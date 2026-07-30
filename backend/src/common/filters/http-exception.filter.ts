@@ -13,6 +13,7 @@ interface ErrorResponseBody {
   statusCode: number;
   message: ClientErrorMessage;
   error?: string;
+  errors?: Record<string, string[]>;
   path: string;
   timestamp: string;
 }
@@ -78,12 +79,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const body = exceptionResponse as {
         message?: ClientErrorMessage;
         error?: string;
+        errors?: Record<string, string[]>;
       };
 
       return {
         statusCode,
         message: body.message ?? 'Request failed',
         ...(body.error ? { error: body.error } : {}),
+        ...(body.errors ? { errors: body.errors } : {}),
         path,
         timestamp,
       };
