@@ -1,0 +1,11 @@
+{
+  "title": "Patients",
+  "description": "Sample page for the patient-list route.",
+  "actions": {
+    "create": "Add patient"
+  },
+  "emptyState": {
+    "title": "No data to display",
+    "description": "When the API is integrated, patients from the authenticated tenant will appear here."
+  }
+}

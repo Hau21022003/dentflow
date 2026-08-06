@@ -91,6 +91,11 @@ export function getErrorMessage(error: unknown): string {
   return ApiError.from(error).message;
 }
 
+/**
+ * Chuẩn hóa lỗi API và đưa thông báo lỗi vào biểu mẫu hoặc callback hiển thị.
+ * Các lỗi theo từng trường sẽ được gán vào trường tương ứng; các lỗi còn lại
+ * được gán vào lỗi cấp biểu mẫu hoặc gửi qua `onMessage`.
+ */
 export function handleApiError<T extends FieldValues>({
   error,
   setError,

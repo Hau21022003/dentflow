@@ -1,0 +1,10 @@
+{
+  "navigation": {
+    "patients": "Bệnh nhân",
+    "demoLogin": "Đăng nhập mẫu"
+  },
+  "language": {
+    "switchToEnglish": "Chuyển sang tiếng Anh",
+    "switchToVietnamese": "Chuyển sang tiếng Việt"
+  }
+}

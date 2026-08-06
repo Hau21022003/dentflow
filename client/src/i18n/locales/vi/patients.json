@@ -1,0 +1,11 @@
+{
+  "title": "Bệnh nhân",
+  "description": "Trang mẫu cho route danh sách bệnh nhân.",
+  "actions": {
+    "create": "Thêm bệnh nhân"
+  },
+  "emptyState": {
+    "title": "Chưa có dữ liệu hiển thị",
+    "description": "Khi tích hợp API, danh sách bệnh nhân của tenant đã xác thực sẽ xuất hiện ở đây."
+  }
+}

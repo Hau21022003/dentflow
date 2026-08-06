@@ -1,30 +1,33 @@
 import { Add } from "@mui/icons-material";
 import { Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
+import { useTranslation } from "react-i18next";
 import { Link as RouterLink } from "react-router-dom";
 import { PATHS } from "../../app/router/paths";
 
 export function PatientsListPage() {
+  const { t } = useTranslation("patients");
+
   return (
     <Stack spacing={3}>
       <Box sx={{ alignItems: "center", display: "flex", gap: 2, justifyContent: "space-between" }}>
         <Box>
           <Typography component="h1" variant="h4">
-            Bệnh nhân
+            {t("title")}
           </Typography>
           <Typography color="text.secondary">
-            Trang mẫu cho route danh sách bệnh nhân.
+            {t("description")}
           </Typography>
         </Box>
         <Button component={RouterLink} startIcon={<Add />} to={PATHS.newPatient} variant="contained">
-          Thêm bệnh nhân
+          {t("actions.create")}
         </Button>
       </Box>
 
       <Card variant="outlined">
         <CardContent>
-          <Typography sx={{ fontWeight: 600 }}>Chưa có dữ liệu hiển thị</Typography>
+          <Typography sx={{ fontWeight: 600 }}>{t("emptyState.title")}</Typography>
           <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-            Khi tích hợp API, danh sách bệnh nhân của tenant đã xác thực sẽ xuất hiện ở đây.
+            {t("emptyState.description")}
           </Typography>
         </CardContent>
       </Card>

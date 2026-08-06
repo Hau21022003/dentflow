@@ -1,8 +1,21 @@
 import { Box, Button, Container, Toolbar, Typography } from "@mui/material";
+import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Outlet, Link as RouterLink } from "react-router-dom";
 import { PATHS } from "../router/paths";
 
 export function AppLayout() {
+  const { i18n, t } = useTranslation("common");
+  const language = i18n.resolvedLanguage === "en" ? "en" : "vi";
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
+  function toggleLanguage() {
+    void i18n.changeLanguage(language === "vi" ? "en" : "vi");
+  }
+
   return (
     <>
       <Box
@@ -14,10 +27,21 @@ export function AppLayout() {
             DentFlow
           </Typography>
           <Button color="inherit" component={RouterLink} to={PATHS.patients}>
-            Bệnh nhân
+            {t("navigation.patients")}
           </Button>
           <Button color="inherit" component={RouterLink} to={PATHS.login}>
-            Đăng nhập mẫu
+            {t("navigation.demoLogin")}
+          </Button>
+          <Button
+            aria-label={
+              language === "vi"
+                ? t("language.switchToEnglish")
+                : t("language.switchToVietnamese")
+            }
+            color="inherit"
+            onClick={toggleLanguage}
+          >
+            {language === "vi" ? "EN" : "VI"}
           </Button>
         </Toolbar>
       </Box>

@@ -1,0 +1,10 @@
+{
+  "navigation": {
+    "patients": "Patients",
+    "demoLogin": "Demo login"
+  },
+  "language": {
+    "switchToEnglish": "Switch to English",
+    "switchToVietnamese": "Switch to Vietnamese"
+  }
+}
