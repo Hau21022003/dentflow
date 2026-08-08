@@ -115,6 +115,7 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 | --- | --- | --- |
 | SaaS | Tenant, Plan, Subscription, SaaSInvoice | Quản lý khách hàng của DentFlow |
 | Tổ chức | Branch, User, RoleAssignment | RoleAssignment có phạm vi branch tùy chọn |
+| Xác thực | User, AuthSession, TotpFactor, PasskeyCredential | User là identity toàn hệ thống; session theo từng thiết bị, TOTP secret và refresh token chỉ lưu dạng mã hóa/hash |
 | Danh mục | Service | Giá và thời lượng phục vụ điều trị/lịch hẹn |
 | Bệnh nhân | Patient, PatientAlert | Patient thuộc tenant, không bị giới hạn một branch |
 | Điều phối | Appointment, Visit | Appointment thuộc branch; Visit được tạo từ appointment |
@@ -149,4 +150,4 @@ Mọi endpoint nghiệp vụ phải áp dụng theo thứ tự: xác thực → 
 3. Kho vật tư, nhà cung cấp, tiêu hao theo hạng mục điều trị.
 4. Báo cáo doanh thu/công nợ nâng cao, KPI bác sĩ, công suất ghế và export kế toán.
 5. Patient portal cho tự đặt hẹn, xem kế hoạch điều trị và lịch sử thanh toán.
-6. 2FA, chính sách lưu trữ dữ liệu, consent và các kiểm soát tuân thủ phù hợp trước khi dùng dữ liệu thật.
+6. Hoàn thiện luồng đăng ký/xác thực 2FA (TOTP và passkey), chính sách lưu trữ dữ liệu, consent và các kiểm soát tuân thủ phù hợp trước khi dùng dữ liệu thật. Persistence cho TOTP, passkey và session đa thiết bị đã được chuẩn bị, nhưng chưa có endpoint xác thực trong giai đoạn này.

@@ -18,7 +18,16 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "migration:run": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
+    "migration:generate": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate src/database/migrations/migration -d src/database/data-source.ts",
+    "migration:revert": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
+    "migration:test:run": "cross-env NODE_ENV=test ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
+    "migration:test:revert": "cross-env NODE_ENV=test ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
+    "seed:dev": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/database/seeds/runner.ts",
+    "seed:test": "cross-env NODE_ENV=test       ts-node -r tsconfig-paths/register src/database/seeds/runner.ts",
+    "setup:dev": "npm run migration:run && npm run seed:dev",
+    "setup:test": "npm run migration:test:run && npm run seed:test"
   },
   "dependencies": {
     "@nestjs/bullmq": "^11.0.4",
