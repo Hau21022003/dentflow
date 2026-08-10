@@ -34,6 +34,12 @@ export class AppConfigService {
     };
   }
 
+  get corsConfig() {
+    return {
+      frontendOrigin: this.config.getOrThrow<string>('app.cors.frontendOrigin'),
+    };
+  }
+
   // ========== REDIS ==========
   get redisConfig() {
     return {
@@ -228,6 +234,9 @@ export class AppConfigService {
       ),
       loginLockMinutes,
       loginLockSeconds: loginLockMinutes * 60,
+      bcryptSaltRounds: this.config.getOrThrow<number>(
+        'app.common.bcryptSaltRounds',
+      ),
       defaultPassword,
     };
   }

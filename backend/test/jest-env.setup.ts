@@ -1,0 +1,1 @@
+process.env.FRONTEND_ORIGIN ??= 'http://localhost:5173';

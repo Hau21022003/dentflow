@@ -3,7 +3,7 @@ import { ClassSerializerInterceptor, INestApplication } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { useContainer } from 'class-validator';
-// import cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import { AppModule } from 'src/app.module';
 import { GlobalExceptionFilter } from 'src/common/filters/http-exception.filter';
 import { LoggingInterceptor } from 'src/common/interceptors/logging.interceptor';
@@ -22,7 +22,19 @@ export async function initApp() {
 
   app = moduleFixture.createNestApplication();
 
-  // app.use(cookieParser());
+  app.use(cookieParser());
+
+  const appConfig = app.get(AppConfigService);
+  app.enableCors({
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allowed?: boolean) => void,
+    ) => {
+      callback(null, !origin || origin === appConfig.corsConfig.frontendOrigin);
+    },
+    methods: ['GET', 'PUT', 'POST', 'PATCH', 'DELETE'],
+    credentials: true,
+  });
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
@@ -36,7 +48,7 @@ export async function initApp() {
 
   app.useGlobalInterceptors(
     new ClassSerializerInterceptor(app.get(Reflector)),
-    new LoggingInterceptor(app.get(AppLogger), app.get(AppConfigService)),
+    new LoggingInterceptor(app.get(AppLogger), appConfig),
   );
 
   app.useGlobalFilters(new GlobalExceptionFilter());

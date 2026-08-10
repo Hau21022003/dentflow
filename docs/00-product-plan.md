@@ -27,13 +27,13 @@ DentFlow Platform
 
 Mọi bản ghi nghiệp vụ mang `tenantId`; dữ liệu gắn với một phòng khám mang thêm `branchId`. API không được chấp nhận ID đơn lẻ như một cơ chế cấp quyền: luôn xác minh tenant và phạm vi chi nhánh từ phiên đăng nhập.
 
-| Vai trò | Phạm vi | Quyền chính |
-| --- | --- | --- |
-| Platform Admin | Toàn nền tảng | Tenant, gói dịch vụ, subscription, hỗ trợ vận hành |
-| Tenant Admin | Một tenant | Chi nhánh, nhân sự, cấu hình, báo cáo toàn chuỗi |
-| Branch Admin | Chi nhánh được gán | Nhân sự, lịch hẹn, bệnh nhân, báo cáo chi nhánh |
-| Receptionist | Chi nhánh được gán | Tiếp nhận, bệnh nhân, lịch hẹn, thanh toán, nhắc hẹn |
-| Dentist | Chi nhánh được gán | Lịch của mình, khám, kế hoạch và ghi chú điều trị bệnh nhân được phân công |
+| Vai trò        | Phạm vi            | Quyền chính                                                                |
+| -------------- | ------------------ | -------------------------------------------------------------------------- |
+| Platform Admin | Toàn nền tảng      | Tenant, gói dịch vụ, subscription, hỗ trợ vận hành                         |
+| Tenant Admin   | Một tenant         | Chi nhánh, nhân sự, cấu hình, báo cáo toàn chuỗi                           |
+| Branch Admin   | Chi nhánh được gán | Nhân sự, lịch hẹn, bệnh nhân, báo cáo chi nhánh                            |
+| Receptionist   | Chi nhánh được gán | Tiếp nhận, bệnh nhân, lịch hẹn, thanh toán, nhắc hẹn                       |
+| Dentist        | Chi nhánh được gán | Lịch của mình, khám, kế hoạch và ghi chú điều trị bệnh nhân được phân công |
 
 Một người dùng có thể được cấp nhiều vai trò/phạm vi, ví dụ Tenant Admin đồng thời là Dentist tại một chi nhánh. Việc cấp hoặc thu hồi quyền phải được ghi vào audit log.
 
@@ -105,29 +105,31 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 
 - React + TypeScript frontend; NestJS REST API; PostgreSQL và TypeOrm.
 - URL chứa `tenantSlug` (ví dụ `/t/tam-anh/dashboard`) cho ứng dụng demo. Có thể mở rộng sang subdomain khi deploy.
-- JWT access token ngắn hạn kết hợp refresh token; mật khẩu được hash; các secrets chỉ nằm trong biến môi trường.
+- Backend auth hiện dùng JWT access token ngắn hạn kết hợp refresh token; mật khẩu và refresh token chỉ lưu hash bcrypt, còn các secrets chỉ nằm trong biến môi trường. Cả hai JWT được gửi bằng cookie `HttpOnly`, host-only, `SameSite=Lax`; không trả raw token trong JSON.
 - i18n Việt/Anh, `Asia/Ho_Chi_Minh` là timezone mặc định và định dạng VND theo locale.
 - Docker Compose cho API, frontend và PostgreSQL; seed tối thiểu hai tenant độc lập.
 
 ## 5. Dữ liệu lõi và quan hệ
 
-| Nhóm | Entity chính | Ghi chú |
-| --- | --- | --- |
-| SaaS | Tenant, Plan, Subscription, SaaSInvoice | Quản lý khách hàng của DentFlow |
-| Tổ chức | Branch, User, RoleAssignment | RoleAssignment có phạm vi branch tùy chọn |
-| Xác thực | User, AuthSession, TotpFactor, PasskeyCredential | User là identity toàn hệ thống; session theo từng thiết bị, TOTP secret và refresh token chỉ lưu dạng mã hóa/hash |
-| Danh mục | Service | Giá và thời lượng phục vụ điều trị/lịch hẹn |
-| Bệnh nhân | Patient, PatientAlert | Patient thuộc tenant, không bị giới hạn một branch |
-| Điều phối | Appointment, Visit | Appointment thuộc branch; Visit được tạo từ appointment |
-| Điều trị | TreatmentPlan, TreatmentItem, TreatmentNote | Bác sĩ được gán và lịch sử thực hiện |
-| Thu phí | PatientInvoice, PatientInvoiceItem, Payment | Tách biệt với hóa đơn SaaS của tenant |
-| Tuân thủ | AuditLog | Ai làm gì, trên bản ghi nào, khi nào |
+| Nhóm      | Entity chính                                     | Ghi chú                                                                                                           |
+| --------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| SaaS      | Tenant, Plan, Subscription, SaaSInvoice          | Quản lý khách hàng của DentFlow                                                                                   |
+| Tổ chức   | Branch, User, RoleAssignment                     | RoleAssignment có phạm vi branch tùy chọn                                                                         |
+| Xác thực  | User, AuthSession, TotpFactor, PasskeyCredential | User là identity toàn hệ thống; session theo từng thiết bị, TOTP secret và refresh token chỉ lưu dạng mã hóa/hash |
+| Danh mục  | Service                                          | Giá và thời lượng phục vụ điều trị/lịch hẹn                                                                       |
+| Bệnh nhân | Patient, PatientAlert                            | Patient thuộc tenant, không bị giới hạn một branch                                                                |
+| Điều phối | Appointment, Visit                               | Appointment thuộc branch; Visit được tạo từ appointment                                                           |
+| Điều trị  | TreatmentPlan, TreatmentItem, TreatmentNote      | Bác sĩ được gán và lịch sử thực hiện                                                                              |
+| Thu phí   | PatientInvoice, PatientInvoiceItem, Payment      | Tách biệt với hóa đơn SaaS của tenant                                                                             |
+| Tuân thủ  | AuditLog                                         | Ai làm gì, trên bản ghi nào, khi nào                                                                              |
 
 ## 6. API và nguyên tắc bảo mật
 
-Các API được tổ chức theo tiền tố `/api/v1`. Tenant context lấy từ `tenantSlug` trong route/header đã được xác minh với session; không tin tưởng tenant ID do client tự gửi.
+Các API nghiệp vụ sẽ được tổ chức theo tiền tố `/api/v1`. Trong khi global prefix chưa được chuẩn hoá ở backend, auth giữ các route hiện hành `/auth/*` dưới API base URL. Tenant context lấy từ `tenantSlug` trong route/header đã được xác minh với session; không tin tưởng tenant ID do client tự gửi.
 
-- `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`.
+- `POST /auth/login`: nhận email/password, kiểm tra trạng thái và login lock, tạo một `AuthSession` cho thiết bị hiện tại, rồi đặt access/refresh cookies và chỉ trả user an toàn (`id`, `email`, `fullName`).
+- `POST /auth/refresh`: chỉ đọc refresh cookie, xác minh JWT, session và bcrypt hash, rồi rotate refresh token trong transaction/row lock trước khi đặt lại hai cookies.
+- `POST /auth/logout`: revoke session của refresh cookie hiện tại, xoá hai cookies và không làm logout các thiết bị khác. Auth endpoint không nhận `tenantId`; các guard nghiệp vụ sau này vẫn phải lấy tenant context từ xác thực đã kiểm chứng.
 - `GET/POST /tenants`, `GET/PATCH /tenants/:id`: chỉ Platform Admin.
 - `GET/POST /branches`, `GET/POST /users`, `POST /role-assignments`: Tenant/Branch Admin theo phạm vi.
 - `GET/POST /patients`, `GET/POST /appointments`, `POST /appointments/:id/check-in`, `POST /appointments/:id/start`, `POST /appointments/:id/complete`.

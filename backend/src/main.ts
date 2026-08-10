@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 import { ClassSerializerInterceptor, INestApplication } from '@nestjs/common';
@@ -10,18 +11,22 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AppLogger } from './common/logging/app-logger.service';
 import { CustomValidationPipe } from './common/pipes/custom-validation.pipe';
 import { AppConfigService } from './config/app-config.service';
+import {
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+} from './modules/auth/auth.constants';
 
 function setupSwagger(app: INestApplication) {
   const config = new DocumentBuilder()
     .setTitle('My API')
     .setDescription('API documentation')
     .setVersion('1.0')
-    .addBearerAuth() // JWT
+    .addBearerAuth()
+    .addCookieAuth(ACCESS_TOKEN_COOKIE, undefined, ACCESS_TOKEN_COOKIE)
+    .addCookieAuth(REFRESH_TOKEN_COOKIE, undefined, REFRESH_TOKEN_COOKIE)
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-
-  document.security = [{ bearer: [] }];
 
   SwaggerModule.setup('api', app, document, {
     swaggerOptions: {
@@ -35,6 +40,8 @@ function setupSwagger(app: INestApplication) {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.use(cookieParser());
+
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
   app.useGlobalPipes(
     new CustomValidationPipe({
@@ -47,7 +54,14 @@ async function bootstrap() {
   setupSwagger(app);
 
   app.enableCors({
-    origin: '*',
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allowed?: boolean) => void,
+    ) => {
+      const frontendOrigin =
+        app.get(AppConfigService).corsConfig.frontendOrigin;
+      callback(null, !origin || origin === frontendOrigin);
+    },
     methods: ['GET', 'PUT', 'POST', 'PATCH', 'DELETE'],
     credentials: true,
   });
@@ -61,4 +75,4 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+void bootstrap();

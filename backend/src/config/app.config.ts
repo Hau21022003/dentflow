@@ -8,6 +8,9 @@ export default registerAs('app', () => {
   return {
     url: env.APP_URL,
     nodeEnv: env.NODE_ENV,
+    cors: {
+      frontendOrigin: env.FRONTEND_ORIGIN,
+    },
     common: {
       appName: env.APP_NAME,
       appShortName: env.APP_SHORT_NAME,
@@ -15,6 +18,7 @@ export default registerAs('app', () => {
       uploadMaxFileSizeMb: env.UPLOAD_MAX_FILE_SIZE_MB,
       defaultPassword: env.DEFAULT_PASSWORD,
       loginLockMinutes: env.LOGIN_LOCK_MINUTES,
+      bcryptSaltRounds: env.BCRYPT_SALT_ROUNDS,
       timezone: env.TIMEZONE,
     },
     i18n: {

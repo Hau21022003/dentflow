@@ -52,6 +52,10 @@ const optionalPositiveInteger = z.preprocess(
   z.coerce.number().int().positive().optional(),
 );
 
+const bcryptSaltRounds = z
+  .preprocess(emptyToUndefined, z.coerce.number().int().min(4).max(31))
+  .default(12);
+
 const booleanFlag = z.preprocess(
   emptyToUndefined,
   z.enum(['true', 'false']).transform((value) => value === 'true'),
@@ -83,6 +87,7 @@ export const envSchema = z
     RUNTIME_ENV_ONLY: booleanFlag.default(false),
 
     APP_URL: requiredUrl,
+    FRONTEND_ORIGIN: requiredUrl,
     APP_NAME: requiredText,
     APP_SHORT_NAME: requiredText,
     TIMEZONE: timezone,
@@ -109,6 +114,7 @@ export const envSchema = z
     UPLOAD_MAX_FILE_SIZE_MB: optionalPositiveInteger,
     MAX_LOGIN_ATTEMPTS: optionalPositiveInteger,
     LOGIN_LOCK_MINUTES: optionalPositiveInteger,
+    BCRYPT_SALT_ROUNDS: bcryptSaltRounds,
     DEFAULT_PASSWORD: optionalText,
 
     MAIL_PROVIDER: z
