@@ -1,7 +1,9 @@
-import { Box, Button, Container, Toolbar, Typography } from "@mui/material";
+import { Languages, Stethoscope } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Outlet, Link as RouterLink } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/shared/lib/utils";
 import { PATHS } from "../router/paths";
 
 export function AppLayout() {
@@ -17,38 +19,57 @@ export function AppLayout() {
   }
 
   return (
-    <>
-      <Box
-        component="header"
-        sx={{ bgcolor: "primary.main", color: "primary.contrastText" }}
-      >
-        <Toolbar>
-          <Typography component="div" sx={{ flexGrow: 1, fontWeight: 700 }}>
-            DentFlow
-          </Typography>
-          <Button color="inherit" component={RouterLink} to={PATHS.patients}>
-            {t("navigation.patients")}
-          </Button>
-          <Button color="inherit" component={RouterLink} to={PATHS.login}>
-            {t("navigation.demoLogin")}
-          </Button>
-          <Button
-            aria-label={
-              language === "vi"
-                ? t("language.switchToEnglish")
-                : t("language.switchToVietnamese")
-            }
-            color="inherit"
-            onClick={toggleLanguage}
-          >
-            {language === "vi" ? "EN" : "VI"}
-          </Button>
-        </Toolbar>
-      </Box>
+    <div className="min-h-svh bg-background">
+      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
+          <Link className="flex items-center gap-2.5 text-foreground" to={PATHS.patients}>
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+              <Stethoscope aria-hidden="true" className="size-5" />
+            </span>
+            <span className="text-base font-bold tracking-tight">DentFlow</span>
+          </Link>
 
-      <Container component="main" maxWidth="md" sx={{ py: 5 }}>
+          <nav aria-label="Điều hướng chính" className="ml-4 hidden items-center gap-1 sm:flex">
+            <NavLink
+              className={({ isActive }) =>
+                cn(
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-secondary text-secondary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                )
+              }
+              to={PATHS.patients}
+            >
+              {t("navigation.patients")}
+            </NavLink>
+          </nav>
+
+          <div className="ml-auto flex items-center gap-2">
+            <Button asChild className="hidden sm:inline-flex" size="sm" variant="ghost">
+              <Link to={PATHS.login}>{t("navigation.demoLogin")}</Link>
+            </Button>
+            <Button
+              aria-label={
+                language === "vi"
+                  ? t("language.switchToEnglish")
+                  : t("language.switchToVietnamese")
+              }
+              onClick={toggleLanguage}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              <Languages aria-hidden="true" />
+              {language === "vi" ? "EN" : "VI"}
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         <Outlet />
-      </Container>
-    </>
+      </main>
+    </div>
   );
 }

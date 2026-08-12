@@ -1,9 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Alert, Box, Button, Stack, Typography } from "@mui/material";
-import { useState } from "react";
+import { ArrowLeft, Save, UserRound } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link as RouterLink } from "react-router-dom";
 import { z } from "zod";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PATHS } from "../../app/router/paths";
 import {
   RHFSelect,
@@ -41,8 +49,12 @@ type MockCreatePatientErrorResponse = {
 };
 
 export function CreatePatientPage() {
-  const [submitted, setSubmitted] = useState(false);
-  const { control, handleSubmit, setError } = useForm<CreatePatientFormValues>({
+  const {
+    control,
+    formState: { errors },
+    handleSubmit,
+    setError,
+  } = useForm<CreatePatientFormValues>({
     defaultValues: {
       fullName: "",
       gender: "",
@@ -52,8 +64,6 @@ export function CreatePatientPage() {
   });
 
   function handleValidSubmit() {
-    setSubmitted(false);
-
     const mockError: MockCreatePatientErrorResponse = {
       status: 422,
       payload: {
@@ -73,37 +83,55 @@ export function CreatePatientPage() {
   }
 
   return (
-    <Stack component="form" noValidate onSubmit={handleSubmit(handleValidSubmit)} spacing={3}>
-      <Box>
-        <Typography component="h1" variant="h4">
-          Thêm bệnh nhân
-        </Typography>
-        <Typography color="text.secondary">
-          Form giao diện mẫu; dữ liệu chưa được gửi tới API.
-        </Typography>
-      </Box>
-
-      {submitted && <Alert severity="info">Mẫu đã nhận submit, nhưng chưa lưu dữ liệu.</Alert>}
-
-      <RHFTextField control={control} fullWidth label="Họ và tên" name="fullName" required />
-      <RHFTextField control={control} fullWidth label="Số điện thoại" name="phone" required />
-      <RHFSelect
-        control={control}
-        fullWidth
-        label="Giới tính"
-        name="gender"
-        options={GENDER_OPTIONS}
-        required
-      />
-
-      <Stack direction="row" spacing={2}>
-        <Button component={RouterLink} to={PATHS.patients} variant="text">
-          Hủy
+    <form className="mx-auto max-w-3xl space-y-7" noValidate onSubmit={handleSubmit(handleValidSubmit)}>
+      <div className="space-y-2">
+        <Button asChild className="-ml-3" size="sm" variant="ghost">
+          <RouterLink to={PATHS.patients}>
+            <ArrowLeft aria-hidden="true" />
+            Quay lại danh sách
+          </RouterLink>
         </Button>
-        <Button type="submit" variant="contained">
+        <h1 className="text-3xl font-bold tracking-tight">Thêm bệnh nhân</h1>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Form giao diện mẫu; dữ liệu chưa được gửi tới API.
+        </p>
+      </div>
+
+      {errors.root?.server?.message && <Alert variant="destructive">{errors.root.server.message}</Alert>}
+
+      <Card>
+        <CardHeader className="border-b border-border/70">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
+            <UserRound aria-hidden="true" className="size-5" />
+          </div>
+          <CardTitle>Thông tin cơ bản</CardTitle>
+          <CardDescription>Nhập thông tin hành chính để khởi tạo hồ sơ bệnh nhân.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-5 pt-6 sm:grid-cols-2">
+          <RHFTextField control={control} fullWidth label="Họ và tên" name="fullName" required />
+          <RHFTextField control={control} fullWidth label="Số điện thoại" name="phone" required />
+          <div className="sm:col-span-2">
+            <RHFSelect
+              control={control}
+              fullWidth
+              label="Giới tính"
+              name="gender"
+              options={GENDER_OPTIONS}
+              required
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
+        <Button asChild variant="outline">
+          <RouterLink to={PATHS.patients}>Hủy</RouterLink>
+        </Button>
+        <Button type="submit">
+          <Save aria-hidden="true" />
           Lưu mẫu
         </Button>
-      </Stack>
-    </Stack>
+      </div>
+    </form>
   );
 }

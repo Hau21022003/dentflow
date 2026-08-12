@@ -1,12 +1,80 @@
-@layer theme, base, mui, components, utilities;
+@import "@fontsource/be-vietnam-pro/400.css";
+@import "@fontsource/be-vietnam-pro/500.css";
+@import "@fontsource/be-vietnam-pro/600.css";
+@import "@fontsource/be-vietnam-pro/700.css";
 @import "tailwindcss";
+@import "tw-animate-css";
 
-html,
-body,
-#root {
-  min-height: 100%;
+@theme inline {
+  --font-sans: "Be Vietnam Pro", Arial, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-body {
-  margin: 0;
+:root {
+  --radius: 0.875rem;
+  --background: oklch(0.985 0.006 184);
+  --foreground: oklch(0.255 0.025 235);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.255 0.025 235);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.255 0.025 235);
+  --primary: oklch(0.52 0.108 184);
+  --primary-foreground: oklch(0.99 0.005 184);
+  --secondary: oklch(0.94 0.025 202);
+  --secondary-foreground: oklch(0.31 0.054 208);
+  --muted: oklch(0.955 0.012 210);
+  --muted-foreground: oklch(0.48 0.025 230);
+  --accent: oklch(0.93 0.03 205);
+  --accent-foreground: oklch(0.31 0.054 208);
+  --destructive: oklch(0.59 0.2 27);
+  --border: oklch(0.89 0.016 210);
+  --input: oklch(0.84 0.02 210);
+  --ring: oklch(0.55 0.12 205);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    min-height: 100%;
+    background: var(--background);
+  }
+
+  body {
+    @apply min-h-svh bg-background font-sans text-foreground antialiased;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  #root {
+    min-height: 100svh;
+  }
 }
