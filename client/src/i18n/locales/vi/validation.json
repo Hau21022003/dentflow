@@ -1,0 +1,17 @@
+{
+  "required": "Vui lòng nhập {{field}}.",
+  "selectionRequired": "Vui lòng chọn {{field}}.",
+  "email": "{{field}} không hợp lệ.",
+  "invalid": "{{field}} không hợp lệ.",
+  "minLength": "{{field}} phải có ít nhất {{min}} ký tự.",
+  "maxLength": "{{field}} không được vượt quá {{max}} ký tự.",
+  "length": "{{field}} phải có đúng {{length}} ký tự.",
+  "url": "{{field}} phải là URL hợp lệ.",
+  "uuid": "{{field}} phải là UUID hợp lệ.",
+  "pattern": "{{field}} không đúng định dạng.",
+  "minNumber": "{{field}} phải lớn hơn hoặc bằng {{min}}.",
+  "maxNumber": "{{field}} phải nhỏ hơn hoặc bằng {{max}}.",
+  "positive": "{{field}} phải lớn hơn 0.",
+  "nonnegative": "{{field}} phải lớn hơn hoặc bằng 0.",
+  "integer": "{{field}} phải là số nguyên."
+}

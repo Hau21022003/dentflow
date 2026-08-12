@@ -1,5 +1,4 @@
 import { Languages, Stethoscope } from "lucide-react";
-import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,10 +8,6 @@ import { PATHS } from "../router/paths";
 export function AppLayout() {
   const { i18n, t } = useTranslation("common");
   const language = i18n.resolvedLanguage === "en" ? "en" : "vi";
-
-  useEffect(() => {
-    document.documentElement.lang = language;
-  }, [language]);
 
   function toggleLanguage() {
     void i18n.changeLanguage(language === "vi" ? "en" : "vi");

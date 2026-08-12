@@ -7,5 +7,17 @@
   "emptyState": {
     "title": "Chưa có dữ liệu hiển thị",
     "description": "Khi tích hợp API, danh sách bệnh nhân của tenant đã xác thực sẽ xuất hiện ở đây."
+  },
+  "form": {
+    "fields": {
+      "fullName": "họ và tên",
+      "phone": "số điện thoại",
+      "gender": "giới tính"
+    },
+    "genderOptions": {
+      "male": "Nam",
+      "female": "Nữ",
+      "other": "Khác"
+    }
   }
 }

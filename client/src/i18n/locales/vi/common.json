@@ -6,5 +6,26 @@
   "language": {
     "switchToEnglish": "Chuyển sang tiếng Anh",
     "switchToVietnamese": "Chuyển sang tiếng Việt"
+  },
+  "auth": {
+    "title": "Chào mừng đến DentFlow",
+    "description": "Đăng nhập để tiếp tục sử dụng hệ thống quản lý nha khoa.",
+    "fields": {
+      "email": "Email",
+      "password": "Mật khẩu"
+    },
+    "actions": {
+      "login": "Đăng nhập",
+      "loggingIn": "Đang đăng nhập...",
+      "showPassword": "Hiển thị mật khẩu"
+    },
+    "errors": {
+      "invalidCredentials": "Email hoặc mật khẩu không đúng."
+    },
+    "session": {
+      "checking": "Đang kiểm tra phiên đăng nhập...",
+      "unavailable": "Không thể xác minh phiên đăng nhập. Vui lòng thử lại.",
+      "retry": "Thử lại"
+    }
   }
 }

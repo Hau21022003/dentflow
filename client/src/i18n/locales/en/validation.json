@@ -1,0 +1,17 @@
+{
+  "required": "{{field}} is required.",
+  "selectionRequired": "Select {{field}}.",
+  "email": "Enter a valid {{field}}.",
+  "invalid": "{{field}} is invalid.",
+  "minLength": "{{field}} must be at least {{min}} characters.",
+  "maxLength": "{{field}} must not exceed {{max}} characters.",
+  "length": "{{field}} must be exactly {{length}} characters.",
+  "url": "Enter a valid URL for {{field}}.",
+  "uuid": "{{field}} must be a valid UUID.",
+  "pattern": "{{field}} has an invalid format.",
+  "minNumber": "{{field}} must be greater than or equal to {{min}}.",
+  "maxNumber": "{{field}} must be less than or equal to {{max}}.",
+  "positive": "{{field}} must be greater than 0.",
+  "nonnegative": "{{field}} must be greater than or equal to 0.",
+  "integer": "{{field}} must be an integer."
+}

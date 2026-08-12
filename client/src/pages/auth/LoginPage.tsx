@@ -7,31 +7,67 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  createValidationMessages,
+  type Translate,
+  type ValidationMessages,
+} from "@/i18n/validation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CircleAlert, LoaderCircle, Stethoscope } from "lucide-react";
+import {
+  CircleAlert,
+  Languages,
+  LoaderCircle,
+  Stethoscope,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { PATHS } from "../../app/router/paths";
+import { resolvePostLoginPath } from "../../app/router/auth-redirect";
 import { useLoginMutation } from "../../features/auth/auth.hooks";
 import { RHFTextField } from "../../shared/components/form";
 import { HTTP_STATUS } from "../../shared/constants/http-status.constants";
 import { ApiError, handleApiError } from "../../shared/lib/error";
 
-const loginSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .min(1, "Vui lòng nhập email.")
-    .email("Email không hợp lệ."),
-  password: z.string().min(1, "Vui lòng nhập mật khẩu."),
-});
+function createLoginSchema(tCommon: Translate, validation: ValidationMessages) {
+  const email = tCommon("auth.fields.email");
+  const password = tCommon("auth.fields.password");
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+  return z.object({
+    email: z
+      .string()
+      .trim()
+      .min(1, validation.required(email))
+      .email(validation.email(email)),
+    password: z.string().min(1, validation.required(password)),
+  });
+}
+
+type LoginFormValues = z.infer<ReturnType<typeof createLoginSchema>>;
 
 export function LoginPage() {
+  const { i18n, t: tCommon } = useTranslation("common");
+  const { t: tValidation } = useTranslation("validation");
+  const location = useLocation();
   const navigate = useNavigate();
   const loginMutation = useLoginMutation();
+  const [showPassword, setShowPassword] = useState(false);
+  const language = i18n.resolvedLanguage === "en" ? "en" : "vi";
+  const validation = useMemo(
+    () => createValidationMessages(tValidation),
+    [tValidation],
+  );
+  const loginSchema = useMemo(
+    () => createLoginSchema(tCommon, validation),
+    [tCommon, validation],
+  );
+  const postLoginPath = useMemo(
+    () => resolvePostLoginPath(location.state),
+    [location.state],
+  );
   const {
     clearErrors,
     control,
@@ -51,20 +87,24 @@ export function LoginPage() {
 
     try {
       await loginMutation.mutateAsync(credentials);
-      navigate(PATHS.patients, { replace: true });
+      navigate(postLoginPath, { replace: true });
     } catch (error) {
       const apiError = ApiError.from(error);
 
       if (apiError.status === HTTP_STATUS.UNAUTHORIZED) {
         setError("root.server", {
           type: "server",
-          message: "Email hoặc mật khẩu không đúng.",
+          message: tCommon("auth.errors.invalidCredentials"),
         });
         return;
       }
 
       handleApiError<LoginFormValues>({ error, setError });
     }
+  }
+
+  function toggleLanguage() {
+    void i18n.changeLanguage(language === "vi" ? "en" : "vi");
   }
 
   return (
@@ -79,10 +119,8 @@ export function LoginPage() {
             <Stethoscope aria-hidden="true" className="size-6" />
           </div>
           <div className="space-y-2">
-            <CardTitle className="text-2xl">Chào mừng đến DentFlow</CardTitle>
-            <CardDescription>
-              Đăng nhập để tiếp tục sử dụng hệ thống quản lý nha khoa.
-            </CardDescription>
+            <CardTitle className="text-2xl">{tCommon("auth.title")}</CardTitle>
+            <CardDescription>{tCommon("auth.description")}</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -102,7 +140,7 @@ export function LoginPage() {
               control={control}
               disabled={loginMutation.isPending}
               fullWidth
-              label="Email"
+              label={tCommon("auth.fields.email")}
               name="email"
               required
               type="email"
@@ -112,11 +150,41 @@ export function LoginPage() {
               control={control}
               disabled={loginMutation.isPending}
               fullWidth
-              label="Mật khẩu"
+              label={tCommon("auth.fields.password")}
               name="password"
               required
-              type="password"
+              type={showPassword ? "text" : "password"}
             />
+            <div className="flex items-center justify-between gap-3">
+              <Label
+                className="w-fit cursor-pointer gap-2 text-muted-foreground"
+                htmlFor="show-password"
+              >
+                <Checkbox
+                  checked={showPassword}
+                  disabled={loginMutation.isPending}
+                  id="show-password"
+                  onCheckedChange={(checked) =>
+                    setShowPassword(checked === true)
+                  }
+                />
+                {tCommon("auth.actions.showPassword")}
+              </Label>
+              <Button
+                aria-label={
+                  language === "vi"
+                    ? tCommon("language.switchToEnglish")
+                    : tCommon("language.switchToVietnamese")
+                }
+                onClick={toggleLanguage}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                <Languages aria-hidden="true" />
+                {language === "vi" ? "EN" : "VI"}
+              </Button>
+            </div>
             <Button
               className="mt-1 h-11 w-full"
               disabled={loginMutation.isPending}
@@ -125,7 +193,9 @@ export function LoginPage() {
               {loginMutation.isPending && (
                 <LoaderCircle aria-hidden="true" className="animate-spin" />
               )}
-              {loginMutation.isPending ? "Đang đăng nhập..." : "Đăng nhập"}
+              {loginMutation.isPending
+                ? tCommon("auth.actions.loggingIn")
+                : tCommon("auth.actions.login")}
             </Button>
           </form>
         </CardContent>

@@ -6,5 +6,26 @@
   "language": {
     "switchToEnglish": "Switch to English",
     "switchToVietnamese": "Switch to Vietnamese"
+  },
+  "auth": {
+    "title": "Welcome to DentFlow",
+    "description": "Sign in to continue to your dental practice workspace.",
+    "fields": {
+      "email": "Email",
+      "password": "Password"
+    },
+    "actions": {
+      "login": "Sign in",
+      "loggingIn": "Signing in...",
+      "showPassword": "Show password"
+    },
+    "errors": {
+      "invalidCredentials": "Email or password is incorrect."
+    },
+    "session": {
+      "checking": "Checking your session...",
+      "unavailable": "We could not verify your session. Please try again.",
+      "retry": "Try again"
+    }
   }
 }

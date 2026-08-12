@@ -1,8 +1,3 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Save, UserRound } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { Link as RouterLink } from "react-router-dom";
-import { z } from "zod";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +7,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  createValidationMessages,
+  type Translate,
+  type ValidationMessages,
+} from "@/i18n/validation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, Save, UserRound } from "lucide-react";
+import { useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { Link as RouterLink } from "react-router-dom";
+import { z } from "zod";
 import { PATHS } from "../../app/router/paths";
 import {
   RHFSelect,
@@ -20,25 +27,32 @@ import {
 } from "../../shared/components/form";
 import { ApiError, handleApiError } from "../../shared/lib/error";
 
-const GENDER_OPTIONS = [
-  { label: "Nam", value: "male" },
-  { label: "Nữ", value: "female" },
-  { label: "Khác", value: "other" },
-] as const satisfies readonly RHFSelectOption[];
+const GENDER_VALUES = ["male", "female", "other"] as const;
 
-const createPatientSchema = z.object({
-  fullName: z.string().trim().min(1, "Vui lòng nhập họ và tên"),
-  phone: z.string().trim().min(1, "Vui lòng nhập số điện thoại"),
-  gender: z
-    .string()
-    .min(1, "Vui lòng chọn giới tính")
-    .refine(
-      (value) => GENDER_OPTIONS.some((option) => option.value === value),
-      "Giới tính không hợp lệ",
-    ),
-});
+function createPatientValidationSchema(
+  tPatients: Translate,
+  validation: ValidationMessages,
+) {
+  const fullName = tPatients("form.fields.fullName");
+  const phone = tPatients("form.fields.phone");
+  const gender = tPatients("form.fields.gender");
 
-type CreatePatientFormValues = z.infer<typeof createPatientSchema>;
+  return z.object({
+    fullName: z.string().trim().min(1, validation.required(fullName)),
+    phone: z.string().trim().min(1, validation.required(phone)),
+    gender: z
+      .string()
+      .min(1, validation.selectionRequired(gender))
+      .refine(
+        (value) => GENDER_VALUES.some((genderValue) => genderValue === value),
+        validation.invalid(gender),
+      ),
+  });
+}
+
+type CreatePatientFormValues = z.infer<
+  ReturnType<typeof createPatientValidationSchema>
+>;
 
 type MockCreatePatientErrorResponse = {
   status: 422;
@@ -49,6 +63,24 @@ type MockCreatePatientErrorResponse = {
 };
 
 export function CreatePatientPage() {
+  const { t: tPatients } = useTranslation("patients");
+  const { t: tValidation } = useTranslation("validation");
+  const validation = useMemo(
+    () => createValidationMessages(tValidation),
+    [tValidation],
+  );
+  const genderOptions = useMemo(
+    () =>
+      GENDER_VALUES.map((value) => ({
+        label: tPatients(`form.genderOptions.${value}`),
+        value,
+      })) satisfies RHFSelectOption[],
+    [tPatients],
+  );
+  const patientSchema = useMemo(
+    () => createPatientValidationSchema(tPatients, validation),
+    [tPatients, validation],
+  );
   const {
     control,
     formState: { errors },
@@ -60,7 +92,7 @@ export function CreatePatientPage() {
       gender: "",
       phone: "",
     },
-    resolver: zodResolver(createPatientSchema),
+    resolver: zodResolver(patientSchema),
   });
 
   function handleValidSubmit() {
@@ -83,7 +115,11 @@ export function CreatePatientPage() {
   }
 
   return (
-    <form className="mx-auto max-w-3xl space-y-7" noValidate onSubmit={handleSubmit(handleValidSubmit)}>
+    <form
+      className="mx-auto max-w-3xl space-y-7"
+      noValidate
+      onSubmit={handleSubmit(handleValidSubmit)}
+    >
       <div className="space-y-2">
         <Button asChild className="-ml-3" size="sm" variant="ghost">
           <RouterLink to={PATHS.patients}>
@@ -97,7 +133,9 @@ export function CreatePatientPage() {
         </p>
       </div>
 
-      {errors.root?.server?.message && <Alert variant="destructive">{errors.root.server.message}</Alert>}
+      {errors.root?.server?.message && (
+        <Alert variant="destructive">{errors.root.server.message}</Alert>
+      )}
 
       <Card>
         <CardHeader className="border-b border-border/70">
@@ -105,18 +143,32 @@ export function CreatePatientPage() {
             <UserRound aria-hidden="true" className="size-5" />
           </div>
           <CardTitle>Thông tin cơ bản</CardTitle>
-          <CardDescription>Nhập thông tin hành chính để khởi tạo hồ sơ bệnh nhân.</CardDescription>
+          <CardDescription>
+            Nhập thông tin hành chính để khởi tạo hồ sơ bệnh nhân.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 pt-6 sm:grid-cols-2">
-          <RHFTextField control={control} fullWidth label="Họ và tên" name="fullName" required />
-          <RHFTextField control={control} fullWidth label="Số điện thoại" name="phone" required />
+          <RHFTextField
+            control={control}
+            fullWidth
+            label={tPatients("form.fields.fullName")}
+            name="fullName"
+            required
+          />
+          <RHFTextField
+            control={control}
+            fullWidth
+            label={tPatients("form.fields.phone")}
+            name="phone"
+            required
+          />
           <div className="sm:col-span-2">
             <RHFSelect
               control={control}
               fullWidth
-              label="Giới tính"
+              label={tPatients("form.fields.gender")}
               name="gender"
-              options={GENDER_OPTIONS}
+              options={genderOptions}
               required
             />
           </div>
