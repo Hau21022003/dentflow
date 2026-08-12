@@ -1,6 +1,7 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core/constants';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -10,6 +11,7 @@ import { AppConfigService } from './config/app-config.service';
 import appConfig from './config/app.config';
 import { validateEnvironment } from './config/env.validation';
 import { AppI18nModule } from './i18n/app-i18n.module';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { ModulesModule } from './modules/modules.module';
 
 const runtimeEnvOnly = process.env.RUNTIME_ENV_ONLY === 'true';
@@ -69,6 +71,12 @@ const runtimeEnvOnly = process.env.RUNTIME_ENV_ONLY === 'true';
     AppI18nModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule {}

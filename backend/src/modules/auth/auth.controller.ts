@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -16,6 +17,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { CookieOptions, Request, Response } from 'express';
+import { CurrentUserId } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { AppConfigService } from '../../config/app-config.service';
 import {
@@ -67,6 +69,16 @@ export class AuthController {
     this.setAuthCookies(response, result.tokens);
 
     return { user: result.user };
+  }
+
+  @Get('me')
+  @ApiCookieAuth(ACCESS_TOKEN_COOKIE)
+  @ApiOkResponse({ type: AuthResponseDto })
+  @ApiUnauthorizedResponse({
+    description: 'Invalid access token or inactive user.',
+  })
+  async me(@CurrentUserId() userId: string): Promise<AuthResponseDto> {
+    return { user: await this.authService.getAuthenticatedUser(userId) };
   }
 
   @Public()

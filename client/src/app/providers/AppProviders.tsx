@@ -2,6 +2,7 @@ import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { enUS, viVN } from "@mui/material/locale";
 import { useMemo, type PropsWithChildren } from "react";
 import { useTranslation } from "react-i18next";
+import { AuthSessionBootstrap } from "./AuthSessionBootstrap";
 import { ReactQueryProvider } from "./ReactQueryProvider";
 
 export function AppProviders({ children }: PropsWithChildren) {
@@ -23,6 +24,7 @@ export function AppProviders({ children }: PropsWithChildren) {
 
   return (
     <ReactQueryProvider>
+      <AuthSessionBootstrap />
       <ThemeProvider theme={theme}>
         <CssBaseline />
         {children}

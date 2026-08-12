@@ -129,6 +129,7 @@ Các API nghiệp vụ sẽ được tổ chức theo tiền tố `/api/v1`. Tro
 
 - `POST /auth/login`: nhận email/password, kiểm tra trạng thái và login lock, tạo một `AuthSession` cho thiết bị hiện tại, rồi đặt access/refresh cookies và chỉ trả user an toàn (`id`, `email`, `fullName`).
 - `POST /auth/refresh`: chỉ đọc refresh cookie, xác minh JWT, session và bcrypt hash, rồi rotate refresh token trong transaction/row lock trước khi đặt lại hai cookies.
+- `GET /auth/me`: yêu cầu access-token cookie hợp lệ, lấy user ID từ JWT đã xác minh rồi đọc lại user đang `ACTIVE`; chỉ trả user an toàn (`id`, `email`, `fullName`) và không nhận user hay tenant ID từ client.
 - `POST /auth/logout`: revoke session của refresh cookie hiện tại, xoá hai cookies và không làm logout các thiết bị khác. Auth endpoint không nhận `tenantId`; các guard nghiệp vụ sau này vẫn phải lấy tenant context từ xác thực đã kiểm chứng.
 - `GET/POST /tenants`, `GET/PATCH /tenants/:id`: chỉ Platform Admin.
 - `GET/POST /branches`, `GET/POST /users`, `POST /role-assignments`: Tenant/Branch Admin theo phạm vi.

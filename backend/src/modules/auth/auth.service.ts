@@ -74,6 +74,16 @@ export class AuthService {
     );
   }
 
+  async getAuthenticatedUser(userId: string): Promise<AuthenticatedUser> {
+    const user = await this.usersRepository.findOneBy({ id: userId });
+
+    if (!user || user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException();
+    }
+
+    return this.toAuthenticatedUser(user);
+  }
+
   async logout(refreshToken?: string): Promise<void> {
     if (!refreshToken) {
       return;

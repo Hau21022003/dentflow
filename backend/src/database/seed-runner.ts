@@ -6,13 +6,14 @@ import dataSource from './data-source';
 
 const env = process.env.NODE_ENV ?? 'development';
 dotenv.config({ path: `.env.${env}` });
+const seedEnv = env === 'development' ? 'dev' : env;
 
 async function runSeeds() {
   await dataSource.initialize();
   const queryRunner = dataSource.createQueryRunner();
   await queryRunner.connect();
 
-  const seedDir = path.join(__dirname, 'seeds', env);
+  const seedDir = path.join(__dirname, 'seeds', seedEnv);
 
   if (!fs.existsSync(seedDir)) {
     console.error(`❌ Seed directory not found: ${seedDir}`);
@@ -30,7 +31,7 @@ async function runSeeds() {
     return;
   }
 
-  console.log(`📂 Found ${files.length} seed file(s) in [${env}]`);
+  console.log(`📂 Found ${files.length} seed file(s) in [${seedEnv}]`);
 
   await queryRunner.startTransaction();
 

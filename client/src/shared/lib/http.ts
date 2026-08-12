@@ -9,15 +9,10 @@ let isRefreshing = false;
 const refreshSubscribers: ((success: boolean) => void)[] = [];
 
 type QueryValue =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | string[]
-  | number[];
+  string | number | boolean | null | undefined | string[] | number[];
 
-export type CustomOptions = Omit<RequestInit, "method"> & {
+export type CustomOptions = Omit<RequestInit, "body" | "method"> & {
+  body?: unknown;
   baseUrl?: string | undefined;
   params?: Record<string, QueryValue>;
   timeout?: number; // ms
@@ -114,7 +109,7 @@ const handleRefreshToken = async (): Promise<boolean> => {
     refreshSubscribers.length = 0;
 
     return true;
-  } catch (error) {
+  } catch {
     // Thông báo cho tất cả các request đang chờ rằng refresh thất bại
     refreshSubscribers.forEach((resolve) => resolve(false));
     refreshSubscribers.length = 0;
@@ -132,7 +127,7 @@ const handleErrorResponse = async <T>(
   method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
   url: string,
   options: CustomOptions,
-  errorResponse: { status: number; payload: any },
+  errorResponse: { status: number; payload: unknown },
   authRequired: boolean,
 ): Promise<{ status: number; payload: T }> => {
   if (errorResponse.status === HTTP_STATUS.UNAUTHORIZED) {
@@ -208,8 +203,11 @@ const request = async <T>(
   let parsedBody: FormData | string | undefined = undefined;
   if (body instanceof FormData) {
     parsedBody = body;
-  } else if (body) {
-    parsedBody = JSON.stringify(body);
+  } else if (body !== undefined && body !== null) {
+    const serializedBody = JSON.stringify(body);
+    if (serializedBody !== undefined) {
+      parsedBody = serializedBody;
+    }
   }
 
   const baseHeaders: {
@@ -266,21 +264,21 @@ const http = {
   },
   post<Response>(
     url: string,
-    body: any,
+    body?: unknown,
     options?: Omit<CustomOptions, "body"> | undefined,
   ) {
     return request<Response>("POST", url, { ...options, body });
   },
   put<Response>(
     url: string,
-    body?: any,
+    body?: unknown,
     options?: Omit<CustomOptions, "body"> | undefined,
   ) {
     return request<Response>("PUT", url, { ...options, body });
   },
   patch<Response>(
     url: string,
-    body?: any,
+    body?: unknown,
     options?: Omit<CustomOptions, "body"> | undefined,
   ) {
     return request<Response>("PATCH", url, { ...options, body });

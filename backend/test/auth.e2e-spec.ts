@@ -78,6 +78,31 @@ describe('Authentication (e2e)', () => {
     ).resolves.toBe(true);
   });
 
+  it('returns the active authenticated user from the access-token cookie', async () => {
+    const user = await createUser();
+    const agent = request.agent(app.getHttpServer());
+
+    await agent
+      .post('/auth/login')
+      .send({ email: user.email, password: PASSWORD })
+      .expect(200);
+
+    await agent
+      .get('/auth/me')
+      .expect(200)
+      .expect({
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+        },
+      });
+
+    await usersRepository.update(user.id, { status: UserStatus.DISABLED });
+    await agent.get('/auth/me').expect(401);
+    await request(app.getHttpServer()).get('/auth/me').expect(401);
+  });
+
   it('rejects invalid and disabled logins, locks repeated failures, and resets a recovered account', async () => {
     const user = await createUser();
     const disabledUser = await createUser({
