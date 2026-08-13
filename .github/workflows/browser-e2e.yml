@@ -1,0 +1,64 @@
+name: Browser E2E Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: dentflow_test
+          POSTGRES_USER: dentflow_test
+          POSTGRES_PASSWORD: dentflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dentflow_test -d dentflow_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            client/package-lock.json
+            browser-e2e/package-lock.json
+      - name: Create test environment file
+        run: cp backend/.env.test.example backend/.env.test
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+      - name: Install client dependencies
+        run: npm ci --prefix client
+      - name: Install browser E2E dependencies
+        run: npm ci --prefix browser-e2e
+      - name: Install Chromium
+        run: npm --prefix browser-e2e exec playwright install --with-deps chromium
+      - name: Run browser E2E tests
+        run: npm --prefix browser-e2e run test
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: browser-e2e/playwright-report/
+          retention-days: 30

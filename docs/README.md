@@ -2,13 +2,14 @@
 
 Thư mục này là nguồn thông tin sản phẩm và kỹ thuật chính của DentFlow. Khi xây dựng hoặc thay đổi tính năng, đọc tài liệu theo thứ tự dưới đây và cập nhật tài liệu liên quan cùng thay đổi mã nguồn.
 
-| Tài liệu | Mục đích |
-| --- | --- |
-| [00-product-plan.md](./00-product-plan.md) | Phạm vi sản phẩm, mô hình tenant, quy trình nha khoa và roadmap |
-| [01-payment-model.md](./01-payment-model.md) | Hai dòng tiền, billing SaaS, thanh toán điều trị và ranh giới trách nhiệm |
-| [02-platform-admin.md](./02-platform-admin.md) | Vận hành Platform Admin: tenant lifecycle, SaaS billing, support và kiểm soát hệ thống |
-| [03-role-workflows.md](./03-role-workflows.md) | Phạm vi quyền, bàn giao công việc và luồng hằng ngày của từng vai trò |
-| [04-tenant-admin.md](./04-tenant-admin.md) | Vận hành Tenant Admin: cấu hình tenant, chi nhánh, nhân sự, giám sát và SaaS billing |
+| Tài liệu                                           | Mục đích                                                                               |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [00-product-plan.md](./00-product-plan.md)         | Phạm vi sản phẩm, mô hình tenant, quy trình nha khoa và roadmap                        |
+| [01-payment-model.md](./01-payment-model.md)       | Hai dòng tiền, billing SaaS, thanh toán điều trị và ranh giới trách nhiệm              |
+| [02-platform-admin.md](./02-platform-admin.md)     | Vận hành Platform Admin: tenant lifecycle, SaaS billing, support và kiểm soát hệ thống |
+| [03-role-workflows.md](./03-role-workflows.md)     | Phạm vi quyền, bàn giao công việc và luồng hằng ngày của từng vai trò                  |
+| [04-tenant-admin.md](./04-tenant-admin.md)         | Vận hành Tenant Admin: cấu hình tenant, chi nhánh, nhân sự, giám sát và SaaS billing   |
+| [08-demo-and-testing.md](./08-demo-and-testing.md) | Tài khoản dữ liệu mẫu, browser E2E và môi trường test tách biệt                        |
 
 ## Quy ước làm việc với Codex
 
@@ -23,4 +24,3 @@ Thư mục này là nguồn thông tin sản phẩm và kỹ thuật chính củ
 - `05-domain-workflows.md`: trạng thái chi tiết của lịch hẹn, visit, treatment plan và hoá đơn.
 - `06-architecture.md`: ranh giới frontend/API/database, tenant context, auth và deployment.
 - `07-api-contracts.md`: quy ước REST, lỗi, pagination, idempotency và webhook.
-- `08-demo-and-testing.md`: tài khoản seed, kịch bản demo và acceptance test.

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
-import { DataSource } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 // import { AppCacheService } from '../shared/cache/app-cache.service';
 
 @Injectable()
@@ -11,61 +11,60 @@ export class TestingService {
     @InjectDataSource() private readonly dataSource: DataSource,
     // private readonly appCacheService: AppCacheService,
   ) {}
-  async resetDatabase() {
+
+  async resetDatabase(): Promise<void> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
 
-    // 1. Lấy tất cả tên bảng trong DB hiện tại
-    const tables: { TABLE_NAME: string }[] = await queryRunner.query(
-      `SELECT TABLE_NAME FROM information_schema.TABLES 
-       WHERE TABLE_SCHEMA = DATABASE() 
-       AND TABLE_NAME != 'migrations'`, // Giữ lại bảng migrations
-    );
+    try {
+      await queryRunner.startTransaction();
 
-    // 2. Tắt FK check để truncate không bị lỗi quan hệ
-    await queryRunner.query(`SET FOREIGN_KEY_CHECKS = 0`);
+      const tables: { qualifiedName: string }[] = await queryRunner.query(
+        `SELECT format('%I.%I', schemaname, tablename) AS "qualifiedName"
+         FROM pg_tables
+         WHERE schemaname = 'public'
+           AND tablename != 'migrations'`,
+      );
 
-    for (const { TABLE_NAME } of tables) {
-      await queryRunner.query(`TRUNCATE TABLE \`${TABLE_NAME}\``);
+      if (tables.length > 0) {
+        await queryRunner.query(
+          `TRUNCATE TABLE ${tables
+            .map(({ qualifiedName }) => qualifiedName)
+            .join(', ')} RESTART IDENTITY CASCADE`,
+        );
+      }
+
+      await this.runSeeds(queryRunner);
+      await queryRunner.commitTransaction();
+
+      // await this.appCacheService.clear();
+      console.log('Database reset successfully');
+    } catch (error) {
+      if (queryRunner.isTransactionActive) {
+        await queryRunner.rollbackTransaction();
+      }
+
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
-
-    await queryRunner.query(`SET FOREIGN_KEY_CHECKS = 1`);
-
-    // 3. Re-run migrations
-    await this.dataSource.runMigrations();
-
-    // 4. Re-seed
-    await this.runSeeds(queryRunner);
-
-    // await this.appCacheService.clear();
-
-    console.log('Database reset successfully');
-
-    await queryRunner.release();
   }
 
-  private async runSeeds(queryRunner: any) {
+  private async runSeeds(queryRunner: QueryRunner): Promise<void> {
     const seedDir = path.join(process.cwd(), 'src/database/seeds/test');
 
     if (!fs.existsSync(seedDir)) return;
 
     const files = fs
       .readdirSync(seedDir)
-      .filter((f) => f.endsWith('.sql'))
+      .filter((file) => file.endsWith('.sql'))
       .sort();
 
-    await queryRunner.startTransaction();
-    try {
-      for (const file of files) {
-        const sql = fs.readFileSync(path.join(seedDir, file), 'utf8').trim();
-        if (!sql) continue;
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(seedDir, file), 'utf8').trim();
+      if (!sql) continue;
 
-        await queryRunner.query(sql);
-      }
-      await queryRunner.commitTransaction();
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
+      await queryRunner.query(sql);
     }
   }
 }
