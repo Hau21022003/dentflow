@@ -5,10 +5,12 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
+import { RoleAssignment } from '../../authorization/entities/role-assignment.entity';
 import { Tenant } from '../../tenants/entities/tenant.entity';
 
 export enum BranchStatus {
@@ -58,4 +60,7 @@ export class Branch {
   })
   @JoinColumn({ name: 'tenant_id', referencedColumnName: 'id' })
   tenant: Tenant;
+
+  @OneToMany(() => RoleAssignment, (roleAssignment) => roleAssignment.branch)
+  roleAssignments: RoleAssignment[];
 }

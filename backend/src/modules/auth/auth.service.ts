@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { compare, hash } from '../../common/utils/hash.util';
 import { AppConfigService } from '../../config/app-config.service';
+import { AuthorizationService } from '../authorization/authorization.service';
 import { User, UserStatus } from '../users/entities/user.entity';
 import {
   AccessTokenPayload,
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
     private readonly appConfig: AppConfigService,
+    private readonly authorizationService: AuthorizationService,
   ) {}
 
   async login(loginDto: LoginDto): Promise<AuthResult> {
@@ -126,7 +128,7 @@ export class AuthService {
     await this.sessionsRepository.save(session);
 
     return {
-      user: this.toAuthenticatedUser(user),
+      user: await this.toAuthenticatedUser(user),
       tokens,
     };
   }
@@ -169,7 +171,7 @@ export class AuthService {
     await manager.getRepository(AuthSession).save(session);
 
     return {
-      user: this.toAuthenticatedUser(user),
+      user: await this.toAuthenticatedUser(user),
       tokens,
     };
   }
@@ -282,11 +284,14 @@ export class AuthService {
     );
   }
 
-  private toAuthenticatedUser(user: User): AuthenticatedUser {
+  private async toAuthenticatedUser(user: User): Promise<AuthenticatedUser> {
     return {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
+      authorization: await this.authorizationService.getAuthorizationSnapshot(
+        user.id,
+      ),
     };
   }
 

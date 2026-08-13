@@ -247,31 +247,15 @@ ALTER TABLE role_assignments
 
 Đây là ràng buộc tenant isolation ở database: biết một `branchId` của tenant khác không thể tạo được assignment cross-tenant. Authorization ở API vẫn bắt buộc xác minh tenant context đã được chứng thực trước khi truy vấn; FK không thay thế guard.
 
+### 10.3.1 Trạng thái persistence hiện tại
+
+Migration `1786060800005-CreateAuthorizationRoleAssignments` và module `authorization` đã triển khai hai bảng assignment cùng enum, FK, CHECK và partial index nêu trên. Authorization service hiện đọc active assignment để tạo authorization snapshot cho `POST /auth/login`, `POST /auth/refresh` và `GET /auth/me`. Fixture synthetic cho development/test hiện tạo Tenant, Branch, User và các grant fixed-role theo thứ tự; module vẫn chưa có route riêng, DTO grant/revoke hay command quản trị role.
+
 ### 10.4 Policy ở code, không phải entity dữ liệu
 
-Permission được định nghĩa bằng policy map bất biến, có thể đặt tại `modules/authorization/authorization.policy.ts`. Tên permission là contract nội bộ cho guard/test, không nhận từ client và không có endpoint CRUD.
+Permission đã được định nghĩa bằng policy map bất biến tại `modules/authorization/authorization.policy.ts`; không lưu thành entity/database enum và không có endpoint CRUD. Snapshot auth trả platform permission và effective permission theo tenant/branch để client ẩn/hiện UI, nhưng policy backend vẫn là nguồn quyết định quyền.
 
-```ts
-type Permission =
-  | 'tenant.settings.manage'
-  | 'branch.manage'
-  | 'staff.assign-role'
-  | 'appointment.manage'
-  | 'clinical.visit.write'
-  | 'treatment-plan.write'
-  | 'patient-invoice.create'
-  | 'patient-payment.record'
-  | 'saas-billing.manage';
-
-const rolePermissions: Readonly<Record<TenantRoleCode, readonly Permission[]>> = {
-  TENANT_ADMIN: ['tenant.settings.manage', 'branch.manage', 'staff.assign-role', 'saas-billing.manage'],
-  BRANCH_ADMIN: ['appointment.manage'],
-  RECEPTIONIST: ['appointment.manage', 'patient-invoice.create', 'patient-payment.record'],
-  DENTIST: ['clinical.visit.write', 'treatment-plan.write'],
-};
-```
-
-Đoạn trên chỉ minh họa shape, không phải ma trận quyền hoàn chỉnh. Mỗi action mới phải được thêm có chủ đích vào policy, guard và test; mặc định không khớp permission là `403`. Không thêm direct user permission, tenant-custom role, wildcard (`*`) hay super-admin bypass cho dữ liệu tenant.
+Policy hiện có capability Platform (`platform.*`), quản trị tenant (`tenant.settings.manage`, `branch.manage`, `service-catalog.manage`, `staff.manage`, reports/audit/billing/notification), Receptionist và Dentist theo ma trận role ở đầu tài liệu. Mỗi action mới phải được thêm có chủ đích vào policy, guard và test; mặc định không khớp permission là `403`. Không thêm direct user permission, tenant-custom role, wildcard (`*`) hay super-admin bypass cho dữ liệu tenant.
 
 ### 10.5 Entity nghiệp vụ dùng làm điều kiện quyền
 
@@ -291,7 +275,8 @@ Nếu sau này cần nhiều dentist/assistant trong một appointment hoặc c�
 - Mọi `INSERT`/thu hồi `PlatformRoleAssignment` hoặc `RoleAssignment` tạo `AuditLog` với action (`ROLE_GRANTED`, `ROLE_REVOKED`, `BRANCH_SCOPE_GRANTED`, `BRANCH_SCOPE_REVOKED`), actor, tenant/branch khi có, resource ID, request ID, reason và before/after an toàn. Không ghi password, token hoặc clinical detail vào audit payload.
 - Vô hiệu hóa `User` hoặc suspend tenant làm mọi assignment không hiệu lực trong guard; không cần viết lại hàng loạt `revoked_at`. Khi user/tenant được mở lại, các assignment chưa bị thu hồi lại có thể có hiệu lực theo policy. Nếu muốn thu hồi vĩnh viễn, thực hiện revoke rõ ràng để có audit.
 - Không cascade delete từ `users`, `tenants` hoặc `branches` sang assignment/audit. Tenant và branch được ngừng hoạt động theo lifecycle; lịch sử quyền phải còn nguyên.
-- Thứ tự triển khai schema: `Tenant` → `Branch` (bao gồm `UNIQUE (id, tenant_id)`) → enum/tables assignment → `AuditLog` → seed assignment demo. Chỉ sau đó mới viết authorization guard/service.
+- Thứ tự triển khai schema: `Tenant` → `Branch` (bao gồm `UNIQUE (id, tenant_id)`) → enum/tables assignment → fixture seed assignment synthetic → `AuditLog` → authorization guard/service.
+- `AuditLog`, tenant-context resolver, Subscription Guard và authorization guard vẫn chưa được triển khai. Fixed permission policy và auth authorization snapshot đã có, nhưng snapshot chỉ dùng cho UI chứ không thay enforcement ở API. Khi thêm command cấp/thu hồi role, các command đó phải ghi audit và không được sửa trực tiếp các field scope bất biến.
 
 ### 10.7 Thuật toán guard sẽ dùng khi service được thêm
 

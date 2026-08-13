@@ -8,25 +8,45 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppConfigService } from 'src/config/app-config.service';
 import { AuthSession } from 'src/modules/auth/sessions/entities/auth-session.entity';
+import {
+  PlatformRoleAssignment,
+  PlatformRoleCode,
+} from 'src/modules/authorization/entities/platform-role-assignment.entity';
+import {
+  RoleAssignment,
+  TenantRoleCode,
+} from 'src/modules/authorization/entities/role-assignment.entity';
 import { TestingGuard } from 'src/modules/testing/testing.guard';
+import { Branch } from 'src/modules/branches/entities/branch.entity';
+import { Tenant } from 'src/modules/tenants/entities/tenant.entity';
 import { User } from 'src/modules/users/entities/user.entity';
 import { closeApp, initApp } from './app.setup';
 
 const E2E_USER = {
   email: 'e2e.user@dentflow.test',
-  password: 'synthetic-e2e-password',
+  password: '12345',
 };
 
 describe('Testing database reset (e2e)', () => {
   let app: INestApplication<App>;
   let usersRepository: Repository<User>;
   let sessionsRepository: Repository<AuthSession>;
+  let tenantsRepository: Repository<Tenant>;
+  let branchesRepository: Repository<Branch>;
+  let platformRoleAssignmentsRepository: Repository<PlatformRoleAssignment>;
+  let roleAssignmentsRepository: Repository<RoleAssignment>;
 
   beforeAll(async () => {
-    app = await initApp();
+    app = (await initApp()) as INestApplication<App>;
     const dataSource = app.get(DataSource);
     usersRepository = dataSource.getRepository(User);
     sessionsRepository = dataSource.getRepository(AuthSession);
+    tenantsRepository = dataSource.getRepository(Tenant);
+    branchesRepository = dataSource.getRepository(Branch);
+    platformRoleAssignmentsRepository = dataSource.getRepository(
+      PlatformRoleAssignment,
+    );
+    roleAssignmentsRepository = dataSource.getRepository(RoleAssignment);
     await dataSource.runMigrations();
   });
 
@@ -34,28 +54,50 @@ describe('Testing database reset (e2e)', () => {
     await closeApp();
   });
 
-  it('resets data repeatedly and restores only the synthetic seed user', async () => {
+  it('resets data repeatedly and restores the synthetic authorization fixtures', async () => {
     const server = app.getHttpServer();
 
     await request(server).get('/testing/reset-db').expect(200);
-    await expectSeededUser();
+    await expectSeededFixtures();
 
     await request(server).post('/auth/login').send(E2E_USER).expect(200);
     expect(await sessionsRepository.count()).toBe(1);
 
     await request(server).get('/testing/reset-db').expect(200);
-    await expectSeededUser();
+    await expectSeededFixtures();
     expect(await sessionsRepository.count()).toBe(0);
   });
 
-  async function expectSeededUser(): Promise<void> {
+  async function expectSeededFixtures(): Promise<void> {
     const users = await usersRepository.find();
 
-    expect(users).toHaveLength(1);
-    expect(users[0]).toMatchObject({
+    expect(users).toHaveLength(4);
+    expect(users.find((user) => user.email === E2E_USER.email)).toMatchObject({
       email: E2E_USER.email,
-      fullName: 'Synthetic E2E User',
+      fullName: 'Synthetic E2E Tenant Admin',
     });
+    expect(await tenantsRepository.count()).toBe(2);
+    expect(await branchesRepository.count()).toBe(3);
+    expect(await platformRoleAssignmentsRepository.count()).toBe(1);
+    expect(await roleAssignmentsRepository.count()).toBe(4);
+
+    const platformAssignments = await platformRoleAssignmentsRepository.find();
+    const tenantAssignments = await roleAssignmentsRepository.find();
+
+    expect(platformAssignments.map(({ roleCode }) => roleCode)).toEqual([
+      PlatformRoleCode.PLATFORM_ADMIN,
+    ]);
+    expect(tenantAssignments.map(({ roleCode }) => roleCode).sort()).toEqual([
+      TenantRoleCode.BRANCH_ADMIN,
+      TenantRoleCode.DENTIST,
+      TenantRoleCode.RECEPTIONIST,
+      TenantRoleCode.TENANT_ADMIN,
+    ]);
+    expect(
+      tenantAssignments.find(
+        ({ roleCode }) => roleCode === TenantRoleCode.TENANT_ADMIN,
+      ),
+    ).toMatchObject({ branchId: null });
   }
 });
 

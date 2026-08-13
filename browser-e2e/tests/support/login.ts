@@ -2,7 +2,7 @@ import { expect, type Page } from "@playwright/test";
 
 export const E2E_USER = {
   email: "e2e.user@dentflow.test",
-  password: "synthetic-e2e-password",
+  password: "12345",
 };
 
 export async function login(page: Page): Promise<void> {

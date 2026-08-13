@@ -8,6 +8,7 @@ import {
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
+import { RoleAssignment } from '../../authorization/entities/role-assignment.entity';
 import { Branch } from '../../branches/entities/branch.entity';
 
 export enum TenantStatus {
@@ -89,4 +90,7 @@ export class Tenant {
 
   @OneToMany(() => Branch, (branch) => branch.tenant)
   branches: Branch[];
+
+  @OneToMany(() => RoleAssignment, (roleAssignment) => roleAssignment.tenant)
+  roleAssignments: RoleAssignment[];
 }
