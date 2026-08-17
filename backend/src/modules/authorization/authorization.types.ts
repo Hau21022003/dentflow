@@ -36,6 +36,7 @@ export interface BranchAuthorizationSnapshot {
 
 export interface AuthorizationBranch {
   id: string;
+  slug: string;
   name: string;
   status: BranchStatus;
 }

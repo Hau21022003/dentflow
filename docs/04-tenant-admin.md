@@ -15,7 +15,7 @@ Migration nền tảng lưu dữ liệu tổ chức trước khi có API quản 
 | Entity | Field cốt lõi đã có | Lifecycle / ràng buộc |
 | --- | --- | --- |
 | `Tenant` | UUID, legal/display name, `slug`, billing/contact information, logo URL, default locale/timezone, status, timestamps | `slug` duy nhất và chỉ gồm chữ thường, số, dấu gạch nối; status khởi tạo là `PROVISIONING` rồi chỉ service lifecycle sau này mới chuyển trạng thái |
-| `Branch` | UUID, `tenantId`, name, address, phone, timezone override, status, timestamps | Thuộc đúng một tenant qua FK `RESTRICT`; `ACTIVE`/`INACTIVE`, không soft-delete; composite unique `(id, tenantId)` chuẩn bị cho FK tenant-scoped của role và dữ liệu nghiệp vụ |
+| `Branch` | UUID, `tenantId`, `slug`, name, address, phone, timezone override, status, timestamps | Thuộc đúng một tenant qua FK `RESTRICT`; `slug` là URL key ổn định, unique theo `(tenantId, slug)` và không thay `id` trong FK; `ACTIVE`/`INACTIVE`, không soft-delete; composite unique `(id, tenantId)` chuẩn bị cho FK tenant-scoped của role và dữ liệu nghiệp vụ |
 
 Branch kế thừa locale/timezone vận hành của tenant khi không có override phù hợp. Giờ mở cửa, slot duration, appointment rules và các cấu hình vận hành khác chưa được lưu ở migration này; chúng sẽ có schema/migration riêng trước khi có endpoint quản trị tương ứng.
 
@@ -51,6 +51,7 @@ Mọi thay đổi quyền, branch, cấu hình tenant, danh mục dịch vụ v�
 - Tenant Admin quản lý display name, logo, thông tin liên hệ, locale và timezone mặc định của tenant.
 - `fullName` là dữ liệu tên chuẩn cho user; hệ thống không bắt buộc tách họ/tên theo một mô hình duy nhất. Tenant chỉ được cấu hình quy ước hiển thị, không thay đổi ý nghĩa hoặc mất dữ liệu tên gốc.
 - `tenantSlug` xuất hiện trong URL và được `PLATFORM_ADMIN` kiểm soát để tránh gãy liên kết hoặc xung đột định danh.
+- `branchSlug` xuất hiện dưới `tenantSlug` trong URL, chỉ unique trong tenant và không tự đổi khi tên branch đổi. Mọi authorization vẫn resolve slug trong tenant đã xác minh rồi kiểm tra bằng `branchId` và branch scope.
 - Thay đổi timezone cần hiển thị cảnh báo về việc lịch hẹn/lịch sử cũ được hiển thị theo timezone mới. Thao tác phải được audit; timestamp nghiệp vụ được lưu theo thời điểm chuẩn để không đổi lịch sử thực tế.
 
 ### Lịch hẹn và giờ hoạt động

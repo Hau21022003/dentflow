@@ -31,6 +31,9 @@ export class AuthorizationBranchResponseDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
 
+  @ApiProperty({ example: 'quan-1' })
+  slug: string;
+
   @ApiProperty({ example: 'Chi nhánh Quận 1' })
   name: string;
 

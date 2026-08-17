@@ -104,7 +104,7 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 ### Trải nghiệm và kỹ thuật
 
 - React + TypeScript frontend; NestJS REST API; PostgreSQL và TypeOrm.
-- URL chứa `tenantSlug` (ví dụ `/t/tam-anh/dashboard`) cho ứng dụng demo. Có thể mở rộng sang subdomain khi deploy.
+- URL chứa `tenantSlug` và, với ngữ cảnh chi nhánh, `branchSlug` scoped theo tenant (ví dụ `/workspace/tam-anh/branches/quan-1/dashboard`). `branchId` vẫn là định danh nội bộ/FK, không dùng làm cơ chế cấp quyền. Có thể mở rộng sang subdomain khi deploy.
 - Backend auth hiện dùng JWT access token ngắn hạn kết hợp refresh token; mật khẩu và refresh token chỉ lưu hash bcrypt, còn các secrets chỉ nằm trong biến môi trường. Cả hai JWT được gửi bằng cookie `HttpOnly`, host-only, `SameSite=Lax`; không trả raw token trong JSON.
 - i18n Việt/Anh, `Asia/Ho_Chi_Minh` là timezone mặc định và định dạng VND theo locale.
 - Docker Compose cho API, frontend và PostgreSQL; seed tối thiểu hai tenant độc lập.

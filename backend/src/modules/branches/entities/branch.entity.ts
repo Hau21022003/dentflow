@@ -20,6 +20,7 @@ export enum BranchStatus {
 
 @Entity({ name: 'branches' })
 @Unique('uq_branches_id_tenant_id', ['id', 'tenantId'])
+@Unique('uq_branches_tenant_id_slug', ['tenantId', 'slug'])
 @Index('idx_branches_tenant_id_status', ['tenantId', 'status'])
 export class Branch {
   @PrimaryGeneratedColumn('uuid')
@@ -27,6 +28,9 @@ export class Branch {
 
   @Column({ name: 'tenant_id', type: 'uuid' })
   tenantId: string;
+
+  @Column({ type: 'varchar', length: 100 })
+  slug: string;
 
   @Column({ type: 'varchar', length: 150 })
   name: string;

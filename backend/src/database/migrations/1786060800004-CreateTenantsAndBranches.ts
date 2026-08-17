@@ -35,6 +35,7 @@ export class CreateTenantsAndBranches1786060800004 implements MigrationInterface
       CREATE TABLE "branches" (
         "id" uuid NOT NULL DEFAULT gen_random_uuid(),
         "tenant_id" uuid NOT NULL,
+        "slug" character varying(100) NOT NULL,
         "name" character varying(150) NOT NULL,
         "address" character varying(500) NOT NULL,
         "phone" character varying(30) NOT NULL,
@@ -44,6 +45,9 @@ export class CreateTenantsAndBranches1786060800004 implements MigrationInterface
         "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         CONSTRAINT "pk_branches_id" PRIMARY KEY ("id"),
         CONSTRAINT "uq_branches_id_tenant_id" UNIQUE ("id", "tenant_id"),
+        CONSTRAINT "uq_branches_tenant_id_slug" UNIQUE ("tenant_id", "slug"),
+        CONSTRAINT "chk_branches_slug_format"
+          CHECK ("slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
         CONSTRAINT "fk_branches_tenant_id"
           FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE RESTRICT
       )

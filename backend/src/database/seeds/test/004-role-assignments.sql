@@ -58,5 +58,23 @@ VALUES
     'DENTIST',
     (SELECT "id" FROM "users" WHERE "email_normalized" = 'platform.admin@dentflow.test'),
     'Synthetic test dentist'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000005',
+    (SELECT "id" FROM "users" WHERE "email_normalized" = 'branch.admin@dentflow.test'),
+    '11000000-0000-4000-8000-000000000001',
+    '21000000-0000-4000-8000-000000000002',
+    'BRANCH_ADMIN',
+    (SELECT "id" FROM "users" WHERE "email_normalized" = 'platform.admin@dentflow.test'),
+    'Synthetic test branch administrator for a second branch'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000006',
+    (SELECT "id" FROM "users" WHERE "email_normalized" = 'branch.admin@dentflow.test'),
+    '11000000-0000-4000-8000-000000000001',
+    '21000000-0000-4000-8000-000000000002',
+    'RECEPTIONIST',
+    (SELECT "id" FROM "users" WHERE "email_normalized" = 'platform.admin@dentflow.test'),
+    'Synthetic test receptionist role for a second branch'
   )
 ON CONFLICT ("id") DO NOTHING;

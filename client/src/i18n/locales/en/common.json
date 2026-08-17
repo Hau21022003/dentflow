@@ -1,11 +1,37 @@
 {
   "navigation": {
     "patients": "Patients",
-    "demoLogin": "Demo login"
+    "demoLogin": "Demo login",
+    "platform": "Platform",
+    "tenantAdministration": "Tenant administration",
+    "branchOperations": "Branch operations",
+    "tenantOverview": "Tenant overview",
+    "branches": "Branch management",
+    "branchOverview": "Branch overview",
+    "staff": "Staff",
+    "appointments": "Appointments",
+    "doctorWorkspace": "Doctor workspace"
   },
   "language": {
     "switchToEnglish": "Switch to English",
-    "switchToVietnamese": "Switch to Vietnamese"
+    "switchToVietnamese": "Switch to Vietnamese",
+    "vietnamese": "Tiếng Việt",
+    "english": "English"
+  },
+  "layout": {
+    "openNavigation": "Open navigation",
+    "closeNavigation": "Close navigation",
+    "primaryNavigation": "Primary navigation",
+    "sidebar": "Sidebar",
+    "branchSelector": "Select branch",
+    "searchPlaceholder": "Search",
+    "searchComingSoon": "Search coming soon",
+    "notifications": "Notifications",
+    "notificationsComingSoon": "Notifications coming soon",
+    "languageSelector": "Select language",
+    "userAccount": "User account",
+    "logout": "Sign out",
+    "loggingOut": "Signing out..."
   },
   "auth": {
     "title": "Welcome to DentFlow",

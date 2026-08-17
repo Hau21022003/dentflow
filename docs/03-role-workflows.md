@@ -283,6 +283,7 @@ Nếu sau này cần nhiều dentist/assistant trong một appointment hoặc c�
 ```text
 Authenticate session
   → resolve tenant từ tenantSlug đã xác minh, không từ client tenantId
+  → nếu route có branchSlug, resolve branch trong tenant đó để lấy target branchId
   → kiểm tra tenant/subscription policy
   → tải active RoleAssignment theo (userId, resolved tenantId, target branchId)
   → đối chiếu fixed policy map

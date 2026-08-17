@@ -52,6 +52,7 @@ export type TenantAuthorization = {
   branches: Array<{
     branch: {
       id: string;
+      slug: string;
       name: string;
       status: BranchStatus;
     };

@@ -59,6 +59,7 @@ export class AuthorizationService {
         ) ?? {
           branch: {
             id: branch.id,
+            slug: branch.slug,
             name: branch.name,
             status: branch.status,
           },

@@ -1,13 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { resetDatabase } from "./support/database";
-import { login } from "./support/login";
+import { E2E_USERS, login } from "./support/login";
 
 test.beforeAll(async ({ request }) => {
   await resetDatabase(request);
 });
 
-test("logs in with the seeded synthetic user", async ({ page }) => {
-  await login(page);
+test("redirects the seeded tenant admin to its workspace home", async ({ page }) => {
+  await login(page, E2E_USERS.tenantAdmin);
 
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page).toHaveURL(/\/workspace\/test-brightsmile\/tenant$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Workspace quản trị tenant" }),
+  ).toBeVisible();
 });
