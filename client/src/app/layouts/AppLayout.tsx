@@ -1,31 +1,3 @@
-import {
-  Bell,
-  Building2,
-  CalendarDays,
-  ChevronDown,
-  ChevronRight,
-  CircleUserRound,
-  ClipboardList,
-  Languages,
-  LayoutDashboard,
-  Menu,
-  Search,
-  ShieldCheck,
-  Stethoscope,
-  UserRoundCog,
-  UsersRound,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
-import {
-  Link,
-  NavLink,
-  Outlet,
-  useLocation,
-  useNavigate,
-  useParams,
-} from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -42,6 +14,9 @@ import {
   SheetContent,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useLogoutMutation } from "@/features/auth/auth.hooks";
+import { useAuthStore } from "@/features/auth/auth.store";
+import { PERMISSIONS } from "@/features/auth/auth.types";
 import {
   findTenantAuthorization,
   hasBranchAccess,
@@ -49,10 +24,33 @@ import {
   hasPlatformPermission,
   hasTenantPermission,
 } from "@/features/auth/authorization";
-import { useLogoutMutation } from "@/features/auth/auth.hooks";
-import { useAuthStore } from "@/features/auth/auth.store";
-import { PERMISSIONS } from "@/features/auth/auth.types";
 import { cn } from "@/shared/lib/utils";
+import type { LucideIcon } from "lucide-react";
+import {
+  Bell,
+  Building2,
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  CircleUserRound,
+  ClipboardList,
+  LayoutDashboard,
+  Menu,
+  ShieldCheck,
+  Stethoscope,
+  UserRoundCog,
+  UsersRound,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  Link,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import { PATHS, pathFor } from "../router/paths";
 
 type NavigationLink = {
@@ -79,6 +77,19 @@ type BranchOption = {
   tenantSlug: string;
   value: string;
 };
+
+function LanguageFlag({ language }: { language: "en" | "vi" }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full ring-1 ring-border/50"
+    >
+      <span
+        className={cn("fi fis text-xl", language === "en" ? "fi-us" : "fi-vn")}
+      />
+    </span>
+  );
+}
 
 const sidebarLinkClass = (isActive: boolean) =>
   cn(
@@ -159,16 +170,28 @@ function SidebarNavigation({
               onClick={() => onToggleGroup(item.key)}
               type="button"
             >
-              <Icon aria-hidden="true" className="size-4 shrink-0 text-primary" />
+              <Icon
+                aria-hidden="true"
+                className="size-4 shrink-0 text-primary"
+              />
               <span className="flex-1">{item.label}</span>
               {isExpanded ? (
-                <ChevronDown aria-hidden="true" className="size-4 text-muted-foreground" />
+                <ChevronDown
+                  aria-hidden="true"
+                  className="size-4 text-muted-foreground"
+                />
               ) : (
-                <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
+                <ChevronRight
+                  aria-hidden="true"
+                  className="size-4 text-muted-foreground"
+                />
               )}
             </button>
             {isExpanded && (
-              <div className="mt-1 space-y-1 border-l border-border/80 pl-3" id={submenuId}>
+              <div
+                className="mt-1 space-y-1 border-l border-border/80 pl-3"
+                id={submenuId}
+              >
                 {item.items.map((child) => {
                   const ChildIcon = child.icon;
 
@@ -180,7 +203,10 @@ function SidebarNavigation({
                       onClick={onNavigate}
                       to={child.to}
                     >
-                      <ChildIcon aria-hidden="true" className="size-4 shrink-0" />
+                      <ChildIcon
+                        aria-hidden="true"
+                        className="size-4 shrink-0"
+                      />
                       <span>{child.label}</span>
                     </NavLink>
                   );
@@ -211,8 +237,8 @@ export function AppLayout() {
     : undefined;
   const branchAccess = Boolean(
     tenantSlug &&
-      branchSlug &&
-      hasBranchAccess(user, { slug: tenantSlug }, branchSlug),
+    branchSlug &&
+    hasBranchAccess(user, { slug: tenantSlug }, branchSlug),
   );
 
   const navigation = useMemo<NavigationItem[]>(() => {
@@ -247,7 +273,13 @@ export function AppLayout() {
         });
       }
 
-      if (hasTenantPermission(user, { slug: tenantSlug }, PERMISSIONS.branchManage)) {
+      if (
+        hasTenantPermission(
+          user,
+          { slug: tenantSlug },
+          PERMISSIONS.branchManage,
+        )
+      ) {
         tenantItems.push({
           end: true,
           icon: Building2,
@@ -344,19 +376,21 @@ export function AppLayout() {
 
   const branchOptions = useMemo<BranchOption[]>(
     () =>
-      user?.authorization.tenants.flatMap(({ branches, tenant: authorizedTenant }) =>
-        branches.map(({ branch }) => ({
-          branchName: branch.name,
-          branchSlug: branch.slug,
-          tenantSlug: authorizedTenant.slug,
-          value: `${authorizedTenant.slug}:${branch.slug}`,
-        })),
+      user?.authorization.tenants.flatMap(
+        ({ branches, tenant: authorizedTenant }) =>
+          branches.map(({ branch }) => ({
+            branchName: branch.name,
+            branchSlug: branch.slug,
+            tenantSlug: authorizedTenant.slug,
+            value: `${authorizedTenant.slug}:${branch.slug}`,
+          })),
       ) ?? [],
     [user],
   );
 
   const selectedBranch = branchOptions.find(
-    (option) => option.tenantSlug === tenantSlug && option.branchSlug === branchSlug,
+    (option) =>
+      option.tenantSlug === tenantSlug && option.branchSlug === branchSlug,
   );
 
   function handleNavigation() {
@@ -366,7 +400,8 @@ export function AppLayout() {
 
   function toggleGroup(key: NavigationGroup["key"]) {
     const group = navigation.find(
-      (item): item is NavigationGroup => item.kind === "group" && item.key === key,
+      (item): item is NavigationGroup =>
+        item.kind === "group" && item.key === key,
     );
     const isExpanded =
       expandedGroups[key] ??
@@ -418,15 +453,24 @@ export function AppLayout() {
         <div className="flex h-16 items-center border-b border-border/80 px-5">
           <SidebarBrand />
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">{sidebarNavigation}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+          {sidebarNavigation}
+        </div>
         <div className="border-t border-border/80 p-3">
-          <div className="mb-2 flex min-w-0 items-center gap-3 px-3 py-2" title={user?.email}>
+          <div
+            className="mb-2 flex min-w-0 items-center gap-3 px-3 py-2"
+            title={user?.email}
+          >
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
               <CircleUserRound aria-hidden="true" className="size-5" />
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold">{user?.fullName}</span>
-              <span className="block truncate text-xs text-muted-foreground">{user?.email}</span>
+              <span className="block truncate text-sm font-semibold">
+                {user?.fullName}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {user?.email}
+              </span>
             </span>
           </div>
           <Button
@@ -437,7 +481,9 @@ export function AppLayout() {
             variant="ghost"
           >
             <UserRoundCog aria-hidden="true" />
-            {logoutMutation.isPending ? t("layout.loggingOut") : t("layout.logout")}
+            {logoutMutation.isPending
+              ? t("layout.loggingOut")
+              : t("layout.logout")}
           </Button>
         </div>
       </aside>
@@ -462,7 +508,10 @@ export function AppLayout() {
             />
           </div>
           <div className="border-t border-border/80 p-3">
-            <p className="truncate px-3 py-2 text-sm font-semibold" title={user?.fullName}>
+            <p
+              className="truncate px-3 py-2 text-sm font-semibold"
+              title={user?.fullName}
+            >
               {user?.fullName}
             </p>
             <Button
@@ -473,7 +522,9 @@ export function AppLayout() {
               variant="ghost"
             >
               <UserRoundCog aria-hidden="true" />
-              {logoutMutation.isPending ? t("layout.loggingOut") : t("layout.logout")}
+              {logoutMutation.isPending
+                ? t("layout.loggingOut")
+                : t("layout.logout")}
             </Button>
           </div>
         </SheetContent>
@@ -493,81 +544,78 @@ export function AppLayout() {
               <Menu aria-hidden="true" />
             </Button>
 
-            {branchAccess && selectedBranch && (
-              <Select onValueChange={changeBranch} value={selectedBranch.value}>
-                <SelectTrigger
-                  aria-label={t("layout.branchSelector")}
-                  className="h-9 min-w-0 max-w-52 flex-1 sm:max-w-64 lg:max-w-72 lg:flex-none"
+            <div className="flex flex-1 justify-end items-center gap-2 sm:gap-3">
+              {branchAccess && selectedBranch && (
+                <Select
+                  onValueChange={changeBranch}
+                  value={selectedBranch.value}
                 >
-                  <Building2 aria-hidden="true" className="size-4 shrink-0 text-primary" />
-                  <SelectValue />
+                  <SelectTrigger
+                    aria-label={t("layout.branchSelector")}
+                    className="h-9 min-w-0 max-w-52 flex-1 sm:max-w-64 lg:max-w-72 lg:flex-none"
+                  >
+                    <Building2
+                      aria-hidden="true"
+                      className="size-4 shrink-0 text-primary"
+                    />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {user?.authorization.tenants.map(
+                      ({ branches, tenant: authorizedTenant }) =>
+                        branches.length > 0 ? (
+                          <SelectGroup key={authorizedTenant.id}>
+                            <SelectLabel>
+                              {authorizedTenant.displayName}
+                            </SelectLabel>
+                            {branches.map(({ branch }) => (
+                              <SelectItem
+                                key={branch.id}
+                                value={`${authorizedTenant.slug}:${branch.slug}`}
+                              >
+                                {branch.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ) : null,
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button
+                aria-label={t("layout.notificationsComingSoon")}
+                className="h-9 w-9 rounded-full border-0 bg-primary/20 text-foreground hover:bg-primary/15 hover:text-foreground disabled:opacity-100"
+                disabled
+                size="icon"
+                title={t("layout.notificationsComingSoon")}
+                type="button"
+                variant="ghost"
+              >
+                <Bell aria-hidden="true" />
+              </Button>
+              <Select onValueChange={changeLanguage} value={language}>
+                <SelectTrigger
+                  aria-label={t("layout.languageSelector")}
+                  className="h-9 w-9 shrink-0 justify-center px-0 [&>svg]:hidden"
+                >
+                  <LanguageFlag language={language} />
                 </SelectTrigger>
                 <SelectContent>
-                  {user?.authorization.tenants.map(({ branches, tenant: authorizedTenant }) =>
-                    branches.length > 0 ? (
-                      <SelectGroup key={authorizedTenant.id}>
-                        <SelectLabel>{authorizedTenant.displayName}</SelectLabel>
-                        {branches.map(({ branch }) => (
-                          <SelectItem
-                            key={branch.id}
-                            value={`${authorizedTenant.slug}:${branch.slug}`}
-                          >
-                            {branch.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    ) : null,
-                  )}
+                  <SelectItem aria-label={t("language.vietnamese")} value="vi">
+                    <span className="flex items-center gap-2">
+                      <LanguageFlag language="vi" />
+                      <span>VI</span>
+                    </span>
+                  </SelectItem>
+                  <SelectItem aria-label={t("language.english")} value="en">
+                    <span className="flex items-center gap-2">
+                      <LanguageFlag language="en" />
+                      <span>EN</span>
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
-            )}
-
-            <div className="ml-auto hidden min-w-0 max-w-md flex-1 md:block">
-              <div
-                aria-disabled="true"
-                aria-label={t("layout.searchComingSoon")}
-                className="flex h-9 items-center gap-2 rounded-lg border border-input bg-muted/40 px-3 text-sm text-muted-foreground"
-                title={t("layout.searchComingSoon")}
-              >
-                <Search aria-hidden="true" className="size-4 shrink-0" />
-                <span className="truncate">{t("layout.searchPlaceholder")}</span>
-              </div>
             </div>
-
-            <Button
-              aria-label={t("layout.searchComingSoon")}
-              className="md:hidden"
-              disabled
-              size="icon"
-              title={t("layout.searchComingSoon")}
-              type="button"
-              variant="ghost"
-            >
-              <Search aria-hidden="true" />
-            </Button>
-            <Button
-              aria-label={t("layout.notificationsComingSoon")}
-              disabled
-              size="icon"
-              title={t("layout.notificationsComingSoon")}
-              type="button"
-              variant="ghost"
-            >
-              <Bell aria-hidden="true" />
-            </Button>
-            <Select onValueChange={changeLanguage} value={language}>
-              <SelectTrigger
-                aria-label={t("layout.languageSelector")}
-                className="h-9 w-[5.5rem] px-2 sm:w-32"
-              >
-                <Languages aria-hidden="true" className="size-4 shrink-0" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="vi">{t("language.vietnamese")}</SelectItem>
-                <SelectItem value="en">{t("language.english")}</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </header>
 
