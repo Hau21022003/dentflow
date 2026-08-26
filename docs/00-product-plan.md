@@ -125,7 +125,7 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 
 ## 6. API và nguyên tắc bảo mật
 
-Các API nghiệp vụ sẽ được tổ chức theo tiền tố `/api/v1`. Trong khi global prefix chưa được chuẩn hoá ở backend, auth giữ các route hiện hành `/auth/*` dưới API base URL. Tenant context lấy từ `tenantSlug` trong route/header đã được xác minh với session; không tin tưởng tenant ID do client tự gửi.
+Các API nghiệp vụ sẽ được tổ chức theo tiền tố `/api/v1`. Trong khi global prefix chưa được chuẩn hoá ở backend, auth giữ các route hiện hành `/auth/*` dưới API base URL. Backend hiện lấy tenant context từ `:tenantSlug` trong route; branch context lấy từ cặp `:tenantSlug` + `:branchSlug`. Không nhận tenant/branch context từ header, body hoặc query và không tin tưởng tenant ID do client tự gửi.
 
 - `POST /auth/login`: nhận email/password, kiểm tra trạng thái và login lock, tạo một `AuthSession` cho thiết bị hiện tại, rồi đặt access/refresh cookies và trả user an toàn cùng authorization snapshot active.
 - `POST /auth/refresh`: chỉ đọc refresh cookie, xác minh JWT, session và bcrypt hash, rồi rotate refresh token trong transaction/row lock trước khi đặt lại hai cookies và trả authorization snapshot mới tính từ database.

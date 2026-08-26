@@ -79,7 +79,7 @@ describe('Testing database reset (e2e)', () => {
     expect(await tenantsRepository.count()).toBe(2);
     expect(await branchesRepository.count()).toBe(3);
     expect(await platformRoleAssignmentsRepository.count()).toBe(1);
-    expect(await roleAssignmentsRepository.count()).toBe(4);
+    expect(await roleAssignmentsRepository.count()).toBe(6);
 
     const platformAssignments = await platformRoleAssignmentsRepository.find();
     const tenantAssignments = await roleAssignmentsRepository.find();
@@ -89,7 +89,9 @@ describe('Testing database reset (e2e)', () => {
     ]);
     expect(tenantAssignments.map(({ roleCode }) => roleCode).sort()).toEqual([
       TenantRoleCode.BRANCH_ADMIN,
+      TenantRoleCode.BRANCH_ADMIN,
       TenantRoleCode.DENTIST,
+      TenantRoleCode.RECEPTIONIST,
       TenantRoleCode.RECEPTIONIST,
       TenantRoleCode.TENANT_ADMIN,
     ]);

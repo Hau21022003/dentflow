@@ -9,6 +9,12 @@ export interface AuthorizationSnapshot {
   tenants: TenantAuthorizationSnapshot[];
 }
 
+export interface EffectiveAuthorizationAccess {
+  platformRoles: PlatformRoleCode[];
+  tenantRoles: TenantRoleCode[];
+  permissions: Permission[];
+}
+
 export interface PlatformAuthorizationSnapshot {
   roles: PlatformRoleCode[];
   permissions: Permission[];

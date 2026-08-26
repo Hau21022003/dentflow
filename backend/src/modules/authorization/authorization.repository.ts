@@ -32,4 +32,27 @@ export class AuthorizationRepository {
       .andWhere('assignment.revoked_at IS NULL')
       .getMany();
   }
+
+  findActiveTenantRoleAssignmentsForScope(
+    userId: string,
+    tenantId: string,
+    branchId?: string,
+  ): Promise<RoleAssignment[]> {
+    const query = this.roleAssignments
+      .createQueryBuilder('assignment')
+      .where('assignment.user_id = :userId', { userId })
+      .andWhere('assignment.tenant_id = :tenantId', { tenantId })
+      .andWhere('assignment.revoked_at IS NULL');
+
+    if (branchId) {
+      query.andWhere(
+        '(assignment.branch_id IS NULL OR assignment.branch_id = :branchId)',
+        { branchId },
+      );
+    } else {
+      query.andWhere('assignment.branch_id IS NULL');
+    }
+
+    return query.getMany();
+  }
 }

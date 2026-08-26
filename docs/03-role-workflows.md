@@ -273,22 +273,70 @@ Nếu sau này cần nhiều dentist/assistant trong một appointment hoặc c�
 ### 10.6 Audit, lifecycle và thứ tự migration
 
 - Mọi `INSERT`/thu hồi `PlatformRoleAssignment` hoặc `RoleAssignment` tạo `AuditLog` với action (`ROLE_GRANTED`, `ROLE_REVOKED`, `BRANCH_SCOPE_GRANTED`, `BRANCH_SCOPE_REVOKED`), actor, tenant/branch khi có, resource ID, request ID, reason và before/after an toàn. Không ghi password, token hoặc clinical detail vào audit payload.
-- Vô hiệu hóa `User` hoặc suspend tenant làm mọi assignment không hiệu lực trong guard; không cần viết lại hàng loạt `revoked_at`. Khi user/tenant được mở lại, các assignment chưa bị thu hồi lại có thể có hiệu lực theo policy. Nếu muốn thu hồi vĩnh viễn, thực hiện revoke rõ ràng để có audit.
+- Authorization guard chỉ xem active role assignment (`revoked_at IS NULL`) trong từng request scoped; thu hồi role vì vậy có hiệu lực ngay mà không cần user đăng nhập lại. User bị `DISABLED` hoặc logout không bị tra cứu lại ở generic protected route: access JWT đã phát hành vẫn dùng đến khi hết hạn, còn login/refresh và `GET /auth/me` vẫn từ chối user không active. Tenant lifecycle sẽ được enforce riêng khi Subscription Guard được triển khai; foundation authorization hiện chưa suy diễn quyền từ `Tenant.status`.
 - Không cascade delete từ `users`, `tenants` hoặc `branches` sang assignment/audit. Tenant và branch được ngừng hoạt động theo lifecycle; lịch sử quyền phải còn nguyên.
 - Thứ tự triển khai schema: `Tenant` → `Branch` (bao gồm `UNIQUE (id, tenant_id)`) → enum/tables assignment → fixture seed assignment synthetic → `AuditLog` → authorization guard/service.
-- `AuditLog`, tenant-context resolver, Subscription Guard và authorization guard vẫn chưa được triển khai. Fixed permission policy và auth authorization snapshot đã có, nhưng snapshot chỉ dùng cho UI chứ không thay enforcement ở API. Khi thêm command cấp/thu hồi role, các command đó phải ghi audit và không được sửa trực tiếp các field scope bất biến.
+- `AuditLog` và Subscription Guard vẫn chưa được triển khai. Tenant-context resolver và authorization guard hiện là foundation dùng lại được: route gắn `@PlatformScope()` hoặc `@TenantScope('tenant' | 'branch')`, khai báo `@RequirePermissions(...)`, rồi guard tải active assignment scoped từ database để enforce. Route không gắn scope decorator hiện chỉ yêu cầu JWT; snapshot auth vẫn chỉ dành cho UI, không thay enforcement ở API. Khi thêm command cấp/thu hồi role, các command đó phải ghi audit và không được sửa trực tiếp các field scope bất biến.
 
-### 10.7 Thuật toán guard sẽ dùng khi service được thêm
+### 10.7 Thuật toán guard cho service scoped
 
 ```text
-Authenticate session
+Authenticate access JWT (chữ ký, hết hạn, typ=access)
   → resolve tenant từ tenantSlug đã xác minh, không từ client tenantId
   → nếu route có branchSlug, resolve branch trong tenant đó để lấy target branchId
-  → kiểm tra tenant/subscription policy
   → tải active RoleAssignment theo (userId, resolved tenantId, target branchId)
   → đối chiếu fixed policy map
-  → kiểm tra ownership/assignment và trạng thái resource
+  → Subscription Guard (khi module billing đã có policy thực thi)
+  → kiểm tra ownership/assignment và trạng thái resource trong service
   → query/update luôn kèm tenantId; nếu branch-owned thì kèm branchId
 ```
 
-`platform_role_assignments` chỉ được đọc ở route `/platform/*`; nó không đi vào query clinical. Các endpoint tenant-facing cũng không tin `branchId` từ body để cấp quyền: branch ID chỉ là resource cần đối chiếu với scope đã tải và tenant context đã xác minh.
+`platform_role_assignments` chỉ được đọc ở route platform scope; nó không đi vào query clinical. Các endpoint tenant-facing cũng không tin `branchId` từ body để cấp quyền: branch ID chỉ là resource cần đối chiếu với scope đã tải và tenant context đã xác minh. Generic guard không tra lại `User.status` hoặc AuthSession sau khi access JWT đã hợp lệ; behavior đó kéo dài đến access-token expiry theo policy hiện tại.
+
+### 10.8 Implementation contract cho scoped API
+
+Mục này là quy ước bắt buộc khi thêm endpoint nghiệp vụ, đặc biệt dành cho agent hoặc người mới vào codebase. Không tự suy diễn tenant context, scope hoặc quyền từ tên entity, `tenantId`/`branchId` do client gửi, hay authorization snapshot trả về cho UI.
+
+Để đọc nhanh luồng thực thi, xem [request authorization flow](./flows/authorization-request-flow.md) và [tenant–branch isolation flow](./flows/tenant-branch-isolation.md). Hai sơ đồ chỉ là trợ giúp trực quan; quy ước trong mục này vẫn là nguồn quyết định.
+
+#### Phân trách nhiệm guard
+
+- Global `JwtAuthGuard` xác minh access JWT và đặt `request.user`. Không có scope decorator, route protected chỉ dừng ở lớp JWT.
+- `@TenantScope('tenant')` hoặc `@TenantScope('branch')` chạy `TenantContextGuard` trước. Guard này chỉ resolve target context từ route params: `:tenantSlug`, và với branch scope là cặp `:tenantSlug` + `:branchSlug`. Nó tìm branch bằng `(resolvedTenantId, branchSlug)`, nên branch thuộc tenant khác không thể tạo context hợp lệ.
+- `TenantContextGuard` không quyết định user có quyền hay không. Tenant/branch không tồn tại, thiếu route param, hoặc branch không thuộc tenant trong URL trả `404`.
+- `AuthorizationGuard` chạy sau context guard. Nó lấy `userId` từ JWT và tenant/branch ID đã resolve để tải active role assignment (`revoked_at IS NULL`), sau đó đối chiếu permission policy.
+- Target context tồn tại nhưng user không có assignment cho tenant/branch, hoặc thiếu permission, trả `403`. Platform assignment chỉ có hiệu lực với `@PlatformScope()`; nó không cấp quyền tenant/clinical.
+
+#### Quy ước controller
+
+- Endpoint Platform dùng `@PlatformScope()` và `@RequirePermissions(...)`. Không dùng tenant context hoặc `platform_role_assignments` để truy vấn dữ liệu clinical.
+- Endpoint tenant-wide dùng URL có `:tenantSlug`, `@TenantScope('tenant')`, và `@RequirePermissions(...)`.
+- Endpoint branch-owned dùng URL có cả `:tenantSlug` và `:branchSlug`, `@TenantScope('branch')`, và `@RequirePermissions(...)`.
+- Không để route nghiệp vụ thiếu scope decorator hoặc `@RequirePermissions(...)` chỉ vì client đã ẩn nút UI. Permission policy backend là nguồn quyết định duy nhất.
+
+```ts
+@Post('tenants/:tenantSlug/branches/:branchSlug/appointments')
+@TenantScope('branch')
+@RequirePermissions(Permission.APPOINTMENT_MANAGE)
+create(
+  @RequestContext() context: AuthorizationContext,
+  @Body() body: CreateAppointmentDto,
+) {
+  return this.appointmentsService.create(context, body);
+}
+```
+
+#### Quy ước service và dữ liệu client gửi lên
+
+- Service nhận `AuthorizationContext` đã được guard tạo. Mọi query/write bắt buộc kèm `context.tenant.id`; entity thuộc branch bắt buộc kèm thêm `context.branch.id`.
+- Không nhận `tenantId`, `tenantSlug`, `branchId` hoặc `branchSlug` trong body/query để chọn scope hay cấp quyền. Các field này được suy ra từ context và có thể bỏ khỏi DTO tạo/cập nhật thông thường.
+- ID nghiệp vụ trong body (ví dụ `patientId`, `appointmentId`, `dentistId`) chỉ là resource reference. Service phải truy vấn resource đó trong tenant/branch context; không tìm theo ID đơn lẻ rồi mới tin dữ liệu trả về.
+- Role/branch scope trả lời user được làm loại thao tác nào ở đâu. Rule ownership/case (ví dụ dentist có được phân appointment, resource có đúng trạng thái hay không) vẫn phải kiểm tra trong service sau guard.
+
+#### Test tối thiểu cho endpoint mới
+
+- User không có JWT nhận `401`.
+- User có tenant/branch khác nhưng target tồn tại nhận `403`.
+- Branch slug thuộc tenant khác trong URL nhận `404`.
+- Body/resource ID của tenant hoặc branch khác không thể đọc hoặc ghi dữ liệu ngoài context.
+- User thiếu một trong các permission yêu cầu nhận `403`; thu hồi assignment có hiệu lực ở request scoped kế tiếp.

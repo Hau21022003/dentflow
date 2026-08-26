@@ -157,6 +157,7 @@ describe('Authentication (e2e)', () => {
     const branch = await branchesRepository.save(
       branchesRepository.create({
         tenantId: tenant.id,
+        slug: 'synthetic-district-1',
         name: 'Synthetic District 1',
         address: '1 Synthetic Street',
         phone: '+84900000001',
@@ -262,6 +263,7 @@ describe('Authentication (e2e)', () => {
               {
                 branch: {
                   id: branch.id,
+                  slug: branch.slug,
                   name: branch.name,
                   status: BranchStatus.INACTIVE,
                 },

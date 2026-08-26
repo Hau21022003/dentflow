@@ -7,6 +7,7 @@ import { AuthorizationRepository } from './authorization.repository';
 import {
   AuthorizationSnapshot,
   BranchAuthorizationSnapshot,
+  EffectiveAuthorizationAccess,
   TenantAuthorizationSnapshot,
 } from './authorization.types';
 
@@ -96,6 +97,50 @@ export class AuthorizationService {
         ),
       },
       tenants,
+    };
+  }
+
+  async getPlatformAccess(
+    userId: string,
+  ): Promise<EffectiveAuthorizationAccess> {
+    const assignments =
+      await this.authorizationRepository.findActivePlatformRoleAssignments(
+        userId,
+      );
+    const platformRoles = sortUnique(
+      assignments.map((assignment) => assignment.roleCode),
+    );
+
+    return {
+      platformRoles,
+      tenantRoles: [],
+      permissions: sortUnique(
+        platformRoles.flatMap((role) => platformRolePermissions[role]),
+      ),
+    };
+  }
+
+  async getTenantAccess(
+    userId: string,
+    tenantId: string,
+    branchId?: string,
+  ): Promise<EffectiveAuthorizationAccess> {
+    const assignments =
+      await this.authorizationRepository.findActiveTenantRoleAssignmentsForScope(
+        userId,
+        tenantId,
+        branchId,
+      );
+    const tenantRoles = sortUnique(
+      assignments.map((assignment) => assignment.roleCode),
+    );
+
+    return {
+      platformRoles: [],
+      tenantRoles,
+      permissions: sortUnique(
+        tenantRoles.flatMap((role) => tenantRolePermissions[role]),
+      ),
     };
   }
 }

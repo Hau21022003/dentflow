@@ -56,7 +56,7 @@ Seed được tách theo môi trường và luôn nạp theo thứ tự `Tenant 
 | `harmony.reception@dentflow.local`     | Harmony Quận 7: `RECEPTIONIST`                                 |
 | `riverfront.admin@dentflow.local`      | Riverfront: `TENANT_ADMIN`, thêm `BRANCH_ADMIN` tại Bình Thạnh |
 
-`backend/src/database/seeds/test/` giữ fixture nhỏ hơn cho test lặp lại: hai tenant, ba branch, bốn user, một grant platform và bốn grant tenant/branch. Browser E2E tiếp tục dùng `e2e.user@dentflow.test`, hiện là `TENANT_ADMIN` của `BrightSmile Test`. Các fixture test còn lại là `platform.admin@dentflow.test`, `branch.admin@dentflow.test` (`BRANCH_ADMIN` và `RECEPTIONIST`) và `dentist@dentflow.test` (`DENTIST` tại Harmony Test).
+`backend/src/database/seeds/test/` giữ fixture nhỏ hơn cho test lặp lại: hai tenant, ba branch, bốn user, một grant platform và sáu grant tenant/branch. Browser E2E tiếp tục dùng `e2e.user@dentflow.test`, hiện là `TENANT_ADMIN` của `BrightSmile Test`. Các fixture test còn lại là `platform.admin@dentflow.test`, `branch.admin@dentflow.test` (`BRANCH_ADMIN` và `RECEPTIONIST` tại Central lẫn West) và `dentist@dentflow.test` (`DENTIST` tại Harmony Test).
 
 Không đưa dữ liệu bệnh nhân thật vào seed hoặc test. Khi bổ sung luồng nghiệp vụ mới, chỉ thêm dữ liệu synthetic với tenant context đã được xác minh bởi backend.
 
