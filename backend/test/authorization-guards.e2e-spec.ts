@@ -1,8 +1,9 @@
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { DataSource, Repository } from 'typeorm';
-import request from 'supertest';
+import { hash } from 'src/common/utils/hash.util';
 import { AppConfigService } from 'src/config/app-config.service';
+import { ACCESS_TOKEN_COOKIE } from 'src/modules/auth/auth.constants';
+import { AuthSession } from 'src/modules/auth/sessions/entities/auth-session.entity';
 import {
   PlatformRoleAssignment,
   PlatformRoleCode,
@@ -11,8 +12,6 @@ import {
   RoleAssignment,
   TenantRoleCode,
 } from 'src/modules/authorization/entities/role-assignment.entity';
-import { ACCESS_TOKEN_COOKIE } from 'src/modules/auth/auth.constants';
-import { AuthSession } from 'src/modules/auth/sessions/entities/auth-session.entity';
 import {
   Branch,
   BranchStatus,
@@ -22,7 +21,9 @@ import {
   TenantStatus,
 } from 'src/modules/tenants/entities/tenant.entity';
 import { User, UserStatus } from 'src/modules/users/entities/user.entity';
-import { hash } from 'src/common/utils/hash.util';
+import request from 'supertest';
+import { loginAs } from 'test/helpers/auth.helper';
+import { DataSource, Repository } from 'typeorm';
 import { closeApp, initApp } from './app.setup';
 
 const PASSWORD = 'synthetic-authorization-password';
@@ -145,36 +146,46 @@ describe('Authorization guards (e2e)', () => {
       TenantRoleCode.RECEPTIONIST,
     );
 
-    const platformCookie = await login(platformUser);
-    const tenantAdminCookie = await login(tenantAdmin);
-    const branchCookie = await login(branchUser);
-    const partialBranchCookie = await login(partialBranchUser);
-    const noRoleCookie = await login(noRoleUser);
+    const platformSession = await loginAs(app, {
+      email: platformUser.email,
+      password: PASSWORD,
+    });
+    const tenantAdminSession = await loginAs(app, {
+      email: tenantAdmin.email,
+      password: PASSWORD,
+    });
+    const branchSession = await loginAs(app, {
+      email: branchUser.email,
+      password: PASSWORD,
+    });
+    const partialBranchSession = await loginAs(app, {
+      email: partialBranchUser.email,
+      password: PASSWORD,
+    });
+    const noRoleSession = await loginAs(app, {
+      email: noRoleUser.email,
+      password: PASSWORD,
+    });
 
-    const platformResponse = await request(app.getHttpServer())
+    const platformResponse = await platformSession.agent
       .get('/testing/authorization/platform')
-      .set('Cookie', platformCookie)
       .expect(200);
     expect(
       authorizationFixture(platformResponse).context.access.platformRoles,
     ).toEqual([PlatformRoleCode.PLATFORM_ADMIN]);
-    await request(app.getHttpServer())
+    await platformSession.agent
       .get(`/testing/authorization/tenants/${tenantA.slug}`)
-      .set('Cookie', platformCookie)
       .expect(403);
-    await request(app.getHttpServer())
+    await noRoleSession.agent
       .get('/testing/authorization/platform')
-      .set('Cookie', noRoleCookie)
       .expect(403);
-    await request(app.getHttpServer())
+    await noRoleSession.agent
       .get('/testing/authorization/jwt-only')
-      .set('Cookie', noRoleCookie)
       .expect(200)
       .expect({ userId: noRoleUser.id });
 
-    const tenantResponse = await request(app.getHttpServer())
+    const tenantResponse = await tenantAdminSession.agent
       .get(`/testing/authorization/tenants/${tenantA.slug}`)
-      .set('Cookie', tenantAdminCookie)
       .expect(200);
     expect(authorizationFixture(tenantResponse).context.tenant?.id).toBe(
       tenantA.id,
@@ -182,22 +193,19 @@ describe('Authorization guards (e2e)', () => {
     expect(
       authorizationFixture(tenantResponse).context.access.tenantRoles,
     ).toEqual([TenantRoleCode.TENANT_ADMIN]);
-    await request(app.getHttpServer())
+    await tenantAdminSession.agent
       .get(`/testing/authorization/tenants/${tenantB.slug}`)
-      .set('Cookie', tenantAdminCookie)
       .expect(403);
-    await request(app.getHttpServer())
+    await tenantAdminSession.agent
       .get(
         `/testing/authorization/tenants/${tenantA.slug}/branches/${branchA1.slug}`,
       )
-      .set('Cookie', tenantAdminCookie)
       .expect(403);
 
-    const branchResponse = await request(app.getHttpServer())
+    const branchResponse = await branchSession.agent
       .get(
         `/testing/authorization/tenants/${tenantA.slug}/branches/${branchA1.slug}`,
       )
-      .set('Cookie', branchCookie)
       .expect(200);
     expect(authorizationFixture(branchResponse).context.branch?.id).toBe(
       branchA1.id,
@@ -205,28 +213,24 @@ describe('Authorization guards (e2e)', () => {
     expect(
       authorizationFixture(branchResponse).context.access.tenantRoles,
     ).toEqual([TenantRoleCode.DENTIST, TenantRoleCode.RECEPTIONIST]);
-    await request(app.getHttpServer())
+    await branchSession.agent
       .get(
         `/testing/authorization/tenants/${tenantA.slug}/branches/${branchA2.slug}`,
       )
-      .set('Cookie', branchCookie)
       .expect(403);
-    await request(app.getHttpServer())
+    await partialBranchSession.agent
       .get(
         `/testing/authorization/tenants/${tenantA.slug}/branches/${branchA1.slug}`,
       )
-      .set('Cookie', partialBranchCookie)
       .expect(403);
 
-    await request(app.getHttpServer())
+    await tenantAdminSession.agent
       .get('/testing/authorization/tenants/unknown-tenant')
-      .set('Cookie', tenantAdminCookie)
       .expect(404);
-    await request(app.getHttpServer())
+    await branchSession.agent
       .get(
         `/testing/authorization/tenants/${tenantA.slug}/branches/${branchB1.slug}`,
       )
-      .set('Cookie', branchCookie)
       .expect(404);
   });
 
@@ -241,13 +245,13 @@ describe('Authorization guards (e2e)', () => {
       branch,
       TenantRoleCode.DENTIST,
     );
-    const cookie = await login(user);
+    const session = await loginAs(app, {
+      email: user.email,
+      password: PASSWORD,
+    });
     const route = `/testing/authorization/tenants/${tenant.slug}/branches/${branch.slug}`;
 
-    await request(app.getHttpServer())
-      .get(route)
-      .set('Cookie', cookie)
-      .expect(200);
+    await session.agent.get(route).expect(200);
 
     await roleAssignmentsRepository.update(dentistGrant.id, {
       revokedAt: new Date(),
@@ -255,10 +259,7 @@ describe('Authorization guards (e2e)', () => {
       revocationReason: 'Synthetic authorization test',
     });
 
-    await request(app.getHttpServer())
-      .get(route)
-      .set('Cookie', cookie)
-      .expect(403);
+    await session.agent.get(route).expect(403);
   });
 
   it('keeps a valid access token usable by generic guards after disable or logout', async () => {
@@ -282,26 +283,24 @@ describe('Authorization guards (e2e)', () => {
     await grantBranch(loggedOutUser, tenant, branch, TenantRoleCode.DENTIST);
     const route = `/testing/authorization/tenants/${tenant.slug}/branches/${branch.slug}`;
 
-    const disabledCookie = await login(disabledUser);
+    const disabledSession = await loginAs(app, {
+      email: disabledUser.email,
+      password: PASSWORD,
+    });
     await usersRepository.update(disabledUser.id, {
       status: UserStatus.DISABLED,
     });
-    await request(app.getHttpServer())
-      .get(route)
-      .set('Cookie', disabledCookie)
-      .expect(200);
+    await disabledSession.agent.get(route).expect(200);
 
-    const logoutAgent = request.agent(app.getHttpServer());
-    const loginResponse = await logoutAgent
-      .post('/auth/login')
-      .send({ email: loggedOutUser.email, password: PASSWORD })
-      .expect(200);
-    const activeCookie = accessCookie(loginResponse);
-    await logoutAgent.post('/auth/logout').expect(204);
+    const loggedOutSession = await loginAs(app, {
+      email: loggedOutUser.email,
+      password: PASSWORD,
+    });
+    await loggedOutSession.agent.post('/auth/logout').expect(204);
 
     await request(app.getHttpServer())
       .get(route)
-      .set('Cookie', activeCookie)
+      .set('Cookie', loggedOutSession.accessCookie)
       .expect(200);
   });
 
@@ -413,33 +412,7 @@ describe('Authorization guards (e2e)', () => {
       }),
     );
   }
-
-  async function login(user: User): Promise<string> {
-    const response = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email: user.email, password: PASSWORD })
-      .expect(200);
-
-    return accessCookie(response);
-  }
 });
-
-function accessCookie(response: request.Response): string {
-  const setCookies: unknown = response.headers['set-cookie'];
-  if (!Array.isArray(setCookies)) {
-    throw new Error('Access token cookie is missing.');
-  }
-
-  const cookie = setCookies.find(
-    (value): value is string =>
-      typeof value === 'string' && value.startsWith(`${ACCESS_TOKEN_COOKIE}=`),
-  );
-  if (!cookie) {
-    throw new Error('Access token cookie is missing.');
-  }
-
-  return cookie.split(';', 1)[0];
-}
 
 function authorizationFixture(
   response: request.Response,
