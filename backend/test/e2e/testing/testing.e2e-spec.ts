@@ -3,9 +3,6 @@ import {
   INestApplication,
   type ExecutionContext,
 } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
-import request from 'supertest';
-import { App } from 'supertest/types';
 import { AppConfigService } from 'src/config/app-config.service';
 import { AuthSession } from 'src/modules/auth/sessions/entities/auth-session.entity';
 import {
@@ -16,11 +13,14 @@ import {
   RoleAssignment,
   TenantRoleCode,
 } from 'src/modules/authorization/entities/role-assignment.entity';
-import { TestingGuard } from 'src/modules/testing/testing.guard';
 import { Branch } from 'src/modules/branches/entities/branch.entity';
 import { Tenant } from 'src/modules/tenants/entities/tenant.entity';
+import { TestingGuard } from 'src/modules/testing/testing.guard';
 import { User } from 'src/modules/users/entities/user.entity';
-import { closeApp, initApp } from './app.setup';
+import request from 'supertest';
+import { App } from 'supertest/types';
+import { DataSource, Repository } from 'typeorm';
+import { closeApp, initApp } from '../../app.setup';
 
 const E2E_USER = {
   email: 'e2e.user@dentflow.test',

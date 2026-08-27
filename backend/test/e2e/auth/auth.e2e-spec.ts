@@ -1,31 +1,26 @@
 import { INestApplication } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
-import request from 'supertest';
-import { compare, hash } from 'src/common/utils/hash.util';
+import { compare } from 'src/common/utils/hash.util';
 import { AppConfigService } from 'src/config/app-config.service';
-import {
-  PlatformRoleAssignment,
-  PlatformRoleCode,
-} from 'src/modules/authorization/entities/platform-role-assignment.entity';
-import {
-  RoleAssignment,
-  TenantRoleCode,
-} from 'src/modules/authorization/entities/role-assignment.entity';
 import {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
 } from 'src/modules/auth/auth.constants';
 import { AuthSession } from 'src/modules/auth/sessions/entities/auth-session.entity';
-import {
-  Branch,
-  BranchStatus,
-} from 'src/modules/branches/entities/branch.entity';
-import {
-  Tenant,
-  TenantStatus,
-} from 'src/modules/tenants/entities/tenant.entity';
+import { PlatformRoleCode } from 'src/modules/authorization/entities/platform-role-assignment.entity';
+import { TenantRoleCode } from 'src/modules/authorization/entities/role-assignment.entity';
+import { BranchStatus } from 'src/modules/branches/entities/branch.entity';
+import { TenantStatus } from 'src/modules/tenants/entities/tenant.entity';
 import { User, UserStatus } from 'src/modules/users/entities/user.entity';
-import { closeApp, initApp } from './app.setup';
+import request from 'supertest';
+import { createAuthFixtures } from 'test/fixtures/auth.fixture';
+import {
+  cookiePair,
+  cookieValue,
+  findSetCookie,
+} from 'test/helpers/cookie.helper';
+import { resetDbToBaseState } from 'test/helpers/db.helper';
+import { DataSource, Repository } from 'typeorm';
+import { closeApp, initApp } from '../../app.setup';
 
 const PASSWORD = 'synthetic-demo-password';
 
@@ -34,37 +29,25 @@ describe('Authentication (e2e)', () => {
   let dataSource: DataSource;
   let usersRepository: Repository<User>;
   let sessionsRepository: Repository<AuthSession>;
-  let tenantsRepository: Repository<Tenant>;
-  let branchesRepository: Repository<Branch>;
-  let platformRoleAssignmentsRepository: Repository<PlatformRoleAssignment>;
-  let roleAssignmentsRepository: Repository<RoleAssignment>;
   let appConfig: AppConfigService;
+  let authFixtures: ReturnType<typeof createAuthFixtures>;
 
   beforeAll(async () => {
     app = await initApp();
     dataSource = app.get(DataSource);
     usersRepository = dataSource.getRepository(User);
     sessionsRepository = dataSource.getRepository(AuthSession);
-    tenantsRepository = dataSource.getRepository(Tenant);
-    branchesRepository = dataSource.getRepository(Branch);
-    platformRoleAssignmentsRepository = dataSource.getRepository(
-      PlatformRoleAssignment,
-    );
-    roleAssignmentsRepository = dataSource.getRepository(RoleAssignment);
     appConfig = app.get(AppConfigService);
+    authFixtures = createAuthFixtures({
+      manager: dataSource.manager,
+      password: PASSWORD,
+      bcryptSaltRounds: appConfig.securityConfig.bcryptSaltRounds,
+    });
     await dataSource.runMigrations();
   });
 
   beforeEach(async () => {
-    await sessionsRepository.createQueryBuilder().delete().execute();
-    await roleAssignmentsRepository.createQueryBuilder().delete().execute();
-    await platformRoleAssignmentsRepository
-      .createQueryBuilder()
-      .delete()
-      .execute();
-    await branchesRepository.createQueryBuilder().delete().execute();
-    await tenantsRepository.createQueryBuilder().delete().execute();
-    await usersRepository.createQueryBuilder().delete().execute();
+    await resetDbToBaseState(app);
   });
 
   afterAll(async () => {
@@ -72,7 +55,7 @@ describe('Authentication (e2e)', () => {
   });
 
   it('logs in a synthetic active user and stores only hashed refresh state', async () => {
-    const user = await createUser();
+    const user = await authFixtures.createUser();
 
     const response = await request(app.getHttpServer())
       .post('/auth/login')
@@ -90,21 +73,24 @@ describe('Authentication (e2e)', () => {
     expect(response.body).not.toHaveProperty('accessToken');
     expect(response.body).not.toHaveProperty('refreshToken');
 
-    const accessCookie = findSetCookie(response, ACCESS_TOKEN_COOKIE);
-    const refreshCookie = findSetCookie(response, REFRESH_TOKEN_COOKIE);
-    expect(accessCookie).toContain('HttpOnly');
-    expect(accessCookie).toContain('SameSite=Lax');
-    expect(accessCookie).toContain('Path=/');
-    expect(refreshCookie).toContain('HttpOnly');
-    expect(refreshCookie).toContain('SameSite=Lax');
-    expect(refreshCookie).toContain('Path=/auth');
+    const accessSetCookie = findSetCookie(response, ACCESS_TOKEN_COOKIE);
+    const refreshSetCookie = findSetCookie(response, REFRESH_TOKEN_COOKIE);
+    expect(accessSetCookie).toContain('HttpOnly');
+    expect(accessSetCookie).toContain('SameSite=Lax');
+    expect(accessSetCookie).toContain('Path=/');
+    expect(refreshSetCookie).toContain('HttpOnly');
+    expect(refreshSetCookie).toContain('SameSite=Lax');
+    expect(refreshSetCookie).toContain('Path=/auth');
 
     const session = await sessionsRepository
       .createQueryBuilder('session')
       .addSelect('session.refreshTokenHash')
       .where('session.userId = :userId', { userId: user.id })
       .getOneOrFail();
-    const rawRefreshToken = cookieValue(refreshCookie, REFRESH_TOKEN_COOKIE);
+    const rawRefreshToken = cookieValue(
+      refreshSetCookie,
+      REFRESH_TOKEN_COOKIE,
+    );
 
     expect(session.refreshTokenHash).not.toBe(rawRefreshToken);
     await expect(
@@ -113,7 +99,7 @@ describe('Authentication (e2e)', () => {
   });
 
   it('returns the active authenticated user from the access-token cookie', async () => {
-    const user = await createUser();
+    const user = await authFixtures.createUser();
     const agent = request.agent(app.getHttpServer());
 
     await agent
@@ -139,90 +125,47 @@ describe('Authentication (e2e)', () => {
   });
 
   it('returns the same active, scoped authorization snapshot from login, refresh, and me', async () => {
-    const user = await createUser();
-    const tenant = await tenantsRepository.save(
-      tenantsRepository.create({
+    const user = await authFixtures.createUser();
+    const { tenant, branch } = await authFixtures.createTenantWithBranch({
+      tenant: {
         legalName: 'Synthetic Dental Group LLC',
         displayName: 'Synthetic Dental Group',
         slug: 'synthetic-dental-group',
         billingEmail: 'billing@synthetic.test',
-        contactEmail: null,
-        contactPhone: null,
-        logoUrl: null,
-        defaultLocale: 'vi',
-        defaultTimezone: 'Asia/Ho_Chi_Minh',
         status: TenantStatus.SUSPENDED,
-      }),
-    );
-    const branch = await branchesRepository.save(
-      branchesRepository.create({
-        tenantId: tenant.id,
+      },
+      branch: {
         slug: 'synthetic-district-1',
         name: 'Synthetic District 1',
         address: '1 Synthetic Street',
         phone: '+84900000001',
-        timezone: null,
         status: BranchStatus.INACTIVE,
-      }),
-    );
+      },
+    });
 
-    await platformRoleAssignmentsRepository.save(
-      platformRoleAssignmentsRepository.create({
-        userId: user.id,
-        roleCode: PlatformRoleCode.PLATFORM_ADMIN,
-        assignedByUserId: null,
-        assignmentReason: null,
-        revokedByUserId: null,
-        revokedAt: null,
-        revocationReason: null,
-      }),
+    await authFixtures.grantPlatformRole(user, PlatformRoleCode.PLATFORM_ADMIN);
+    await authFixtures.grantTenantRole(
+      user,
+      tenant,
+      TenantRoleCode.TENANT_ADMIN,
     );
-    await roleAssignmentsRepository.save([
-      roleAssignmentsRepository.create({
-        userId: user.id,
-        tenantId: tenant.id,
-        branchId: null,
-        roleCode: TenantRoleCode.TENANT_ADMIN,
-        assignedByUserId: null,
-        assignmentReason: null,
-        revokedByUserId: null,
-        revokedAt: null,
-        revocationReason: null,
-      }),
-      roleAssignmentsRepository.create({
-        userId: user.id,
-        tenantId: tenant.id,
-        branchId: branch.id,
-        roleCode: TenantRoleCode.RECEPTIONIST,
-        assignedByUserId: null,
-        assignmentReason: null,
-        revokedByUserId: null,
-        revokedAt: null,
-        revocationReason: null,
-      }),
-      roleAssignmentsRepository.create({
-        userId: user.id,
-        tenantId: tenant.id,
-        branchId: branch.id,
-        roleCode: TenantRoleCode.DENTIST,
-        assignedByUserId: null,
-        assignmentReason: null,
-        revokedByUserId: null,
-        revokedAt: null,
-        revocationReason: null,
-      }),
-      roleAssignmentsRepository.create({
-        userId: user.id,
-        tenantId: tenant.id,
-        branchId: branch.id,
-        roleCode: TenantRoleCode.BRANCH_ADMIN,
-        assignedByUserId: null,
+    await authFixtures.grantBranchRole(
+      user,
+      branch,
+      TenantRoleCode.RECEPTIONIST,
+    );
+    await authFixtures.grantBranchRole(user, branch, TenantRoleCode.DENTIST);
+    await authFixtures.grantBranchRole(
+      user,
+      branch,
+      TenantRoleCode.BRANCH_ADMIN,
+      {
         assignmentReason: 'Synthetic revoked grant',
-        revokedByUserId: user.id,
+        revokedBy: user,
         revokedAt: new Date(),
         revocationReason: 'Synthetic test revocation',
-      }),
-    ]);
+      },
+    );
 
     const expectedUser = {
       id: user.id,
@@ -304,8 +247,8 @@ describe('Authentication (e2e)', () => {
   });
 
   it('rejects invalid and disabled logins, locks repeated failures, and resets a recovered account', async () => {
-    const user = await createUser();
-    const disabledUser = await createUser({
+    const user = await authFixtures.createUser();
+    const disabledUser = await authFixtures.createUser({
       email: 'disabled-user@example.test',
       status: UserStatus.DISABLED,
     });
@@ -356,15 +299,16 @@ describe('Authentication (e2e)', () => {
   });
 
   it('rotates refresh tokens and rejects tampered, stale, expired, and missing cookies', async () => {
-    const user = await createUser();
+    const user = await authFixtures.createUser();
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: user.email, password: PASSWORD })
       .expect(200);
-    const originalRefreshCookie = findSetCookie(
+    const originalRefreshSetCookie = findSetCookie(
       loginResponse,
       REFRESH_TOKEN_COOKIE,
     );
+    const originalRefreshCookie = cookiePair(originalRefreshSetCookie);
 
     await request(app.getHttpServer())
       .post('/auth/refresh')
@@ -375,13 +319,14 @@ describe('Authentication (e2e)', () => {
       .set('Cookie', originalRefreshCookie)
       .expect(401);
 
-    const newRefreshCookie = findSetCookie(
+    const newRefreshSetCookie = findSetCookie(
       await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email: user.email, password: PASSWORD })
         .expect(200),
       REFRESH_TOKEN_COOKIE,
     );
+    const newRefreshCookie = cookiePair(newRefreshSetCookie);
     const tamperedRefreshCookie = `${REFRESH_TOKEN_COOKIE}=${cookieValue(
       newRefreshCookie,
       REFRESH_TOKEN_COOKIE,
@@ -412,7 +357,7 @@ describe('Authentication (e2e)', () => {
   });
 
   it('logs out only the current device session and clears both cookies', async () => {
-    const user = await createUser();
+    const user = await authFixtures.createUser();
     const deviceOne = request.agent(app.getHttpServer());
     const deviceTwo = request.agent(app.getHttpServer());
 
@@ -458,53 +403,7 @@ describe('Authentication (e2e)', () => {
       deniedResponse.headers['access-control-allow-origin'],
     ).toBeUndefined();
   });
-
-  async function createUser(
-    overrides: Partial<Pick<User, 'email' | 'fullName' | 'status'>> = {},
-  ): Promise<User> {
-    const email = overrides.email ?? 'active-user@example.test';
-
-    return usersRepository.save(
-      usersRepository.create({
-        email,
-        emailNormalized: email.toLowerCase(),
-        fullName: overrides.fullName ?? 'Synthetic User',
-        status: overrides.status ?? UserStatus.ACTIVE,
-        passwordHash: await hash(
-          PASSWORD,
-          appConfig.securityConfig.bcryptSaltRounds,
-        ),
-        passwordChangedAt: null,
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-        lastLoginAt: null,
-        emailVerifiedAt: null,
-      }),
-    );
-  }
 });
-
-function findSetCookie(response: request.Response, name: string): string {
-  const setCookies: unknown = response.headers['set-cookie'];
-  if (!Array.isArray(setCookies)) {
-    throw new Error(`Missing ${name} cookie.`);
-  }
-
-  const cookie = setCookies.find(
-    (value): value is string =>
-      typeof value === 'string' && value.startsWith(`${name}=`),
-  );
-
-  if (!cookie) {
-    throw new Error(`Missing ${name} cookie.`);
-  }
-
-  return cookie;
-}
-
-function cookieValue(cookie: string, name: string): string {
-  return cookie.slice(`${name}=`.length).split(';', 1)[0];
-}
 
 function emptyAuthorization() {
   return {

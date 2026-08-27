@@ -1,30 +1,19 @@
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { hash } from 'src/common/utils/hash.util';
 import { AppConfigService } from 'src/config/app-config.service';
 import { ACCESS_TOKEN_COOKIE } from 'src/modules/auth/auth.constants';
-import { AuthSession } from 'src/modules/auth/sessions/entities/auth-session.entity';
-import {
-  PlatformRoleAssignment,
-  PlatformRoleCode,
-} from 'src/modules/authorization/entities/platform-role-assignment.entity';
+import { PlatformRoleCode } from 'src/modules/authorization/entities/platform-role-assignment.entity';
 import {
   RoleAssignment,
   TenantRoleCode,
 } from 'src/modules/authorization/entities/role-assignment.entity';
-import {
-  Branch,
-  BranchStatus,
-} from 'src/modules/branches/entities/branch.entity';
-import {
-  Tenant,
-  TenantStatus,
-} from 'src/modules/tenants/entities/tenant.entity';
 import { User, UserStatus } from 'src/modules/users/entities/user.entity';
 import request from 'supertest';
+import { createAuthFixtures } from 'test/fixtures/auth.fixture';
 import { loginAs } from 'test/helpers/auth.helper';
+import { resetDbToBaseState } from 'test/helpers/db.helper';
 import { DataSource, Repository } from 'typeorm';
-import { closeApp, initApp } from './app.setup';
+import { closeApp, initApp } from '../../app.setup';
 
 const PASSWORD = 'synthetic-authorization-password';
 
@@ -45,11 +34,8 @@ describe('Authorization guards (e2e)', () => {
   let appConfig: AppConfigService;
   let jwtService: JwtService;
   let usersRepository: Repository<User>;
-  let sessionsRepository: Repository<AuthSession>;
-  let tenantsRepository: Repository<Tenant>;
-  let branchesRepository: Repository<Branch>;
-  let platformAssignmentsRepository: Repository<PlatformRoleAssignment>;
   let roleAssignmentsRepository: Repository<RoleAssignment>;
+  let authFixtures: ReturnType<typeof createAuthFixtures>;
 
   beforeAll(async () => {
     app = await initApp();
@@ -57,23 +43,17 @@ describe('Authorization guards (e2e)', () => {
     appConfig = app.get(AppConfigService);
     jwtService = app.get(JwtService);
     usersRepository = dataSource.getRepository(User);
-    sessionsRepository = dataSource.getRepository(AuthSession);
-    tenantsRepository = dataSource.getRepository(Tenant);
-    branchesRepository = dataSource.getRepository(Branch);
-    platformAssignmentsRepository = dataSource.getRepository(
-      PlatformRoleAssignment,
-    );
     roleAssignmentsRepository = dataSource.getRepository(RoleAssignment);
+    authFixtures = createAuthFixtures({
+      manager: dataSource.manager,
+      password: PASSWORD,
+      bcryptSaltRounds: appConfig.securityConfig.bcryptSaltRounds,
+    });
     await dataSource.runMigrations();
   });
 
   beforeEach(async () => {
-    await sessionsRepository.createQueryBuilder().delete().execute();
-    await roleAssignmentsRepository.createQueryBuilder().delete().execute();
-    await platformAssignmentsRepository.createQueryBuilder().delete().execute();
-    await branchesRepository.createQueryBuilder().delete().execute();
-    await tenantsRepository.createQueryBuilder().delete().execute();
-    await usersRepository.createQueryBuilder().delete().execute();
+    await resetDbToBaseState(app);
   });
 
   afterAll(async () => {
@@ -81,7 +61,9 @@ describe('Authorization guards (e2e)', () => {
   });
 
   it('rejects missing, malformed, wrong-type, and expired access tokens', async () => {
-    const user = await createUser('token-user@authorization.test');
+    const user = await authFixtures.createUser({
+      email: 'token-user@authorization.test',
+    });
 
     await request(app.getHttpServer())
       .get('/testing/authorization/platform')
@@ -117,31 +99,58 @@ describe('Authorization guards (e2e)', () => {
   });
 
   it('enforces platform, tenant, and branch permissions without cross-scope access', async () => {
-    const tenantA = await createTenant('synthetic-tenant-a');
-    const tenantB = await createTenant('synthetic-tenant-b');
-    const branchA1 = await createBranch(tenantA, 'district-1');
-    const branchA2 = await createBranch(tenantA, 'district-2');
-    const branchB1 = await createBranch(tenantB, 'district-b1');
-    const platformUser = await createUser('platform@authorization.test');
-    const tenantAdmin = await createUser('tenant-admin@authorization.test');
-    const branchUser = await createUser('branch-user@authorization.test');
-    const partialBranchUser = await createUser(
-      'partial-branch-user@authorization.test',
-    );
-    const noRoleUser = await createUser('no-role@authorization.test');
+    const tenantA = await authFixtures.createTenant({
+      slug: 'synthetic-tenant-a',
+    });
+    const tenantB = await authFixtures.createTenant({
+      slug: 'synthetic-tenant-b',
+    });
+    const branchA1 = await authFixtures.createBranch(tenantA, {
+      slug: 'district-1',
+    });
+    const branchA2 = await authFixtures.createBranch(tenantA, {
+      slug: 'district-2',
+    });
+    const branchB1 = await authFixtures.createBranch(tenantB, {
+      slug: 'district-b1',
+    });
+    const platformUser = await authFixtures.createUser({
+      email: 'platform@authorization.test',
+    });
+    const tenantAdmin = await authFixtures.createUser({
+      email: 'tenant-admin@authorization.test',
+    });
+    const branchUser = await authFixtures.createUser({
+      email: 'branch-user@authorization.test',
+    });
+    const partialBranchUser = await authFixtures.createUser({
+      email: 'partial-branch-user@authorization.test',
+    });
+    const noRoleUser = await authFixtures.createUser({
+      email: 'no-role@authorization.test',
+    });
 
-    await grantPlatform(platformUser, PlatformRoleCode.PLATFORM_ADMIN);
-    await grantTenant(tenantAdmin, tenantA, TenantRoleCode.TENANT_ADMIN);
-    await grantBranch(
-      branchUser,
+    await authFixtures.grantPlatformRole(
+      platformUser,
+      PlatformRoleCode.PLATFORM_ADMIN,
+    );
+    await authFixtures.grantTenantRole(
+      tenantAdmin,
       tenantA,
+      TenantRoleCode.TENANT_ADMIN,
+    );
+    await authFixtures.grantBranchRole(
+      branchUser,
       branchA1,
       TenantRoleCode.RECEPTIONIST,
     );
-    await grantBranch(branchUser, tenantA, branchA1, TenantRoleCode.DENTIST);
-    await grantBranch(
+    await authFixtures.grantBranchRole(
+      branchUser,
+      branchA1,
+      TenantRoleCode.DENTIST,
+    );
+    await authFixtures.grantBranchRole(
       partialBranchUser,
-      tenantA,
       branchA1,
       TenantRoleCode.RECEPTIONIST,
     );
@@ -235,13 +244,20 @@ describe('Authorization guards (e2e)', () => {
   });
 
   it('enforces role revocation on the next scoped request', async () => {
-    const tenant = await createTenant('revoke-tenant');
-    const branch = await createBranch(tenant, 'revoke-branch');
-    const user = await createUser('revoke-user@authorization.test');
-    await grantBranch(user, tenant, branch, TenantRoleCode.RECEPTIONIST);
-    const dentistGrant = await grantBranch(
+    const { tenant, branch } = await authFixtures.createTenantWithBranch({
+      tenant: { slug: 'revoke-tenant' },
+      branch: { slug: 'revoke-branch' },
+    });
+    const user = await authFixtures.createUser({
+      email: 'revoke-user@authorization.test',
+    });
+    await authFixtures.grantBranchRole(
       user,
-      tenant,
+      branch,
+      TenantRoleCode.RECEPTIONIST,
+    );
+    const dentistGrant = await authFixtures.grantBranchRole(
+      user,
       branch,
       TenantRoleCode.DENTIST,
     );
@@ -263,24 +279,36 @@ describe('Authorization guards (e2e)', () => {
   });
 
   it('keeps a valid access token usable by generic guards after disable or logout', async () => {
-    const tenant = await createTenant('token-lifecycle-tenant');
-    const branch = await createBranch(tenant, 'token-lifecycle-branch');
-    const disabledUser = await createUser('disabled@authorization.test');
-    const loggedOutUser = await createUser('logout@authorization.test');
-    await grantBranch(
+    const { tenant, branch } = await authFixtures.createTenantWithBranch({
+      tenant: { slug: 'token-lifecycle-tenant' },
+      branch: { slug: 'token-lifecycle-branch' },
+    });
+    const disabledUser = await authFixtures.createUser({
+      email: 'disabled@authorization.test',
+    });
+    const loggedOutUser = await authFixtures.createUser({
+      email: 'logout@authorization.test',
+    });
+    await authFixtures.grantBranchRole(
       disabledUser,
-      tenant,
       branch,
       TenantRoleCode.RECEPTIONIST,
     );
-    await grantBranch(disabledUser, tenant, branch, TenantRoleCode.DENTIST);
-    await grantBranch(
+    await authFixtures.grantBranchRole(
+      disabledUser,
+      branch,
+      TenantRoleCode.DENTIST,
+    );
+    await authFixtures.grantBranchRole(
       loggedOutUser,
-      tenant,
       branch,
       TenantRoleCode.RECEPTIONIST,
     );
-    await grantBranch(loggedOutUser, tenant, branch, TenantRoleCode.DENTIST);
+    await authFixtures.grantBranchRole(
+      loggedOutUser,
+      branch,
+      TenantRoleCode.DENTIST,
+    );
     const route = `/testing/authorization/tenants/${tenant.slug}/branches/${branch.slug}`;
 
     const disabledSession = await loginAs(app, {
@@ -303,115 +331,6 @@ describe('Authorization guards (e2e)', () => {
       .set('Cookie', loggedOutSession.accessCookie)
       .expect(200);
   });
-
-  async function createUser(email: string): Promise<User> {
-    return usersRepository.save(
-      usersRepository.create({
-        email,
-        emailNormalized: email.toLowerCase(),
-        fullName: 'Synthetic Authorization User',
-        status: UserStatus.ACTIVE,
-        passwordHash: await hash(
-          PASSWORD,
-          appConfig.securityConfig.bcryptSaltRounds,
-        ),
-        passwordChangedAt: null,
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-        lastLoginAt: null,
-        emailVerifiedAt: null,
-      }),
-    );
-  }
-
-  async function createTenant(slug: string): Promise<Tenant> {
-    return tenantsRepository.save(
-      tenantsRepository.create({
-        legalName: `Synthetic ${slug} LLC`,
-        displayName: `Synthetic ${slug}`,
-        slug,
-        billingEmail: `${slug}@billing.test`,
-        contactEmail: null,
-        contactPhone: null,
-        logoUrl: null,
-        defaultLocale: 'vi',
-        defaultTimezone: 'Asia/Ho_Chi_Minh',
-        status: TenantStatus.ACTIVE,
-      }),
-    );
-  }
-
-  async function createBranch(tenant: Tenant, slug: string): Promise<Branch> {
-    return branchesRepository.save(
-      branchesRepository.create({
-        tenantId: tenant.id,
-        slug,
-        name: `Synthetic ${tenant.slug} ${slug}`,
-        address: '1 Synthetic Street',
-        phone: '+84900000000',
-        timezone: null,
-        status: BranchStatus.ACTIVE,
-      }),
-    );
-  }
-
-  async function grantPlatform(
-    user: User,
-    roleCode: PlatformRoleCode,
-  ): Promise<PlatformRoleAssignment> {
-    return platformAssignmentsRepository.save(
-      platformAssignmentsRepository.create({
-        userId: user.id,
-        roleCode,
-        assignedByUserId: null,
-        assignmentReason: null,
-        revokedByUserId: null,
-        revokedAt: null,
-        revocationReason: null,
-      }),
-    );
-  }
-
-  async function grantTenant(
-    user: User,
-    tenant: Tenant,
-    roleCode: TenantRoleCode.TENANT_ADMIN,
-  ): Promise<RoleAssignment> {
-    return roleAssignmentsRepository.save(
-      roleAssignmentsRepository.create({
-        userId: user.id,
-        tenantId: tenant.id,
-        branchId: null,
-        roleCode,
-        assignedByUserId: null,
-        assignmentReason: null,
-        revokedByUserId: null,
-        revokedAt: null,
-        revocationReason: null,
-      }),
-    );
-  }
-
-  async function grantBranch(
-    user: User,
-    tenant: Tenant,
-    branch: Branch,
-    roleCode: Exclude<TenantRoleCode, TenantRoleCode.TENANT_ADMIN>,
-  ): Promise<RoleAssignment> {
-    return roleAssignmentsRepository.save(
-      roleAssignmentsRepository.create({
-        userId: user.id,
-        tenantId: tenant.id,
-        branchId: branch.id,
-        roleCode,
-        assignedByUserId: null,
-        assignmentReason: null,
-        revokedByUserId: null,
-        revokedAt: null,
-        revocationReason: null,
-      }),
-    );
-  }
 });
 
 function authorizationFixture(
