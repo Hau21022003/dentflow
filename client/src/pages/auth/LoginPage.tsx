@@ -64,10 +64,6 @@ export function LoginPage() {
     () => createLoginSchema(tCommon, validation),
     [tCommon, validation],
   );
-  const postLoginPath = useMemo(
-    () => resolvePostLoginPath(location.state),
-    [location.state],
-  );
   const {
     clearErrors,
     control,
@@ -86,8 +82,8 @@ export function LoginPage() {
     clearErrors("root.server");
 
     try {
-      await loginMutation.mutateAsync(credentials);
-      navigate(postLoginPath, { replace: true });
+      const user = await loginMutation.mutateAsync(credentials);
+      navigate(resolvePostLoginPath(location.state, user), { replace: true });
     } catch (error) {
       const apiError = ApiError.from(error);
 

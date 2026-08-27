@@ -38,7 +38,6 @@ export class TestingService {
       await queryRunner.commitTransaction();
 
       // await this.appCacheService.clear();
-      console.log('Database reset successfully');
     } catch (error) {
       if (queryRunner.isTransactionActive) {
         await queryRunner.rollbackTransaction();

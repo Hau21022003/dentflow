@@ -11,6 +11,23 @@ export function SelectValue({ ...props }: ComponentProps<typeof SelectPrimitive.
   return <SelectPrimitive.Value data-slot="select-value" {...props} />;
 }
 
+export function SelectGroup({ ...props }: ComponentProps<typeof SelectPrimitive.Group>) {
+  return <SelectPrimitive.Group data-slot="select-group" {...props} />;
+}
+
+export function SelectLabel({
+  className,
+  ...props
+}: ComponentProps<typeof SelectPrimitive.Label>) {
+  return (
+    <SelectPrimitive.Label
+      data-slot="select-label"
+      className={cn("px-2 py-1.5 text-xs font-semibold text-muted-foreground", className)}
+      {...props}
+    />
+  );
+}
+
 export function SelectTrigger({
   className,
   children,

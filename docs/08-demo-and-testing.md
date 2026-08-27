@@ -41,11 +41,22 @@ Playwright tự chạy backend ở `http://127.0.0.1:3001` và frontend ở `htt
 
 ## Dữ liệu synthetic
 
-Tài khoản browser E2E được seed lại trước mỗi file test:
+Seed được tách theo môi trường và luôn nạp theo thứ tự `Tenant → Branch → User → role assignment`. Toàn bộ dữ liệu là synthetic; mọi tài khoản dưới đây có mật khẩu `12345`, chỉ dùng cho development/test local.
 
-| Email                    | Password                 | Mục đích                                                           |
-| ------------------------ | ------------------------ | ------------------------------------------------------------------ |
-| `e2e.user@dentflow.test` | `synthetic-e2e-password` | Kiểm tra đăng nhập UI và làm fixture cho các browser E2E tiếp theo |
+`backend/src/database/seeds/dev/` có dữ liệu mở rộng để kiểm tra đa tenant: ba tenant, năm branch và tám user. Các role đang có gồm một `PLATFORM_ADMIN`, tenant-wide `TENANT_ADMIN`, cùng `BRANCH_ADMIN`, `RECEPTIONIST` và `DENTIST` ở branch scope. `Riverfront Gò Vấp` là branch `INACTIVE` để kiểm tra UI/lifecycle; nó không có grant active.
+
+| Email                                  | Scope / role                                                   |
+| -------------------------------------- | -------------------------------------------------------------- |
+| `platform.admin@dentflow.local`        | Platform: `PLATFORM_ADMIN`                                     |
+| `brightsmile.admin@dentflow.local`     | BrightSmile: `TENANT_ADMIN`, thêm `DENTIST` tại Quận 1         |
+| `brightsmile.ops@dentflow.local`       | BrightSmile: `BRANCH_ADMIN` tại Quận 1 và Thủ Đức              |
+| `brightsmile.reception@dentflow.local` | BrightSmile Quận 1: `RECEPTIONIST`                             |
+| `brightsmile.dentist@dentflow.local`   | BrightSmile Quận 1 và Thủ Đức: `DENTIST`                       |
+| `harmony.admin@dentflow.local`         | Harmony: `TENANT_ADMIN`                                        |
+| `harmony.reception@dentflow.local`     | Harmony Quận 7: `RECEPTIONIST`                                 |
+| `riverfront.admin@dentflow.local`      | Riverfront: `TENANT_ADMIN`, thêm `BRANCH_ADMIN` tại Bình Thạnh |
+
+`backend/src/database/seeds/test/` giữ fixture nhỏ hơn cho test lặp lại: hai tenant, ba branch, bốn user, một grant platform và sáu grant tenant/branch. Browser E2E tiếp tục dùng `e2e.user@dentflow.test`, hiện là `TENANT_ADMIN` của `BrightSmile Test`. Các fixture test còn lại là `platform.admin@dentflow.test`, `branch.admin@dentflow.test` (`BRANCH_ADMIN` và `RECEPTIONIST` tại Central lẫn West) và `dentist@dentflow.test` (`DENTIST` tại Harmony Test).
 
 Không đưa dữ liệu bệnh nhân thật vào seed hoặc test. Khi bổ sung luồng nghiệp vụ mới, chỉ thêm dữ liệu synthetic với tenant context đã được xác minh bởi backend.
 

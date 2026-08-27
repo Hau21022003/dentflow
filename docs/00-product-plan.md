@@ -104,7 +104,7 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 ### Trải nghiệm và kỹ thuật
 
 - React + TypeScript frontend; NestJS REST API; PostgreSQL và TypeOrm.
-- URL chứa `tenantSlug` (ví dụ `/t/tam-anh/dashboard`) cho ứng dụng demo. Có thể mở rộng sang subdomain khi deploy.
+- URL chứa `tenantSlug` và, với ngữ cảnh chi nhánh, `branchSlug` scoped theo tenant (ví dụ `/workspace/tam-anh/branches/quan-1/dashboard`). `branchId` vẫn là định danh nội bộ/FK, không dùng làm cơ chế cấp quyền. Có thể mở rộng sang subdomain khi deploy.
 - Backend auth hiện dùng JWT access token ngắn hạn kết hợp refresh token; mật khẩu và refresh token chỉ lưu hash bcrypt, còn các secrets chỉ nằm trong biến môi trường. Cả hai JWT được gửi bằng cookie `HttpOnly`, host-only, `SameSite=Lax`; không trả raw token trong JSON.
 - i18n Việt/Anh, `Asia/Ho_Chi_Minh` là timezone mặc định và định dạng VND theo locale.
 - Docker Compose cho API, frontend và PostgreSQL; seed tối thiểu hai tenant độc lập.
@@ -125,11 +125,11 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 
 ## 6. API và nguyên tắc bảo mật
 
-Các API nghiệp vụ sẽ được tổ chức theo tiền tố `/api/v1`. Trong khi global prefix chưa được chuẩn hoá ở backend, auth giữ các route hiện hành `/auth/*` dưới API base URL. Tenant context lấy từ `tenantSlug` trong route/header đã được xác minh với session; không tin tưởng tenant ID do client tự gửi.
+Các API nghiệp vụ sẽ được tổ chức theo tiền tố `/api/v1`. Trong khi global prefix chưa được chuẩn hoá ở backend, auth giữ các route hiện hành `/auth/*` dưới API base URL. Backend hiện lấy tenant context từ `:tenantSlug` trong route; branch context lấy từ cặp `:tenantSlug` + `:branchSlug`. Không nhận tenant/branch context từ header, body hoặc query và không tin tưởng tenant ID do client tự gửi.
 
-- `POST /auth/login`: nhận email/password, kiểm tra trạng thái và login lock, tạo một `AuthSession` cho thiết bị hiện tại, rồi đặt access/refresh cookies và chỉ trả user an toàn (`id`, `email`, `fullName`).
-- `POST /auth/refresh`: chỉ đọc refresh cookie, xác minh JWT, session và bcrypt hash, rồi rotate refresh token trong transaction/row lock trước khi đặt lại hai cookies.
-- `GET /auth/me`: yêu cầu access-token cookie hợp lệ, lấy user ID từ JWT đã xác minh rồi đọc lại user đang `ACTIVE`; chỉ trả user an toàn (`id`, `email`, `fullName`) và không nhận user hay tenant ID từ client.
+- `POST /auth/login`: nhận email/password, kiểm tra trạng thái và login lock, tạo một `AuthSession` cho thiết bị hiện tại, rồi đặt access/refresh cookies và trả user an toàn cùng authorization snapshot active.
+- `POST /auth/refresh`: chỉ đọc refresh cookie, xác minh JWT, session và bcrypt hash, rồi rotate refresh token trong transaction/row lock trước khi đặt lại hai cookies và trả authorization snapshot mới tính từ database.
+- `GET /auth/me`: yêu cầu access-token cookie hợp lệ, lấy user ID từ JWT đã xác minh rồi đọc lại user đang `ACTIVE`; trả `id`, `email`, `fullName` và authorization snapshot, không nhận user hay tenant ID từ client.
 - `POST /auth/logout`: revoke session của refresh cookie hiện tại, xoá hai cookies và không làm logout các thiết bị khác. Auth endpoint không nhận `tenantId`; các guard nghiệp vụ sau này vẫn phải lấy tenant context từ xác thực đã kiểm chứng.
 - `GET/POST /tenants`, `GET/PATCH /tenants/:id`: chỉ Platform Admin.
 - `GET/POST /branches`, `GET/POST /users`, `POST /role-assignments`: Tenant/Branch Admin theo phạm vi.
@@ -139,6 +139,8 @@ Các API nghiệp vụ sẽ được tổ chức theo tiền tố `/api/v1`. Tro
 - `POST /billing/checkout-session`, `POST /billing/webhook`; webhook không dùng JWT mà xác minh chữ ký Stripe.
 
 Mọi endpoint nghiệp vụ phải áp dụng theo thứ tự: xác thực → lấy tenant context → kiểm tra subscription → kiểm tra role/phạm vi branch → truy vấn có điều kiện `tenantId`/`branchId`.
+
+Authorization snapshot trong auth response gồm platform role/permission và các tenant/branch grant còn hiệu lực, chỉ để client phân bổ UI theo context. Snapshot không có assignment ID, actor, reason hoặc timestamp; không phải nguồn xác thực quyền. Backend vẫn phải tính và kiểm tra quyền từ database trên từng endpoint nghiệp vụ.
 
 ## 7. Kiểm thử và demo bắt buộc
 

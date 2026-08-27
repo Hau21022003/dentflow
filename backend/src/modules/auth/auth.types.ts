@@ -1,3 +1,5 @@
+import type { AuthorizationSnapshot } from '../authorization/authorization.types';
+
 export interface AccessTokenPayload {
   sub: string;
   sid: string;
@@ -20,6 +22,7 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   fullName: string;
+  authorization: AuthorizationSnapshot;
 }
 
 export interface AuthResult {

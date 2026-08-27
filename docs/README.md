@@ -10,6 +10,7 @@ Thư mục này là nguồn thông tin sản phẩm và kỹ thuật chính củ
 | [03-role-workflows.md](./03-role-workflows.md)     | Phạm vi quyền, bàn giao công việc và luồng hằng ngày của từng vai trò                  |
 | [04-tenant-admin.md](./04-tenant-admin.md)         | Vận hành Tenant Admin: cấu hình tenant, chi nhánh, nhân sự, giám sát và SaaS billing   |
 | [08-demo-and-testing.md](./08-demo-and-testing.md) | Tài khoản dữ liệu mẫu, browser E2E và môi trường test tách biệt                        |
+| [flows/README.md](./flows/README.md)               | Sơ đồ Mermaid đọc nhanh cho developer; không thay thế tài liệu domain chuẩn            |
 
 ## Quy ước làm việc với Codex
 

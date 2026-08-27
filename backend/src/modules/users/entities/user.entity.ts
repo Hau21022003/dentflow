@@ -9,6 +9,8 @@ import {
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
+import { PlatformRoleAssignment } from '../../authorization/entities/platform-role-assignment.entity';
+import { RoleAssignment } from '../../authorization/entities/role-assignment.entity';
 import { PasskeyCredential } from '../../auth/passkeys/entities/passkey-credential.entity';
 import { AuthSession } from '../../auth/sessions/entities/auth-session.entity';
 import { TotpFactor } from '../../auth/totp/entities/totp-factor.entity';
@@ -81,4 +83,13 @@ export class User {
 
   @OneToMany(() => AuthSession, (authSession) => authSession.user)
   authSessions: AuthSession[];
+
+  @OneToMany(
+    () => PlatformRoleAssignment,
+    (platformRoleAssignment) => platformRoleAssignment.user,
+  )
+  platformRoleAssignments: PlatformRoleAssignment[];
+
+  @OneToMany(() => RoleAssignment, (roleAssignment) => roleAssignment.user)
+  roleAssignments: RoleAssignment[];
 }
