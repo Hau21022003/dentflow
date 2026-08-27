@@ -58,7 +58,7 @@ test("app shell shows granted navigation, switches branch, and adapts for mobile
   await login(page, E2E_USERS.branchAdminReceptionist);
 
   await page.getByRole("combobox", { name: /Chọn ngôn ngữ|Select language/ }).click();
-  await page.getByRole("option", { name: "Tiếng Việt" }).click();
+  await page.getByRole("option", { name: "VI", exact: true }).click();
 
   const navigation = page.getByRole("navigation", { name: "Điều hướng chính" });
   await expect(navigation.getByRole("button", { name: "Vận hành chi nhánh" })).toHaveAttribute(
@@ -79,7 +79,7 @@ test("app shell shows granted navigation, switches branch, and adapts for mobile
   );
 
   await page.getByRole("combobox", { name: "Chọn ngôn ngữ" }).click();
-  await page.getByRole("option", { name: "English" }).click();
+  await page.getByRole("option", { name: "EN", exact: true }).click();
   await expect(page.getByRole("button", { name: "Branch operations" })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
