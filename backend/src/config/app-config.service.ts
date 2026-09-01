@@ -34,6 +34,12 @@ export class AppConfigService {
     };
   }
 
+  get auditConfig() {
+    return {
+      ipHmacSecret: this.config.getOrThrow<string>('app.audit.ipHmacSecret'),
+    };
+  }
+
   get corsConfig() {
     return {
       frontendOrigin: this.config.getOrThrow<string>('app.cors.frontendOrigin'),

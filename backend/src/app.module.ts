@@ -1,11 +1,13 @@
 import { BullModule } from '@nestjs/bullmq';
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core/constants';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LoggingModule } from './common/logging/logging.module';
+import { RequestContextMiddleware } from './common/request-context/request-context.middleware';
+import { RequestContextModule } from './common/request-context/request-context.module';
 import { AppConfigModule } from './config/app-config.module';
 import { AppConfigService } from './config/app-config.service';
 import appConfig from './config/app.config';
@@ -67,6 +69,7 @@ const runtimeEnvOnly = process.env.RUNTIME_ENV_ONLY === 'true';
     }),
     ModulesModule,
     LoggingModule,
+    RequestContextModule,
     AppConfigModule,
     AppI18nModule,
   ],
@@ -79,4 +82,8 @@ const runtimeEnvOnly = process.env.RUNTIME_ENV_ONLY === 'true';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestContextMiddleware).forRoutes('*');
+  }
+}

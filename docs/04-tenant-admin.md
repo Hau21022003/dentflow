@@ -110,14 +110,15 @@ Tenant Admin không được tự chuyển subscription sang `ACTIVE` hoặc đ�
 
 ## 8. API contract định hướng
 
-Các endpoint dưới `/api/v1` yêu cầu tenant context đã xác minh và `TENANT_ADMIN` cho năng lực quản trị tương ứng. Mỗi endpoint vẫn áp dụng Subscription Guard, kiểm tra role và truy vấn có điều kiện `tenantId`/`branchId`.
+Các endpoint nội bộ trong tài liệu này yêu cầu tenant context đã xác minh và `TENANT_ADMIN` cho năng lực quản trị tương ứng. API prefix/version công khai do Nginx/gateway quản lý khi deploy nên không được ghi cứng ở backend. Mỗi endpoint vẫn áp dụng Subscription Guard, kiểm tra role và truy vấn có điều kiện `tenantId`/`branchId`.
 
 - `GET/PATCH /tenant/settings`
 - `GET/POST/PATCH /branches`
 - `GET/POST/PATCH /services`
 - `GET/POST/PATCH /users`
 - `POST /role-assignments`, `PATCH /role-assignments/:assignmentId`, `DELETE /role-assignments/:assignmentId`
-- `GET /dashboard`, `GET /reports/*`, `GET /audit-logs`
+- `GET /dashboard`, `GET /reports/*`
+- `GET /tenants/:tenantSlug/audit-logs` và `/:id`; Branch Admin dùng route branch-scoped tương ứng. List chỉ trả summary, còn detail trả payload đã redacted theo [audit log](./05-audit-log.md).
 - `GET /billing/subscription`, `GET /billing/invoices`, `POST /billing/checkout-session`, `POST /billing/customer-portal`
 
 Settings API không nhận credential mail/provider hoặc `tenantId` để chọn tenant. Các command nhạy cảm cần idempotency key khi phù hợp, validation tenant/branch scope và audit log.

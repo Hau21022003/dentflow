@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '../authorization/authorization.module';
+import { AuditModule } from '../audit/audit.module';
 import { User } from '../users/entities/user.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -19,6 +20,7 @@ import { TotpModule } from './totp/totp.module';
     PassportModule,
     TypeOrmModule.forFeature([AuthSession, User]),
     AuthorizationModule,
+    AuditModule,
     PasskeysModule,
     TotpModule,
   ],

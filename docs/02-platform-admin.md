@@ -97,7 +97,7 @@ Nếu thêm support access sau này, phải yêu cầu một trong hai điều k
 
 ## 7. API contract định hướng
 
-Các endpoint dưới `/api/v1/platform/*` yêu cầu `PLATFORM_ADMIN`. API không nhận `tenantId` như một tín hiệu cấp quyền từ client; ID chỉ là resource được role Platform Admin tra cứu.
+Các endpoint nội bộ dưới `/platform/*` yêu cầu `PLATFORM_ADMIN`. Tài liệu này không ghi API prefix/version công khai vì chúng do Nginx/gateway quản lý khi deploy. API không nhận `tenantId` như một tín hiệu cấp quyền từ client; ID chỉ là resource được role Platform Admin tra cứu.
 
 - `GET /platform/dashboard`
 - `GET/POST /platform/tenants`
@@ -109,7 +109,7 @@ Các endpoint dưới `/api/v1/platform/*` yêu cầu `PLATFORM_ADMIN`. API khô
 - `GET/POST /platform/plans`, `PATCH /platform/plans/:planId`
 - `GET /platform/billing/invoices`, `GET /platform/billing/webhook-events`
 - `POST /platform/billing/webhook-events/:eventId/retry`
-- `GET /platform/audit-logs`
+- `GET /platform/audit-logs`, `GET /platform/audit-logs/:id`: chỉ trả audit domain Platform/Security; không trả clinical hay payment điều trị của tenant.
 
 Các command thay đổi trạng thái cần body gồm `reason` (bắt buộc với suspend/extend/reactivate thủ công) và `idempotencyKey`. Endpoint retry chỉ chạy lại business processing đã lưu, không gọi provider để tạo giao dịch mới.
 

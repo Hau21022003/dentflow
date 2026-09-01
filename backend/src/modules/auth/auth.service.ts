@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { compare, hash } from '../../common/utils/hash.util';
 import { AppConfigService } from '../../config/app-config.service';
+import { AuditAction, AuditLogService, AuditActorType } from '../audit';
 import { AuthorizationService } from '../authorization/authorization.service';
 import { User, UserStatus } from '../users/entities/user.entity';
 import {
@@ -29,6 +30,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly appConfig: AppConfigService,
     private readonly authorizationService: AuthorizationService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   async login(loginDto: LoginDto): Promise<AuthResult> {
@@ -56,7 +58,7 @@ export class AuthService {
     const isPasswordValid = await compare(loginDto.password, user.passwordHash);
 
     if (!isPasswordValid) {
-      await this.recordFailedLogin(user, now);
+      await this.recordFailedLogin(user.id, now);
       throw this.invalidCredentials();
     }
 
@@ -265,17 +267,48 @@ export class AuthService {
     );
   }
 
-  private async recordFailedLogin(user: User, now: Date): Promise<void> {
+  private async recordFailedLogin(userId: string, now: Date): Promise<void> {
     const { maxLoginAttempts, loginLockMinutes } =
       this.appConfig.securityConfig;
-    const failedLoginAttempts = user.failedLoginAttempts + 1;
 
-    user.failedLoginAttempts = failedLoginAttempts;
-    if (failedLoginAttempts >= maxLoginAttempts) {
-      user.lockedUntil = new Date(now.getTime() + loginLockMinutes * 60 * 1000);
-    }
+    await this.dataSource.transaction(async (manager) => {
+      const user = await manager
+        .getRepository(User)
+        .createQueryBuilder('user')
+        .setLock('pessimistic_write')
+        .where('user.id = :userId', { userId })
+        .getOne();
+      if (!user) {
+        return;
+      }
 
-    await this.usersRepository.save(user);
+      const failedLoginAttempts = user.failedLoginAttempts + 1;
+      const wasLocked = Boolean(user.lockedUntil && user.lockedUntil > now);
+
+      user.failedLoginAttempts = failedLoginAttempts;
+      if (failedLoginAttempts >= maxLoginAttempts) {
+        user.lockedUntil = new Date(
+          now.getTime() + loginLockMinutes * 60 * 1000,
+        );
+      }
+
+      await manager.getRepository(User).save(user);
+
+      if (failedLoginAttempts >= maxLoginAttempts && !wasLocked) {
+        await this.auditLogService.record(manager, {
+          action: AuditAction.AUTH_ACCOUNT_LOCKED,
+          actor: { type: AuditActorType.SYSTEM },
+          resourceId: user.id,
+          before: { failedLoginAttempts: failedLoginAttempts - 1 },
+          after: {
+            failedLoginAttempts,
+            lockDurationSeconds: loginLockMinutes * 60,
+          },
+          metadata: { reasonCode: 'MAX_FAILED_LOGIN_ATTEMPTS' },
+          occurredAt: now,
+        });
+      }
+    });
   }
 
   private getRefreshExpiry(): Date {

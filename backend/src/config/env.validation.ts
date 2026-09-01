@@ -109,6 +109,7 @@ export const envSchema = z
     JWT_ACCESS_EXPIRES_IN: duration,
     JWT_REFRESH_SECRET: requiredText,
     JWT_REFRESH_EXPIRES_IN: duration,
+    AUDIT_IP_HMAC_SECRET: requiredText,
 
     PORT: optionalPositiveInteger,
     UPLOAD_MAX_FILE_SIZE_MB: optionalPositiveInteger,

@@ -49,6 +49,9 @@ export default registerAs('app', () => {
         expiresIn: env.JWT_REFRESH_EXPIRES_IN,
       },
     },
+    audit: {
+      ipHmacSecret: env.AUDIT_IP_HMAC_SECRET,
+    },
     email: {
       provider: env.MAIL_PROVIDER,
       from: env.MAIL_FROM,
