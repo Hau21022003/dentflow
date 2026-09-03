@@ -1,12 +1,208 @@
-import { Building2, CreditCard, Search, UsersRound } from "lucide-react";
+import { type ColumnDef } from "@tanstack/react-table";
+import { Building2 } from "lucide-react";
+
+import { DataTable } from "@/components/shadcntable/data-table";
+import { DataTableColumnHeader } from "@/components/shadcntable/data-table-column-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StaticPageHeader } from "@/shared/components/static-dashboard";
 
-const tenantRows = [
-  { name: "BrightSmile Dental", plan: "Growth", branches: "3 branch", status: "ACTIVE" },
-  { name: "Harmony Dental", plan: "Trial", branches: "1 branch", status: "TRIAL" },
-  { name: "Riverfront Dental", plan: "Starter", branches: "2 branch", status: "PAST_DUE" },
+type TenantStatus = "ACTIVE" | "TRIAL" | "PAST_DUE" | "SUSPENDED" | "CANCELED";
+
+type TenantTableRow = {
+  id: string;
+  name: string;
+  plan: string;
+  branchCount: number;
+  status: TenantStatus;
+};
+
+const tenantRows: TenantTableRow[] = [
+  {
+    id: "tenant-001",
+    name: "BrightSmile Dental",
+    plan: "Growth",
+    branchCount: 3,
+    status: "ACTIVE",
+  },
+  {
+    id: "tenant-002",
+    name: "Harmony Dental",
+    plan: "Starter",
+    branchCount: 1,
+    status: "TRIAL",
+  },
+  {
+    id: "tenant-003",
+    name: "Riverfront Dental",
+    plan: "Starter",
+    branchCount: 2,
+    status: "PAST_DUE",
+  },
+  {
+    id: "tenant-004",
+    name: "An Phu Dental Care",
+    plan: "Growth",
+    branchCount: 4,
+    status: "ACTIVE",
+  },
+  {
+    id: "tenant-005",
+    name: "Sunrise Orthodontics",
+    plan: "Professional",
+    branchCount: 5,
+    status: "ACTIVE",
+  },
+  {
+    id: "tenant-006",
+    name: "Lotus Dental Studio",
+    plan: "Starter",
+    branchCount: 1,
+    status: "SUSPENDED",
+  },
+  {
+    id: "tenant-007",
+    name: "Westlake Dental",
+    plan: "Growth",
+    branchCount: 3,
+    status: "ACTIVE",
+  },
+  {
+    id: "tenant-008",
+    name: "Nha khoa Minh Tâm",
+    plan: "Starter",
+    branchCount: 1,
+    status: "TRIAL",
+  },
+  {
+    id: "tenant-009",
+    name: "Greenfield Dental",
+    plan: "Professional",
+    branchCount: 6,
+    status: "ACTIVE",
+  },
+  {
+    id: "tenant-010",
+    name: "Nha khoa Bình An",
+    plan: "Growth",
+    branchCount: 2,
+    status: "PAST_DUE",
+  },
+  {
+    id: "tenant-011",
+    name: "Coastal Smile Clinic",
+    plan: "Starter",
+    branchCount: 1,
+    status: "CANCELED",
+  },
+  {
+    id: "tenant-012",
+    name: "Nha khoa Thành Công",
+    plan: "Growth",
+    branchCount: 4,
+    status: "ACTIVE",
+  },
+  {
+    id: "tenant-013",
+    name: "Maple Dental Group",
+    plan: "Professional",
+    branchCount: 7,
+    status: "ACTIVE",
+  },
+  {
+    id: "tenant-014",
+    name: "Nha khoa Hòa Bình",
+    plan: "Starter",
+    branchCount: 1,
+    status: "SUSPENDED",
+  },
+  {
+    id: "tenant-015",
+    name: "Skyline Dental",
+    plan: "Growth",
+    branchCount: 3,
+    status: "TRIAL",
+  },
+];
+
+const tenantStatusLabels: Record<TenantStatus, string> = {
+  ACTIVE: "Đang hoạt động",
+  TRIAL: "Dùng thử",
+  PAST_DUE: "Quá hạn thanh toán",
+  SUSPENDED: "Đã tạm khóa",
+  CANCELED: "Đã hủy",
+};
+
+const tenantStatusBadgeVariants: Record<
+  TenantStatus,
+  "default" | "secondary" | "destructive" | "outline" | "ghost"
+> = {
+  ACTIVE: "default",
+  TRIAL: "secondary",
+  PAST_DUE: "outline",
+  SUSPENDED: "destructive",
+  CANCELED: "ghost",
+};
+
+const tenantColumns: ColumnDef<TenantTableRow>[] = [
+  {
+    accessorKey: "name",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Tenant" />
+    ),
+    cell: ({ row }) => (
+      <div className="flex items-center gap-3">
+        <span className="flex size-9 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+          <Building2 aria-hidden="true" className="size-4" />
+        </span>
+        <div>
+          <p className="font-semibold">{row.original.name}</p>
+          <p className="text-sm text-muted-foreground">Tenant SaaS mẫu</p>
+        </div>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "plan",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Gói dịch vụ" />
+    ),
+  },
+  {
+    accessorKey: "branchCount",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Chi nhánh" />
+    ),
+    cell: ({ row }) => `${row.original.branchCount} chi nhánh`,
+  },
+  {
+    accessorKey: "status",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Trạng thái" />
+    ),
+    cell: ({ row }) => {
+      const status = row.original.status;
+
+      return (
+        <Badge variant={tenantStatusBadgeVariants[status]}>
+          {tenantStatusLabels[status]}
+        </Badge>
+      );
+    },
+    meta: {
+      filterConfig: {
+        variant: "select",
+        title: "Lọc theo trạng thái",
+        description: "Chỉ hiển thị tenant có trạng thái đã chọn.",
+        placeholder: "Chọn trạng thái",
+        options: Object.entries(tenantStatusLabels).map(([value, label]) => ({
+          label,
+          value,
+        })),
+      },
+    },
+  },
 ];
 
 export function TenantManagementPage() {
@@ -23,34 +219,67 @@ export function TenantManagementPage() {
           <div>
             <CardTitle>Tenant trên hệ thống</CardTitle>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Dữ liệu demo không liên kết API và không cho phép thay đổi trạng thái tenant.
+              Dữ liệu demo synthetic không liên kết API và không cho phép thay
+              đổi trạng thái tenant.
             </p>
           </div>
-          <Button disabled type="button">Tạo tenant</Button>
+          <Button disabled type="button">
+            Tạo tenant
+          </Button>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="flex items-center gap-2 border-b border-border/70 px-6 py-4 text-sm text-muted-foreground">
-            <Search aria-hidden="true" className="size-4" />
-            Tìm kiếm tenant (UI mẫu)
-          </div>
-          <div className="divide-y divide-border/70">
-            {tenantRows.map((tenant) => (
-              <div className="grid gap-3 px-6 py-5 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto] sm:items-center" key={tenant.name}>
-                <div className="flex items-center gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
-                    <Building2 aria-hidden="true" className="size-5" />
-                  </span>
-                  <div>
-                    <p className="font-semibold">{tenant.name}</p>
-                    <p className="text-sm text-muted-foreground">Tenant SaaS mẫu</p>
-                  </div>
-                </div>
-                <span className="flex items-center gap-2 text-sm text-muted-foreground"><CreditCard aria-hidden="true" className="size-4" />{tenant.plan}</span>
-                <span className="flex items-center gap-2 text-sm text-muted-foreground"><UsersRound aria-hidden="true" className="size-4" />{tenant.branches}</span>
-                <span className="w-fit rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">{tenant.status}</span>
+        <CardContent className="p-6">
+          <DataTable
+            columns={tenantColumns}
+            data={tenantRows}
+            emptyState={
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                Không tìm thấy tenant phù hợp.
               </div>
-            ))}
-          </div>
+            }
+            locale={{
+              body: { noResults: "Không tìm thấy tenant phù hợp." },
+              pagination: {
+                rowsSelected: "tenant được chọn.",
+                rowsPerPage: "Số dòng mỗi trang",
+                page: "Trang",
+                of: "trên",
+                goToFirstPage: "Đến trang đầu",
+                goToPreviousPage: "Trang trước",
+                goToNextPage: "Trang sau",
+                goToLastPage: "Đến trang cuối",
+              },
+              toolbar: { searchPlaceholder: "Tìm kiếm tenant..." },
+              viewOptions: {
+                view: "Hiển thị",
+                toggleColumns: "Ẩn hoặc hiện cột",
+              },
+              rowSelection: {
+                selectAll: "Chọn tất cả tenant",
+                selectRow: "Chọn tenant",
+              },
+              columnHeader: {
+                sortAscending: "Sắp xếp tăng dần",
+                sortDescending: "Sắp xếp giảm dần",
+                clearSorting: "Xóa sắp xếp",
+                hideColumn: "Ẩn cột",
+                clearFilter: "Xóa bộ lọc",
+                sortMenuLabel: "Mở tùy chọn sắp xếp",
+                filterMenuLabel: "Mở bộ lọc cột",
+              },
+              filters: {
+                multiSelect: {
+                  search: "Tìm lựa chọn...",
+                  noResults: "Không có lựa chọn phù hợp.",
+                },
+                numberRange: { min: "Từ", max: "Đến" },
+              },
+            }}
+            pagination={{
+              pageSize: 10,
+              pageSizeOptions: [5, 10, 25],
+            }}
+            toolbar={{ search: true, viewOptions: true }}
+          />
         </CardContent>
       </Card>
     </div>
