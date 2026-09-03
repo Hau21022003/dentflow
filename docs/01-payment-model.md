@@ -34,8 +34,9 @@ Mỗi provider cần ánh xạ event tạo/cập nhật/hủy subscription và i
 
 ### Mô hình dữ liệu SaaS
 
-- `SubscriptionPlan`: tên, provider price/plan ID, chu kỳ, giới hạn tính năng và giá.
-- `Subscription`: `tenantId`, plan, provider customer/subscription ID, trạng thái, kỳ hiện tại, ngày hủy.
+- `SubscriptionPlan`: catalog toàn Platform, không thuộc tenant. Mỗi plan có code ổn định, tên/mô tả, một chu kỳ (`MONTHLY` hoặc `YEARLY`), giá nguyên theo đơn vị tiền tệ nhỏ nhất, ISO currency, provider plan ID tùy chọn, entitlement JSON object và trạng thái hiển thị. Một plan chỉ đại diện cho một mức giá/một chu kỳ, ví dụ `growth-monthly` và `growth-yearly` là hai plan khác nhau. `code` không đổi sau khi tạo; plan đã từng được `Subscription` tham chiếu chỉ thay đổi được availability (ẩn/hiện), không đổi giá hay entitlement hồi tố.
+- `trialDays` là thời hạn trial mặc định tùy chọn của plan. Trial là trạng thái của `Subscription`, không phải một plan có chu kỳ riêng; `Subscription` sẽ quyết định thời điểm bắt đầu/kết thúc trial thực tế khi tenant được provision.
+- `Subscription`: `tenantId`, plan, provider customer/subscription ID, trạng thái, kỳ hiện tại, ngày hủy. Plan reference là bất biến; khi tenant đổi plan, đóng record cũ và tạo record mới để giữ lịch sử cũng như bảo vệ plan đã từng dùng.
 - `SaaSInvoice`: `tenantId`, provider invoice ID, kỳ billing, tổng tiền, tiền tệ, trạng thái, URL invoice/hosted payment page.
 - `PaymentEvent`: event provider đã xử lý, loại event, thời điểm, kết quả; đây là audit kỹ thuật, không thay thế `AuditLog` nghiệp vụ.
 

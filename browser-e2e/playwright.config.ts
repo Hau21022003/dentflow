@@ -31,6 +31,7 @@ export default defineConfig({
       env: {
         APP_URL: apiUrl,
         FRONTEND_ORIGIN: frontendUrl,
+        AUDIT_IP_HMAC_SECRET: "secret",
         PORT: "3001",
       },
     },

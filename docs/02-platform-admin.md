@@ -13,7 +13,7 @@ MVP dùng một role `PLATFORM_ADMIN` duy nhất; tài khoản được provisio
 | Năng lực | Được phép | Bị cấm / giới hạn |
 | --- | --- | --- |
 | Tenant | Tạo, xem, cập nhật thông tin SaaS, khóa/mở khóa, gia hạn trial | Không sửa dữ liệu lâm sàng hoặc tài chính điều trị |
-| Plan | Tạo, ẩn plan mới; thay đổi metadata plan chưa dùng | Không đổi giá/quyền của subscription đang active hồi tố |
+| Plan | Tạo, ẩn/kích hoạt lại plan; thay đổi metadata plan chưa từng được dùng | `code` bất biến; plan đã có subscription history chỉ đổi availability, không đổi giá/quyền hồi tố |
 | SaaS billing | Xem subscription/invoice/event; mở Stripe dashboard/link; ghi nhận chuyển khoản qua luồng kiểm soát | Không đánh dấu giao dịch Stripe là paid bằng thao tác thủ công |
 | Support | Gửi lại lời mời, yêu cầu reset Tenant Admin, xem audit log SaaS | Không support access âm thầm, không xem dữ liệu nhạy cảm mặc định |
 | System | Xem webhook failures, job failures và feature flags | Không chỉnh sửa dữ liệu production trực tiếp qua database |
@@ -111,7 +111,9 @@ Các endpoint nội bộ dưới `/platform/*` yêu cầu `PLATFORM_ADMIN`. Tài
 - `POST /platform/billing/webhook-events/:eventId/retry`
 - `GET /platform/audit-logs`, `GET /platform/audit-logs/:id`: chỉ trả audit domain Platform/Security; không trả clinical hay payment điều trị của tenant.
 
-Các command thay đổi trạng thái cần body gồm `reason` (bắt buộc với suspend/extend/reactivate thủ công) và `idempotencyKey`. Endpoint retry chỉ chạy lại business processing đã lưu, không gọi provider để tạo giao dịch mới.
+Các command tenant lifecycle cần body gồm `reason` (bắt buộc với suspend/extend/reactivate thủ công) và `idempotencyKey`. Endpoint retry chỉ chạy lại business processing đã lưu, không gọi provider để tạo giao dịch mới.
+
+Plan catalog chỉ dành cho Platform Admin. `GET /platform/plans` trả cả plan active và inactive; `POST` luôn tạo plan active; `PATCH` không nhận đổi `code` và chỉ thay toàn bộ object `entitlements` khi field này được gửi. Thay đổi `isActive` cần `reason`; lệnh lặp lại trạng thái hiện có không tạo audit mới. Catalog chưa có idempotency persistence riêng: `code` và provider plan ID được unique. Plan từng được subscription tham chiếu chỉ được đổi `isActive`.
 
 ## 8. Acceptance criteria và test
 

@@ -1,12 +1,10 @@
-import { Transform } from 'class-transformer';
 import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Trim } from '../../../common/dto-decorators/trim.decorator';
 
 export class LoginDto {
   @ApiProperty({ example: 'dentist@example.test' })
-  @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
-  )
+  @Trim()
   @IsEmail()
   @MaxLength(254)
   email: string;
