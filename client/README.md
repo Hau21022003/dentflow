@@ -34,9 +34,11 @@ npm run build
 ## Quy ước frontend
 
 - Dùng alias `@/` cho `src/`; utilities là `@/shared/lib/utils`.
-- API đi qua HTTP client tại `src/shared/lib/http.ts`; endpoint constants ở
-  `src/shared/constants/endpoint.constants.ts`. Tạo service và React Query hook
-  trong feature phù hợp, thay vì gọi `fetch` trực tiếp trong page.
+- API đi qua HTTP client tại `src/shared/lib/http.ts`. Tạo service và React
+  Query hook trong feature phù hợp, thay vì gọi `fetch` trực tiếp trong page.
+  Endpoint chỉ được một service/feature dùng thì khai báo trực tiếp tại service;
+  chỉ đưa vào `src/shared/constants/endpoint.constants.ts` khi URL thực sự được
+  tái sử dụng ở nhiều nơi.
 - Route guard chỉ phục vụ UX. Backend vẫn phải xác thực quyền và tenant context
   cho mọi request.
 - Chỉ dùng dữ liệu demo synthetic. Không đưa dữ liệu bệnh nhân thật vào mock,
