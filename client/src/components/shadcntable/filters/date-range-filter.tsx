@@ -26,16 +26,15 @@ export function DateRangeFilter({
 
   return (
     <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn(
-              "h-8 w-full justify-start text-left font-normal",
-              !dateRange && "text-muted-foreground",
-            )}
-          >
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={cn(
+            "h-8 w-full justify-start text-left font-normal",
+            !dateRange && "text-muted-foreground",
+          )}
+        >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {dateRange?.from ? (
               dateRange.to ? (
@@ -48,9 +47,8 @@ export function DateRangeFilter({
             ) : (
               `${config.placeholder}`
             )}
-          </Button>
-        }
-      />
+        </Button>
+      </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="range"

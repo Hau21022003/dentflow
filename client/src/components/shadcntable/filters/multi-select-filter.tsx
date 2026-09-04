@@ -48,14 +48,13 @@ export function MultiSelectFilter({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between"
-          >
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
             {selectedOptions?.length > 0 ? (
               <div className="flex gap-1">
                 <Badge variant="secondary">{selectedOptions[0]?.label}</Badge>
@@ -69,9 +68,8 @@ export function MultiSelectFilter({
               config.placeholder
             )}
             <ChevronsUpDown className="opacity-50" />
-          </Button>
-        }
-      />
+        </Button>
+      </PopoverTrigger>
       <PopoverContent className="w-full p-0">
         <Command>
           <CommandInput

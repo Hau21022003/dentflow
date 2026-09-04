@@ -56,14 +56,13 @@ export function DataTableColumnHeader<TData, TValue>({
       <span>{title}</span>
       <div className="flex items-center space-x-0.1">
         <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="data-[state=open]:bg-accent"
-                aria-label={locale.columnHeader.sortMenuLabel}
-              >
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="data-[state=open]:bg-accent"
+              aria-label={locale.columnHeader.sortMenuLabel}
+            >
                 {isSortedDesc ? (
                   <ArrowDown />
                 ) : isSortedAsc ? (
@@ -71,9 +70,8 @@ export function DataTableColumnHeader<TData, TValue>({
                 ) : (
                   <ChevronsUpDown />
                 )}
-              </Button>
-            }
-          />
+            </Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             {!isSortedAsc && (
               <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
@@ -105,20 +103,18 @@ export function DataTableColumnHeader<TData, TValue>({
         {/* Filter popover */}
         {filterConfig && (
           <Popover>
-            <PopoverTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className={cn(
-                    hasActiveFilter && "bg-accent text-accent-foreground",
-                  )}
-                  aria-label={locale.columnHeader.filterMenuLabel}
-                >
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className={cn(
+                  hasActiveFilter && "bg-accent text-accent-foreground",
+                )}
+                aria-label={locale.columnHeader.filterMenuLabel}
+              >
                   <ListFilter />
-                </Button>
-              }
-            />
+              </Button>
+            </PopoverTrigger>
             <PopoverContent className="w-80" align="start">
               <div className="space-y-4">
                 {(filterConfig.title || filterConfig.description) && (

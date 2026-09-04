@@ -3,7 +3,8 @@ import { XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   AlertDialog,
-  AlertDialogClose,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -135,12 +136,12 @@ export function FormDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogClose render={<Button type="button" variant="outline" />}>
+            <AlertDialogCancel type="button" variant="outline">
               {t("formDialog.discardChanges.keepEditing")}
-            </AlertDialogClose>
-            <Button onClick={discardChanges} type="button" variant="destructive">
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={discardChanges} type="button" variant="destructive">
               {t("formDialog.discardChanges.discard")}
-            </Button>
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

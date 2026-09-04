@@ -30,19 +30,16 @@ export function DataTableViewOptions<TData>({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        disabled={isLoading}
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            className="ml-auto hidden h-8 lg:flex"
-          >
+      <DropdownMenuTrigger asChild disabled={isLoading}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto hidden h-8 lg:flex"
+        >
             <Settings2 />
             {locale.viewOptions.view}
-          </Button>
-        }
-      />
+        </Button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[150px]">
         <DropdownMenuGroup>
           <DropdownMenuLabel>
