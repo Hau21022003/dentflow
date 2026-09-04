@@ -1,0 +1,125 @@
+{
+  "title": "Subscription plans",
+  "description": "Manage the global SaaS plan catalog, its commercial metadata, and availability.",
+  "catalogTitle": "Plan catalog",
+  "catalogDescription": "All active and inactive plans are visible to Platform Admins.",
+  "loading": "Loading plans",
+  "actions": {
+    "create": "Create plan",
+    "retry": "Try again",
+    "edit": "Edit",
+    "editPlan": "Edit {{name}}",
+    "activate": "Activate",
+    "activatePlan": "Activate {{name}}",
+    "deactivate": "Deactivate",
+    "deactivatePlan": "Deactivate {{name}}",
+    "cancel": "Cancel",
+    "saving": "Saving"
+  },
+  "billingIntervals": {
+    "MONTHLY": "Monthly",
+    "YEARLY": "Yearly"
+  },
+  "analyticsOptions": {
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "unconfigured": "Not configured"
+  },
+  "form": {
+    "createTitle": "Create subscription plan",
+    "createDescription": "A new plan is active immediately after creation.",
+    "createSubmit": "Create plan",
+    "editTitle": "Edit subscription plan",
+    "editDescription": "Plans with subscription history can only change availability.",
+    "editSubmit": "Save changes",
+    "codeLocked": "The plan code cannot be changed after creation.",
+    "amountLimit": "The converted API amount must not exceed {{max}} minor currency units.",
+    "fields": {
+      "code": "Plan code",
+      "name": "Plan name",
+      "description": "Description",
+      "billingInterval": "Billing interval",
+      "currency": "Currency",
+      "price": "Price",
+      "trialDays": "Default trial days",
+      "providerPlanId": "Provider plan ID",
+      "maxBranches": "Maximum branches",
+      "maxUsers": "Maximum users",
+      "analytics": "Analytics"
+    }
+  },
+  "entitlements": {
+    "title": "Entitlements",
+    "description": "Set the standard branch, user, and analytics limits for this plan.",
+    "maxBranches": "Branches",
+    "maxUsers": "Users",
+    "analytics": "Analytics",
+    "notConfigured": "Not configured",
+    "unknownTitle": "Additional entitlements",
+    "unknownDescription": "These catalog values are read-only here and will be preserved when supported entitlements are saved."
+  },
+  "availability": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "activateTitle": "Activate plan",
+    "activateDescription": "Make {{name}} available for future SaaS subscriptions.",
+    "activateConfirm": "Activate plan",
+    "deactivateTitle": "Deactivate plan",
+    "deactivateDescription": "Hide {{name}} from future SaaS subscriptions. Existing history is not changed.",
+    "deactivateConfirm": "Deactivate plan",
+    "reason": "Reason",
+    "reasonRequired": "Enter a reason for this availability change.",
+    "reasonTooLong": "The reason must not exceed 500 characters."
+  },
+  "empty": {
+    "title": "No plans yet",
+    "description": "Create the first SaaS subscription plan for DentFlow."
+  },
+  "table": {
+    "searchPlaceholder": "Search plans...",
+    "noResults": "No matching plans found.",
+    "noTrial": "No trial",
+    "trialDays": "{{days}} days",
+    "columns": {
+      "plan": "Plan",
+      "billingInterval": "Billing interval",
+      "price": "Price",
+      "trial": "Trial",
+      "entitlements": "Entitlements",
+      "availability": "Availability",
+      "actions": "Actions"
+    },
+    "filters": {
+      "billingInterval": "Billing interval",
+      "billingIntervalDescription": "Show plans with the selected billing interval.",
+      "availability": "Availability",
+      "availabilityDescription": "Show active or inactive plans.",
+      "selectPlaceholder": "Select a value",
+      "search": "Search options...",
+      "noResults": "No options found.",
+      "min": "Min",
+      "max": "Max"
+    },
+    "controls": {
+      "clearFilter": "Clear filter",
+      "clearSorting": "Clear sorting",
+      "filterMenuLabel": "Open filter options",
+      "hideColumn": "Hide column",
+      "sortAscending": "Sort ascending",
+      "sortDescending": "Sort descending",
+      "sortMenuLabel": "Open sort options",
+      "toggleColumns": "Toggle columns",
+      "view": "View"
+    },
+    "pagination": {
+      "rowsSelected": "row(s) selected.",
+      "rowsPerPage": "Rows per page",
+      "page": "Page",
+      "of": "of",
+      "first": "Go to first page",
+      "previous": "Go to previous page",
+      "next": "Go to next page",
+      "last": "Go to last page"
+    }
+  }
+}

@@ -3,6 +3,7 @@ import { PERMISSIONS } from "@/features/auth/auth.types";
 import { LoginPage } from "../../pages/auth/LoginPage";
 import { PatientsListPage } from "../../pages/patients/PatientsListPage";
 import { PlatformHomePage } from "../../pages/platform/PlatformHomePage";
+import { SubscriptionPlanManagementPage } from "../../pages/platform/SubscriptionPlanManagementPage";
 import { TenantManagementPage } from "../../pages/platform/TenantManagementPage";
 import { BranchWorkspaceHomePage } from "../../pages/workspace/branch/BranchWorkspaceHomePage";
 import { StaffManagementPage } from "../../pages/workspace/branch/StaffManagementPage";
@@ -60,6 +61,15 @@ export const routes: RouteObject[] = [
                 children: [{ index: true, element: <TenantManagementPage /> }],
               },
             ],
+          },
+          {
+            path: PATHS.platformPlans,
+            element: (
+              <RequirePlatformPermission
+                permission={PERMISSIONS.platformPlanManage}
+              />
+            ),
+            children: [{ index: true, element: <SubscriptionPlanManagementPage /> }],
           },
           {
             path: PATHS.workspace,

@@ -38,6 +38,7 @@ import {
   Menu,
   ShieldCheck,
   Stethoscope,
+  Tags,
   UserRoundCog,
   UsersRound,
 } from "lucide-react";
@@ -246,11 +247,21 @@ export function AppLayout() {
 
     if (hasPlatformPermission(user, PERMISSIONS.platformSystemRead)) {
       items.push({
-        end: false,
+        end: true,
         icon: ShieldCheck,
         kind: "link",
         label: t("navigation.platform"),
         to: PATHS.platform,
+      });
+    }
+
+    if (hasPlatformPermission(user, PERMISSIONS.platformPlanManage)) {
+      items.push({
+        end: true,
+        icon: Tags,
+        kind: "link",
+        label: t("navigation.plans"),
+        to: PATHS.platformPlans,
       });
     }
 

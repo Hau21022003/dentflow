@@ -5,6 +5,7 @@ export const PATHS = {
   patients: "/patients",
   platform: "/platform",
   platformTenants: "/platform/tenants",
+  platformPlans: "/platform/plans",
   workspace: "/workspace",
   workspaceTenant: "/workspace/:tenantSlug",
   workspaceTenantHome: "/workspace/:tenantSlug/tenant",
