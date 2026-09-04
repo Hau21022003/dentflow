@@ -3,10 +3,10 @@ import { Building2 } from "lucide-react";
 
 import { DataTable } from "@/components/shadcntable/data-table";
 import { DataTableColumnHeader } from "@/components/shadcntable/data-table-column-header";
+import { StaticPageHeader } from "@/components/static-dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StaticPageHeader } from "@/shared/components/static-dashboard";
 
 type TenantStatus = "ACTIVE" | "TRIAL" | "PAST_DUE" | "SUSPENDED" | "CANCELED";
 

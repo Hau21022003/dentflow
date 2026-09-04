@@ -1,31 +1,21 @@
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  FormDialog,
+  RHFSelect,
+  RHFTextField,
+  type RHFSelectOption,
+} from "@/components/form";
+import { Alert } from "@/components/ui/alert";
 import {
   createValidationMessages,
   type Translate,
   type ValidationMessages,
 } from "@/i18n/validation";
+import { ApiError, handleApiError } from "@/shared/lib/error";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Save, UserRound } from "lucide-react";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink } from "react-router-dom";
 import { z } from "zod";
-import { PATHS } from "../../app/router/paths";
-import {
-  RHFSelect,
-  RHFTextField,
-  type RHFSelectOption,
-} from "../../shared/components/form";
-import { ApiError, handleApiError } from "../../shared/lib/error";
 
 const GENDER_VALUES = ["male", "female", "other"] as const;
 
@@ -62,7 +52,15 @@ type MockCreatePatientErrorResponse = {
   };
 };
 
-export function CreatePatientPage() {
+type PatientCreateDialogProps = {
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+};
+
+export function PatientCreateDialog({
+  open,
+  onOpenChange,
+}: PatientCreateDialogProps) {
   const { t: tPatients } = useTranslation("patients");
   const { t: tValidation } = useTranslation("validation");
   const validation = useMemo(
@@ -83,8 +81,9 @@ export function CreatePatientPage() {
   );
   const {
     control,
-    formState: { errors },
+    formState: { errors, isDirty, isSubmitting },
     handleSubmit,
+    reset,
     setError,
   } = useForm<CreatePatientFormValues>({
     defaultValues: {
@@ -94,6 +93,14 @@ export function CreatePatientPage() {
     },
     resolver: zodResolver(patientSchema),
   });
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      reset();
+    }
+
+    onOpenChange(nextOpen);
+  }
 
   function handleValidSubmit() {
     const mockError: MockCreatePatientErrorResponse = {
@@ -115,39 +122,23 @@ export function CreatePatientPage() {
   }
 
   return (
-    <form
-      className="mx-auto max-w-3xl space-y-7"
+    <FormDialog
+      description={tPatients("form.description")}
+      isDirty={isDirty}
+      isSubmitting={isSubmitting}
       noValidate
+      onOpenChange={handleOpenChange}
       onSubmit={handleSubmit(handleValidSubmit)}
+      open={open}
+      submitText={tPatients("form.submit")}
+      title={tPatients("form.title")}
     >
-      <div className="space-y-2">
-        <Button asChild className="-ml-3" size="sm" variant="ghost">
-          <RouterLink to={PATHS.patients}>
-            <ArrowLeft aria-hidden="true" />
-            Quay lại danh sách
-          </RouterLink>
-        </Button>
-        <h1 className="text-3xl font-bold tracking-tight">Thêm bệnh nhân</h1>
-        <p className="text-sm leading-6 text-muted-foreground">
-          Form giao diện mẫu; dữ liệu chưa được gửi tới API.
-        </p>
-      </div>
+      <div className="space-y-5">
+        {errors.root?.server?.message && (
+          <Alert variant="destructive">{errors.root.server.message}</Alert>
+        )}
 
-      {errors.root?.server?.message && (
-        <Alert variant="destructive">{errors.root.server.message}</Alert>
-      )}
-
-      <Card>
-        <CardHeader className="border-b border-border/70">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
-            <UserRound aria-hidden="true" className="size-5" />
-          </div>
-          <CardTitle>Thông tin cơ bản</CardTitle>
-          <CardDescription>
-            Nhập thông tin hành chính để khởi tạo hồ sơ bệnh nhân.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-5 pt-6 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2">
           <RHFTextField
             control={control}
             fullWidth
@@ -172,18 +163,8 @@ export function CreatePatientPage() {
               required
             />
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
-        <Button asChild variant="outline">
-          <RouterLink to={PATHS.patients}>Hủy</RouterLink>
-        </Button>
-        <Button type="submit">
-          <Save aria-hidden="true" />
-          Lưu mẫu
-        </Button>
+        </div>
       </div>
-    </form>
+    </FormDialog>
   );
 }

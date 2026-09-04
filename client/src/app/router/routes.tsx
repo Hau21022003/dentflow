@@ -1,7 +1,6 @@
 import { Navigate, type RouteObject } from "react-router-dom";
 import { PERMISSIONS } from "@/features/auth/auth.types";
 import { LoginPage } from "../../pages/auth/LoginPage";
-import { CreatePatientPage } from "../../pages/patients/CreatePatientPage";
 import { PatientsListPage } from "../../pages/patients/PatientsListPage";
 import { PlatformHomePage } from "../../pages/platform/PlatformHomePage";
 import { TenantManagementPage } from "../../pages/platform/TenantManagementPage";
@@ -134,7 +133,6 @@ export const routes: RouteObject[] = [
             ],
           },
           { path: PATHS.patients, element: <PatientsListPage /> },
-          { path: PATHS.newPatient, element: <CreatePatientPage /> },
         ],
       },
     ],

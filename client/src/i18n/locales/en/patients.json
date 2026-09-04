@@ -9,6 +9,9 @@
     "description": "When the API is integrated, patients from the authenticated tenant will appear here."
   },
   "form": {
+    "title": "Add patient",
+    "description": "Enter administrative information to start a patient record.",
+    "submit": "Save sample",
     "fields": {
       "fullName": "full name",
       "phone": "phone number",

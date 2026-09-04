@@ -3,7 +3,6 @@ export const PATHS = {
   login: "/login",
   forbidden: "/forbidden",
   patients: "/patients",
-  newPatient: "/patients/new",
   platform: "/platform",
   platformTenants: "/platform/tenants",
   workspace: "/workspace",

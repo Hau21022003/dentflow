@@ -1,9 +1,14 @@
-import { CalendarDays, ClipboardList, HeartPulse, Stethoscope } from "lucide-react";
 import {
   StaticListCard,
   StaticMetricGrid,
   StaticPageHeader,
-} from "@/shared/components/static-dashboard";
+} from "@/components/static-dashboard";
+import {
+  CalendarDays,
+  ClipboardList,
+  HeartPulse,
+  Stethoscope,
+} from "lucide-react";
 import { useWorkspaceContext } from "../use-workspace-context";
 
 export function DoctorHomePage() {
@@ -20,28 +25,75 @@ export function DoctorHomePage() {
       />
       <StaticMetricGrid
         metrics={[
-          { label: "Ca được phân công", value: "8", description: "Chỉ thuộc bác sĩ hiện tại", icon: CalendarDays },
-          { label: "Đã check-in", value: "4", description: "Sẵn sàng mở visit", icon: HeartPulse, tone: "blue" },
-          { label: "Visit đang mở", value: "2", description: "Cần hoàn tất clinical note", icon: ClipboardList, tone: "amber" },
-          { label: "Treatment item", value: "6", description: "Theo dõi tiến độ được giao", icon: Stethoscope, tone: "rose" },
+          {
+            label: "Ca được phân công",
+            value: "8",
+            description: "Chỉ thuộc bác sĩ hiện tại",
+            icon: CalendarDays,
+          },
+          {
+            label: "Đã check-in",
+            value: "4",
+            description: "Sẵn sàng mở visit",
+            icon: HeartPulse,
+            tone: "blue",
+          },
+          {
+            label: "Visit đang mở",
+            value: "2",
+            description: "Cần hoàn tất clinical note",
+            icon: ClipboardList,
+            tone: "amber",
+          },
+          {
+            label: "Treatment item",
+            value: "6",
+            description: "Theo dõi tiến độ được giao",
+            icon: Stethoscope,
+            tone: "rose",
+          },
         ]}
       />
       <section className="grid gap-5 lg:grid-cols-2">
         <StaticListCard
           description="Danh sách mock chỉ mô tả trạng thái, không hiển thị thông tin bệnh nhân."
           items={[
-            { title: "Ca 09:00", detail: "Đã check-in · sẵn sàng bắt đầu visit.", status: "Sẵn sàng" },
-            { title: "Ca 10:30", detail: "Treatment plan đang chờ ghi nhận.", status: "Đang chờ" },
-            { title: "Ca 14:00", detail: "Cần hoàn tất và đề xuất tái khám.", status: "Follow-up" },
+            {
+              title: "Ca 09:00",
+              detail: "Đã check-in · sẵn sàng bắt đầu visit.",
+              status: "Sẵn sàng",
+            },
+            {
+              title: "Ca 10:30",
+              detail: "Treatment plan đang chờ ghi nhận.",
+              status: "Đang chờ",
+            },
+            {
+              title: "Ca 14:00",
+              detail: "Cần hoàn tất và đề xuất tái khám.",
+              status: "Follow-up",
+            },
           ]}
           title="Lịch điều trị của tôi"
         />
         <StaticListCard
           description="Các entry point chuyên môn chỉ dành cho role Dentist trong branch scope."
           items={[
-            { title: "Clinical note", detail: "Ghi nhận khám và chẩn đoán cho ca được phép.", status: "2 mở" },
-            { title: "Kế hoạch điều trị", detail: "Tạo hạng mục điều trị và chỉ định liên quan.", status: "3 plan" },
-            { title: "Tái khám", detail: "Đề xuất lịch để tiếp nhận tạo appointment tiếp theo.", status: "1 đề xuất" },
+            {
+              title: "Clinical note",
+              detail: "Ghi nhận khám và chẩn đoán cho ca được phép.",
+              status: "2 mở",
+            },
+            {
+              title: "Kế hoạch điều trị",
+              detail: "Tạo hạng mục điều trị và chỉ định liên quan.",
+              status: "3 plan",
+            },
+            {
+              title: "Tái khám",
+              detail: "Đề xuất lịch để tiếp nhận tạo appointment tiếp theo.",
+              status: "1 đề xuất",
+            },
           ]}
           title="Tiến độ chuyên môn"
         />

@@ -1,10 +1,21 @@
-import { CalendarDays, ClipboardList, Stethoscope, UsersRound } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { pathFor } from "@/app/router/paths";
+import { StaticPageHeader } from "@/components/static-dashboard";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import type { TenantRoleCode } from "@/features/auth/auth.types";
-import { StaticPageHeader } from "@/shared/components/static-dashboard";
+import type { LucideIcon } from "lucide-react";
+import {
+  CalendarDays,
+  ClipboardList,
+  Stethoscope,
+  UsersRound,
+} from "lucide-react";
+import { Link } from "react-router-dom";
 import { useWorkspaceContext } from "../use-workspace-context";
 
 type RolePanel = {
@@ -22,7 +33,8 @@ export function BranchWorkspaceHomePage() {
   const rolePanels: Partial<Record<TenantRoleCode, RolePanel>> = {
     BRANCH_ADMIN: {
       title: "Quản trị chi nhánh",
-      description: "Điều phối nhân sự và theo dõi vận hành trong branch được gán.",
+      description:
+        "Điều phối nhân sự và theo dõi vận hành trong branch được gán.",
       action: "Mở quản lý nhân sự",
       icon: UsersRound,
       to: pathFor.workspaceBranchStaff(tenantSlug, branchSlug),
@@ -57,15 +69,21 @@ export function BranchWorkspaceHomePage() {
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="flex flex-col gap-2 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="font-semibold">{visiblePanels.length} role tại branch hiện tại</p>
+            <p className="font-semibold">
+              {visiblePanels.length} role tại branch hiện tại
+            </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Các card bên dưới thay đổi theo authorization snapshot của user sau khi đăng nhập.
+              Các card bên dưới thay đổi theo authorization snapshot của user
+              sau khi đăng nhập.
             </p>
           </div>
           <ClipboardList aria-hidden="true" className="size-7 text-primary" />
         </CardContent>
       </Card>
-      <section aria-label="Khu vực theo role" className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <section
+        aria-label="Khu vực theo role"
+        className="grid gap-5 md:grid-cols-2 xl:grid-cols-3"
+      >
         {visiblePanels.map((panel) => {
           const Icon = panel.icon;
 
@@ -73,11 +91,15 @@ export function BranchWorkspaceHomePage() {
             <Link className="group" key={panel.title} to={panel.to}>
               <Card className="h-full transition-colors group-hover:border-primary/40 group-hover:bg-secondary/30">
                 <CardHeader>
-                  <span className="mb-2 flex size-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><Icon aria-hidden="true" className="size-5" /></span>
+                  <span className="mb-2 flex size-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
+                    <Icon aria-hidden="true" className="size-5" />
+                  </span>
                   <CardTitle>{panel.title}</CardTitle>
                   <CardDescription>{panel.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="pt-0 text-sm font-semibold text-primary">{panel.action} →</CardContent>
+                <CardContent className="pt-0 text-sm font-semibold text-primary">
+                  {panel.action} →
+                </CardContent>
               </Card>
             </Link>
           );

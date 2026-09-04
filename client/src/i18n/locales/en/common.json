@@ -53,5 +53,16 @@
       "unavailable": "We could not verify your session. Please try again.",
       "retry": "Try again"
     }
+  },
+  "formDialog": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "submitting": "Saving",
+    "discardChanges": {
+      "title": "Discard changes?",
+      "description": "Your unsaved information will be lost.",
+      "keepEditing": "Keep editing",
+      "discard": "Discard changes"
+    }
   }
 }

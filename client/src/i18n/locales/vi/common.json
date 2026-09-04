@@ -53,5 +53,16 @@
       "unavailable": "Không thể xác minh phiên đăng nhập. Vui lòng thử lại.",
       "retry": "Thử lại"
     }
+  },
+  "formDialog": {
+    "close": "Đóng",
+    "cancel": "Hủy",
+    "submitting": "Đang lưu",
+    "discardChanges": {
+      "title": "Bỏ các thay đổi?",
+      "description": "Các thông tin chưa lưu sẽ bị mất.",
+      "keepEditing": "Tiếp tục nhập",
+      "discard": "Bỏ thay đổi"
+    }
   }
 }
