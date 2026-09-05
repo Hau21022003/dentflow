@@ -50,9 +50,10 @@ npm run build
 
 ## UI primitives
 
-`components.json` dùng style `base-nova`. Một số primitive hiện dùng Base UI;
-hãy giữ đúng API của primitive đang import. Ví dụ trigger Base UI nhận element
-qua prop `render`, không dùng `asChild` của Radix.
+`components.json` dùng style `radix-nova`. Primitive trong `src/components/ui`
+dựa trên Radix UI; hãy tạo và sử dụng component theo API Radix đang có trong
+codebase. Khi primitive Radix cần render child trigger/action, dùng `asChild`
+theo mẫu hiện có; không dùng prop `render` của Base UI.
 
 Không ghi đè component trong `src/components/ui` bằng lệnh registry nếu chưa
 xem `--dry-run` và `--diff`, vì chúng là UI foundation đang được các page dùng
@@ -70,7 +71,32 @@ import { DataTableColumnHeader } from "@/components/shadcntable/data-table-colum
 ```
 
 - Dùng `DataTableColumnHeader` cho cột cần sort, filter hoặc ẩn/hiện.
-- Truyền `locale` cho text của bảng; về sau map object này từ i18n `vi`/`en`.
+- Locale chung của DataTable phải tạo bằng `createDataTableLocale()` từ
+  `src/i18n/data-table.ts`; không tạo lại object locale hoặc gọi lặp từng key
+  như `t("table.pagination.goToFirstPage")` trong page.
+- Chuỗi điều khiển dùng chung nằm ở `common.dataTable` (pagination, sort,
+  filter, ẩn/hiện cột, chọn dòng). Text mang ngữ cảnh domain vẫn đặt trong
+  namespace domain và chỉ truyền qua override typed khi thực sự cần.
+
+```tsx
+const { t: tCommon } = useTranslation("common");
+const { t: tPlans } = useTranslation("plans");
+
+const dataTableLocale = useMemo(
+  () =>
+    createDataTableLocale(tCommon, {
+      toolbar: { searchPlaceholder: tPlans("table.searchPlaceholder") },
+    }),
+  [tCommon, tPlans],
+);
+
+<DataTable columns={columns} data={data} locale={dataTableLocale} />;
+```
+
+- `createDataTableLocale(tCommon, overrides?)` luôn trả về đủ
+  `DataTableLocale`; override được merge theo từng nhóm và chỉ dành cho text
+  đặc thù bảng. Select/multi-select không cần `filterConfig.placeholder` nếu
+  dùng placeholder chung từ locale.
 - POC hiện xử lý search, filter, sort và pagination ở client với mock data.
 - DataTable đã hỗ trợ server-side pagination qua `pagination.manual`,
   `pageIndex`, `pageSize`, `rowCount` và `onPaginationChange`. Khi nối API thật,

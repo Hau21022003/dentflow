@@ -18,6 +18,7 @@ import {
   localeForLanguage,
 } from "@/features/subscription-plans/subscription-plans.price";
 import type { SubscriptionPlan } from "@/features/subscription-plans/subscription-plans.types";
+import { createDataTableLocale } from "@/i18n/data-table";
 import { getErrorMessage } from "@/shared/lib/error";
 import { type ColumnDef } from "@tanstack/react-table";
 import { Pencil, Plus, Power, PowerOff, RefreshCw, Tags } from "lucide-react";
@@ -34,6 +35,7 @@ function formatEntitlementValue(value: unknown, fallback: string): string {
 
 export function SubscriptionPlanManagementPage() {
   const { i18n, t } = useTranslation("plans");
+  const { t: tCommon } = useTranslation("common");
   const locale = localeForLanguage(i18n.resolvedLanguage);
   const catalogQuery = useSubscriptionPlansQuery();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -42,6 +44,13 @@ export function SubscriptionPlanManagementPage() {
   >();
   const [availabilityPlan, setAvailabilityPlan] =
     useState<SubscriptionPlan | null>(null);
+  const dataTableLocale = useMemo(
+    () =>
+      createDataTableLocale(tCommon, {
+        toolbar: { searchPlaceholder: t("table.searchPlaceholder") },
+      }),
+    [t, tCommon],
+  );
 
   const columns = useMemo<ColumnDef<SubscriptionPlan>[]>(
     () => [
@@ -80,7 +89,6 @@ export function SubscriptionPlanManagementPage() {
               label: t(`billingIntervals.${value}`),
               value,
             })),
-            placeholder: t("table.filters.selectPlaceholder"),
             title: t("table.filters.billingInterval"),
             variant: "select",
           },
@@ -188,7 +196,6 @@ export function SubscriptionPlanManagementPage() {
               ),
               value,
             })),
-            placeholder: t("table.filters.selectPlaceholder"),
             title: t("table.filters.availability"),
             variant: "select",
           },
@@ -318,43 +325,7 @@ export function SubscriptionPlanManagementPage() {
               }
               isFetching={catalogQuery.isFetching}
               isLoading={catalogQuery.isLoading}
-              locale={{
-                body: { noResults: t("table.noResults") },
-                columnHeader: {
-                  clearFilter: t("table.controls.clearFilter"),
-                  clearSorting: t("table.controls.clearSorting"),
-                  filterMenuLabel: t("table.controls.filterMenuLabel"),
-                  hideColumn: t("table.controls.hideColumn"),
-                  sortAscending: t("table.controls.sortAscending"),
-                  sortDescending: t("table.controls.sortDescending"),
-                  sortMenuLabel: t("table.controls.sortMenuLabel"),
-                },
-                filters: {
-                  multiSelect: {
-                    noResults: t("table.filters.noResults"),
-                    search: t("table.filters.search"),
-                  },
-                  numberRange: {
-                    max: t("table.filters.max"),
-                    min: t("table.filters.min"),
-                  },
-                },
-                pagination: {
-                  goToFirstPage: t("table.pagination.first"),
-                  goToLastPage: t("table.pagination.last"),
-                  goToNextPage: t("table.pagination.next"),
-                  goToPreviousPage: t("table.pagination.previous"),
-                  of: t("table.pagination.of"),
-                  page: t("table.pagination.page"),
-                  rowsPerPage: t("table.pagination.rowsPerPage"),
-                  rowsSelected: t("table.pagination.rowsSelected"),
-                },
-                toolbar: { searchPlaceholder: t("table.searchPlaceholder") },
-                viewOptions: {
-                  toggleColumns: t("table.controls.toggleColumns"),
-                  view: t("table.controls.view"),
-                },
-              }}
+              locale={dataTableLocale}
               pagination={{ pageSize: 10, pageSizeOptions: [5, 10, 25] }}
               toolbar={{ search: true, viewOptions: true }}
             />

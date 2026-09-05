@@ -499,7 +499,7 @@ export function SubscriptionPlanFormDialog({
           <Alert variant="destructive">{errors.root.server.message}</Alert>
         )}
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid items-start gap-5 sm:grid-cols-2">
           <RHFTextField
             control={control}
             disabled={!isCreate}
@@ -595,7 +595,7 @@ export function SubscriptionPlanFormDialog({
               {tPlans("entitlements.description")}
             </p>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid items-start gap-5 sm:grid-cols-2">
             <RHFTextField
               control={control}
               fullWidth

@@ -72,6 +72,10 @@ export function DataTable<TData, TValue>({
       rowSelection: { ...defaultDataTableLocale.rowSelection, ...locale?.rowSelection },
       columnHeader: { ...defaultDataTableLocale.columnHeader, ...locale?.columnHeader },
       filters: {
+        select: {
+          ...defaultDataTableLocale.filters.select,
+          ...locale?.filters?.select,
+        },
         multiSelect: {
           ...defaultDataTableLocale.filters.multiSelect,
           ...locale?.filters?.multiSelect,

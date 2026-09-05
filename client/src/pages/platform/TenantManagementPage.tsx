@@ -7,6 +7,9 @@ import { StaticPageHeader } from "@/components/static-dashboard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createDataTableLocale } from "@/i18n/data-table";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 type TenantStatus = "ACTIVE" | "TRIAL" | "PAST_DUE" | "SUSPENDED" | "CANCELED";
 
@@ -206,6 +209,9 @@ const tenantColumns: ColumnDef<TenantTableRow>[] = [
 ];
 
 export function TenantManagementPage() {
+  const { t } = useTranslation("common");
+  const dataTableLocale = useMemo(() => createDataTableLocale(t), [t]);
+
   return (
     <div className="space-y-7">
       <StaticPageHeader
@@ -236,44 +242,7 @@ export function TenantManagementPage() {
                 Không tìm thấy tenant phù hợp.
               </div>
             }
-            locale={{
-              body: { noResults: "Không tìm thấy tenant phù hợp." },
-              pagination: {
-                rowsSelected: "tenant được chọn.",
-                rowsPerPage: "Số dòng mỗi trang",
-                page: "Trang",
-                of: "trên",
-                goToFirstPage: "Đến trang đầu",
-                goToPreviousPage: "Trang trước",
-                goToNextPage: "Trang sau",
-                goToLastPage: "Đến trang cuối",
-              },
-              toolbar: { searchPlaceholder: "Tìm kiếm tenant..." },
-              viewOptions: {
-                view: "Hiển thị",
-                toggleColumns: "Ẩn hoặc hiện cột",
-              },
-              rowSelection: {
-                selectAll: "Chọn tất cả tenant",
-                selectRow: "Chọn tenant",
-              },
-              columnHeader: {
-                sortAscending: "Sắp xếp tăng dần",
-                sortDescending: "Sắp xếp giảm dần",
-                clearSorting: "Xóa sắp xếp",
-                hideColumn: "Ẩn cột",
-                clearFilter: "Xóa bộ lọc",
-                sortMenuLabel: "Mở tùy chọn sắp xếp",
-                filterMenuLabel: "Mở bộ lọc cột",
-              },
-              filters: {
-                multiSelect: {
-                  search: "Tìm lựa chọn...",
-                  noResults: "Không có lựa chọn phù hợp.",
-                },
-                numberRange: { min: "Từ", max: "Đến" },
-              },
-            }}
+            locale={dataTableLocale}
             pagination={{
               pageSize: 10,
               pageSizeOptions: [5, 10, 25],

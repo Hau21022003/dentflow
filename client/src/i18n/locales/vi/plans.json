@@ -77,7 +77,6 @@
   },
   "table": {
     "searchPlaceholder": "Tìm plan...",
-    "noResults": "Không tìm thấy plan phù hợp.",
     "noTrial": "Không có trial",
     "trialDays": "{{days}} ngày",
     "columns": {
@@ -93,33 +92,7 @@
       "billingInterval": "Chu kỳ thanh toán",
       "billingIntervalDescription": "Chỉ hiển thị plan theo chu kỳ đã chọn.",
       "availability": "Availability",
-      "availabilityDescription": "Chỉ hiển thị plan đang hoạt động hoặc đã ẩn.",
-      "selectPlaceholder": "Chọn giá trị",
-      "search": "Tìm lựa chọn...",
-      "noResults": "Không có lựa chọn phù hợp.",
-      "min": "Từ",
-      "max": "Đến"
-    },
-    "controls": {
-      "clearFilter": "Xóa bộ lọc",
-      "clearSorting": "Xóa sắp xếp",
-      "filterMenuLabel": "Mở tùy chọn lọc",
-      "hideColumn": "Ẩn cột",
-      "sortAscending": "Sắp xếp tăng dần",
-      "sortDescending": "Sắp xếp giảm dần",
-      "sortMenuLabel": "Mở tùy chọn sắp xếp",
-      "toggleColumns": "Ẩn hoặc hiện cột",
-      "view": "Hiển thị"
-    },
-    "pagination": {
-      "rowsSelected": "dòng được chọn.",
-      "rowsPerPage": "Số dòng mỗi trang",
-      "page": "Trang",
-      "of": "trên",
-      "first": "Đến trang đầu",
-      "previous": "Trang trước",
-      "next": "Trang sau",
-      "last": "Đến trang cuối"
+      "availabilityDescription": "Chỉ hiển thị plan đang hoạt động hoặc đã ẩn."
     }
   }
 }

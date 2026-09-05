@@ -65,7 +65,7 @@ export function MultiSelectFilter({
                 )}
               </div>
             ) : (
-              config.placeholder
+              config.placeholder ?? locale.filters.select.placeholder
             )}
             <ChevronsUpDown className="opacity-50" />
         </Button>

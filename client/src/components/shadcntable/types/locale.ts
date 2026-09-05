@@ -33,6 +33,9 @@ export interface DataTableLocale {
     filterMenuLabel: string
   }
   filters: {
+    select: {
+      placeholder: string
+    }
     multiSelect: {
       search: string
       noResults: string

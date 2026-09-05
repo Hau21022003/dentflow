@@ -35,6 +35,9 @@ export const defaultDataTableLocale: DataTableLocale = {
     filterMenuLabel: 'Toggle filter options',
   },
   filters: {
+    select: {
+      placeholder: 'Select a value',
+    },
     multiSelect: {
       search: 'Search...',
       noResults: 'No results found.',

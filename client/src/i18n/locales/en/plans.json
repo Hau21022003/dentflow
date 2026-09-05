@@ -77,7 +77,6 @@
   },
   "table": {
     "searchPlaceholder": "Search plans...",
-    "noResults": "No matching plans found.",
     "noTrial": "No trial",
     "trialDays": "{{days}} days",
     "columns": {
@@ -93,33 +92,7 @@
       "billingInterval": "Billing interval",
       "billingIntervalDescription": "Show plans with the selected billing interval.",
       "availability": "Availability",
-      "availabilityDescription": "Show active or inactive plans.",
-      "selectPlaceholder": "Select a value",
-      "search": "Search options...",
-      "noResults": "No options found.",
-      "min": "Min",
-      "max": "Max"
-    },
-    "controls": {
-      "clearFilter": "Clear filter",
-      "clearSorting": "Clear sorting",
-      "filterMenuLabel": "Open filter options",
-      "hideColumn": "Hide column",
-      "sortAscending": "Sort ascending",
-      "sortDescending": "Sort descending",
-      "sortMenuLabel": "Open sort options",
-      "toggleColumns": "Toggle columns",
-      "view": "View"
-    },
-    "pagination": {
-      "rowsSelected": "row(s) selected.",
-      "rowsPerPage": "Rows per page",
-      "page": "Page",
-      "of": "of",
-      "first": "Go to first page",
-      "previous": "Go to previous page",
-      "next": "Go to next page",
-      "last": "Go to last page"
+      "availabilityDescription": "Show active or inactive plans."
     }
   }
 }
