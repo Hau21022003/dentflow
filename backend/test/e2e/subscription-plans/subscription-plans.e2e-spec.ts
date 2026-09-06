@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { DataSource, Repository } from 'typeorm';
 import { AuditAction } from 'src/modules/audit/audit-actions';
@@ -112,6 +113,7 @@ describe('Subscription plans (e2e)', () => {
 
     await agent
       .patch(`/platform/plans/${createdPlan.id}`)
+      .set('Idempotency-Key', randomUUID())
       .send({ isActive: false, reason: 'ARCHIVED_FOR_REVIEW' })
       .expect(200);
 
@@ -158,6 +160,7 @@ describe('Subscription plans (e2e)', () => {
 
     const updated = await agent
       .patch(`/platform/plans/${plan.id}`)
+      .set('Idempotency-Key', randomUUID())
       .send({
         name: 'Starter Plus',
         description: null,
@@ -174,6 +177,7 @@ describe('Subscription plans (e2e)', () => {
 
     await agent
       .patch(`/platform/plans/${plan.id}`)
+      .set('Idempotency-Key', randomUUID())
       .send({ code: 'renamed-plan' })
       .expect(422);
 
@@ -210,15 +214,18 @@ describe('Subscription plans (e2e)', () => {
 
     await agent
       .patch(`/platform/plans/${plan.id}`)
+      .set('Idempotency-Key', randomUUID())
       .send({ amount: 199000 })
       .expect(409);
     await agent
       .patch(`/platform/plans/${plan.id}`)
+      .set('Idempotency-Key', randomUUID())
       .send({ isActive: false })
       .expect(422);
 
     await agent
       .patch(`/platform/plans/${plan.id}`)
+      .set('Idempotency-Key', randomUUID())
       .send({ isActive: false, reason: 'DISCONTINUED' })
       .expect(200)
       .expect((response) => {
@@ -239,6 +246,7 @@ describe('Subscription plans (e2e)', () => {
     });
     await agent
       .patch(`/platform/plans/${plan.id}`)
+      .set('Idempotency-Key', randomUUID())
       .send({ isActive: false })
       .expect(200);
     await expect(
@@ -247,6 +255,7 @@ describe('Subscription plans (e2e)', () => {
 
     await agent
       .patch(`/platform/plans/${plan.id}`)
+      .set('Idempotency-Key', randomUUID())
       .send({ isActive: true, reason: 'RESTORED_AFTER_REVIEW' })
       .expect(200)
       .expect((response) => {
@@ -391,15 +400,18 @@ describe('Subscription plans (e2e)', () => {
   }
 
   function postPlan(agent: ReturnType<typeof request.agent>, overrides = {}) {
-    return agent.post('/platform/plans').send({
-      code: 'starter-monthly',
-      name: 'Starter',
-      billingInterval: 'MONTHLY',
-      amount: 49000,
-      currency: 'VND',
-      entitlements: { maxBranches: 1 },
-      ...overrides,
-    });
+    return agent
+      .post('/platform/plans')
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        code: 'starter-monthly',
+        name: 'Starter',
+        billingInterval: 'MONTHLY',
+        amount: 49000,
+        currency: 'VND',
+        entitlements: { maxBranches: 1 },
+        ...overrides,
+      });
   }
 
   async function createPlan(

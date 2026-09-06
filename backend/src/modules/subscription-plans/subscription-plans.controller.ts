@@ -12,6 +12,7 @@ import { RequestContext } from '../../common/decorators/request-context.decorato
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import type { AuthorizationContext } from '../authorization/authorization-context';
 import { Permission } from '../authorization/authorization.policy';
+import { Idempotent } from '../idempotency/idempotent.decorator';
 import { CreateSubscriptionPlanDto } from './dto/create-subscription-plan.dto';
 import { UpdateSubscriptionPlanDto } from './dto/update-subscription-plan.dto';
 import { SubscriptionPlansService } from './subscription-plans.service';
@@ -30,6 +31,7 @@ export class SubscriptionPlansController {
   }
 
   @Post()
+  @Idempotent('platform.plan.create')
   @PlatformScope()
   @RequirePermissions(Permission.PLATFORM_PLAN_MANAGE)
   create(
@@ -40,6 +42,7 @@ export class SubscriptionPlansController {
   }
 
   @Patch(':planId')
+  @Idempotent('platform.plan.update')
   @PlatformScope()
   @RequirePermissions(Permission.PLATFORM_PLAN_MANAGE)
   update(

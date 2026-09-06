@@ -1,8 +1,3 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
-import { useEffect, useId, useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { z } from "zod";
 import {
   FormDialog,
   RHFSelect,
@@ -35,6 +30,15 @@ import {
   type ValidationMessages,
 } from "@/i18n/validation";
 import { handleApiError } from "@/shared/lib/error";
+import {
+  idempotencyKeyForIntent,
+  type IdempotencyIntent,
+} from "@/shared/lib/idempotency";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useId, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { z } from "zod";
 
 const CODE_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const CURRENCY_PATTERN = /^[A-Z]{3}$/;
@@ -161,7 +165,8 @@ function createPlanFormSchema({
         });
       }
 
-      const validAnalytics = values.analytics === "true" || values.analytics === "false";
+      const validAnalytics =
+        values.analytics === "true" || values.analytics === "false";
       if (isCreate && !validAnalytics) {
         context.addIssue({
           code: "custom",
@@ -229,7 +234,10 @@ function isPositiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
-function getInitialValues(plan: SubscriptionPlan | undefined, locale: string): PlanFormValues {
+function getInitialValues(
+  plan: SubscriptionPlan | undefined,
+  locale: string,
+): PlanFormValues {
   const entitlements = plan?.entitlements ?? {};
 
   return {
@@ -258,7 +266,9 @@ function getInitialValues(plan: SubscriptionPlan | undefined, locale: string): P
   };
 }
 
-function getUnknownEntitlements(plan: SubscriptionPlan | undefined): Record<string, unknown> {
+function getUnknownEntitlements(
+  plan: SubscriptionPlan | undefined,
+): Record<string, unknown> {
   if (!plan) {
     return {};
   }
@@ -284,7 +294,10 @@ function areEqual(left: unknown, right: unknown): boolean {
   }
 
   if (Array.isArray(left) && Array.isArray(right)) {
-    return left.length === right.length && left.every((value, index) => areEqual(value, right[index]));
+    return (
+      left.length === right.length &&
+      left.every((value, index) => areEqual(value, right[index]))
+    );
   }
 
   if (isRecord(left) && isRecord(right)) {
@@ -321,7 +334,8 @@ function buildUpdateInput({
   const normalized = {
     name: values.name.trim(),
     description: values.description.trim() || null,
-    billingInterval: values.billingInterval as SubscriptionPlan["billingInterval"],
+    billingInterval:
+      values.billingInterval as SubscriptionPlan["billingInterval"],
     amount: parseMajorAmount(values.price, values.currency, locale)!,
     currency: values.currency.trim(),
     providerPlanId: values.providerPlanId.trim() || null,
@@ -329,16 +343,19 @@ function buildUpdateInput({
   };
 
   if (normalized.name !== plan.name) input.name = normalized.name;
-  if (normalized.description !== plan.description) input.description = normalized.description;
+  if (normalized.description !== plan.description)
+    input.description = normalized.description;
   if (normalized.billingInterval !== plan.billingInterval) {
     input.billingInterval = normalized.billingInterval;
   }
   if (normalized.amount !== plan.amount) input.amount = normalized.amount;
-  if (normalized.currency !== plan.currency) input.currency = normalized.currency;
+  if (normalized.currency !== plan.currency)
+    input.currency = normalized.currency;
   if (normalized.providerPlanId !== plan.providerPlanId) {
     input.providerPlanId = normalized.providerPlanId;
   }
-  if (normalized.trialDays !== plan.trialDays) input.trialDays = normalized.trialDays;
+  if (normalized.trialDays !== plan.trialDays)
+    input.trialDays = normalized.trialDays;
 
   const entitlementFields = ["maxBranches", "maxUsers", "analytics"] as const;
   if (entitlementFields.some((field) => dirtyFields[field])) {
@@ -390,9 +407,14 @@ export function SubscriptionPlanFormDialog({
     () => getInitialValues(plan, locale),
     [locale, plan],
   );
-  const unknownEntitlements = useMemo(() => getUnknownEntitlements(plan), [plan]);
+  const unknownEntitlements = useMemo(
+    () => getUnknownEntitlements(plan),
+    [plan],
+  );
   const createMutation = useCreateSubscriptionPlanMutation();
   const updateMutation = useUpdateSubscriptionPlanMutation();
+  const [idempotencyIntent, setIdempotencyIntent] =
+    useState<IdempotencyIntent | null>(null);
   const mutation = isCreate ? createMutation : updateMutation;
   const {
     control,
@@ -409,7 +431,7 @@ export function SubscriptionPlanFormDialog({
     if (open) {
       reset(defaultValues);
     }
-  }, [defaultValues, open, reset]);
+  }, [defaultValues, open, plan?.id, reset]);
 
   const billingIntervalOptions = useMemo(
     () =>
@@ -429,17 +451,18 @@ export function SubscriptionPlanFormDialog({
   );
   const currencyOptions = useMemo(
     () =>
-      [...new Set([...PLAN_CURRENCY_CODES, ...(plan ? [plan.currency] : [])])].map(
-        (currency) => ({
-          label: formatCurrencyOption(currency, locale),
-          value: currency,
-        }),
-      ) satisfies RHFSelectOption[],
+      [
+        ...new Set([...PLAN_CURRENCY_CODES, ...(plan ? [plan.currency] : [])]),
+      ].map((currency) => ({
+        label: formatCurrencyOption(currency, locale),
+        value: currency,
+      })) satisfies RHFSelectOption[],
     [locale, plan],
   );
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
+      setIdempotencyIntent(null);
       reset(defaultValues);
     }
 
@@ -457,7 +480,16 @@ export function SubscriptionPlanFormDialog({
         });
 
         if (Object.keys(input).length > 0) {
-          await updateMutation.mutateAsync({ planId: plan.id, input });
+          const nextIdempotencyIntent = idempotencyKeyForIntent(
+            idempotencyIntent,
+            { operation: "platform.plan.update", planId: plan.id, input },
+          );
+          setIdempotencyIntent(nextIdempotencyIntent);
+          await updateMutation.mutateAsync({
+            planId: plan.id,
+            input,
+            idempotencyKey: nextIdempotencyIntent.key,
+          });
         }
       } else {
         const amount = parseMajorAmount(values.price, values.currency, locale)!;
@@ -465,14 +497,24 @@ export function SubscriptionPlanFormDialog({
           code: values.code.trim(),
           name: values.name.trim(),
           description: values.description.trim() || null,
-          billingInterval: values.billingInterval as SubscriptionPlan["billingInterval"],
+          billingInterval:
+            values.billingInterval as SubscriptionPlan["billingInterval"],
           amount,
           currency: values.currency.trim(),
           providerPlanId: values.providerPlanId.trim() || null,
-          trialDays: values.trialDays.length > 0 ? Number(values.trialDays) : null,
+          trialDays:
+            values.trialDays.length > 0 ? Number(values.trialDays) : null,
           entitlements: createEntitlements(values),
         };
-        await createMutation.mutateAsync(input);
+        const nextIdempotencyIntent = idempotencyKeyForIntent(
+          idempotencyIntent,
+          { operation: "platform.plan.create", input },
+        );
+        setIdempotencyIntent(nextIdempotencyIntent);
+        await createMutation.mutateAsync({
+          input,
+          idempotencyKey: nextIdempotencyIntent.key,
+        });
       }
 
       handleOpenChange(false);
@@ -484,7 +526,9 @@ export function SubscriptionPlanFormDialog({
   return (
     <FormDialog
       contentClassName="sm:max-w-2xl"
-      description={tPlans(isCreate ? "form.createDescription" : "form.editDescription")}
+      description={tPlans(
+        isCreate ? "form.createDescription" : "form.editDescription",
+      )}
       isDirty={isDirty}
       isSubmitting={mutation.isPending}
       noValidate
@@ -525,9 +569,13 @@ export function SubscriptionPlanFormDialog({
               name="description"
               render={({ field, fieldState }) => (
                 <div className="grid gap-2">
-                  <Label htmlFor={descriptionId}>{tPlans("form.fields.description")}</Label>
+                  <Label htmlFor={descriptionId}>
+                    {tPlans("form.fields.description")}
+                  </Label>
                   <Textarea
-                    aria-describedby={fieldState.error ? `${descriptionId}-message` : undefined}
+                    aria-describedby={
+                      fieldState.error ? `${descriptionId}-message` : undefined
+                    }
                     aria-invalid={Boolean(fieldState.error)}
                     id={descriptionId}
                     maxLength={1000}
@@ -538,7 +586,10 @@ export function SubscriptionPlanFormDialog({
                     value={field.value}
                   />
                   {fieldState.error?.message && (
-                    <p className="text-xs text-destructive" id={`${descriptionId}-message`}>
+                    <p
+                      className="text-xs text-destructive"
+                      id={`${descriptionId}-message`}
+                    >
                       {fieldState.error.message}
                     </p>
                   )}
@@ -628,7 +679,9 @@ export function SubscriptionPlanFormDialog({
 
         {Object.keys(unknownEntitlements).length > 0 && (
           <div className="space-y-2 rounded-xl border border-dashed border-border/70 p-4">
-            <h3 className="font-semibold">{tPlans("entitlements.unknownTitle")}</h3>
+            <h3 className="font-semibold">
+              {tPlans("entitlements.unknownTitle")}
+            </h3>
             <p className="text-sm text-muted-foreground">
               {tPlans("entitlements.unknownDescription")}
             </p>

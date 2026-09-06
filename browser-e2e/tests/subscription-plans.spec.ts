@@ -5,6 +5,7 @@ import {
   type Locator,
   type Page,
 } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 import { resetDatabase } from "./support/database";
 import { E2E_USERS, login } from "./support/login";
 
@@ -21,14 +22,20 @@ test.beforeEach(async ({ request }) => {
   await resetDatabase(request);
 });
 
-test("Platform Admin can reach the plan catalog from navigation", async ({ page }) => {
+test("Platform Admin can reach the plan catalog from navigation", async ({
+  page,
+}) => {
   await login(page, E2E_USERS.platformAdmin);
   await switchToEnglish(page);
 
   await page.goto("/platform/plans");
   await expect(page).toHaveURL(/\/platform\/plans$/);
-  await expect(page.getByRole("heading", { name: "Subscription plans" })).toBeVisible();
-  await expect(page.getByRole("navigation").getByRole("link", { name: "Plan catalog" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Subscription plans" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation").getByRole("link", { name: "Plan catalog" }),
+  ).toBeVisible();
 });
 
 test("Tenant Admin is denied the plan catalog", async ({ page }) => {
@@ -37,7 +44,9 @@ test("Tenant Admin is denied the plan catalog", async ({ page }) => {
   await expect(page.getByText("403 · Không có quyền truy cập")).toBeVisible();
 });
 
-test("creates a plan, validates inputs, and keeps a duplicate API error visible", async ({ page }) => {
+test("creates a plan, validates inputs, and keeps a duplicate API error visible", async ({
+  page,
+}) => {
   await login(page, E2E_USERS.platformAdmin);
   await switchToEnglish(page);
   await page.goto("/platform/plans");
@@ -47,19 +56,36 @@ test("creates a plan, validates inputs, and keeps a duplicate API error visible"
   await dialog.getByRole("button", { name: "Create plan" }).click();
   await expect(dialog.getByText("Plan code is required.")).toBeVisible();
 
-  await fillPlanForm(dialog, { code: "growth-monthly", name: "Growth Monthly" });
+  await fillPlanForm(dialog, {
+    code: "growth-monthly",
+    name: "Growth Monthly",
+  });
+  const createRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" && request.url().endsWith("/platform/plans"),
+  );
   await dialog.getByRole("button", { name: "Create plan" }).click();
+  expect((await createRequest).headers()["idempotency-key"]).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  );
   await expect(dialog).toHaveCount(0);
   await expect(page.getByText("Growth Monthly", { exact: true })).toBeVisible();
   await expect(page.getByText("growth-monthly", { exact: true })).toBeVisible();
   await expect(page.getByText(/250,000/)).toBeVisible();
 
   await page.getByRole("button", { name: "Create plan" }).click();
-  const duplicateDialog = page.getByRole("dialog", { name: "Create subscription plan" });
-  await fillPlanForm(duplicateDialog, { code: "growth-monthly", name: "Growth Monthly" });
+  const duplicateDialog = page.getByRole("dialog", {
+    name: "Create subscription plan",
+  });
+  await fillPlanForm(duplicateDialog, {
+    code: "growth-monthly",
+    name: "Growth Monthly",
+  });
   await duplicateDialog.getByRole("button", { name: "Create plan" }).click();
   await expect(
-    duplicateDialog.getByText("Subscription plan code or provider plan ID already exists."),
+    duplicateDialog.getByText(
+      "Subscription plan code or provider plan ID already exists.",
+    ),
   ).toBeVisible();
 });
 
@@ -94,10 +120,15 @@ test("edits an unused plan without changing code and preserves unsupported entit
   await dialog.getByLabel("Maximum branches").fill("4");
 
   const patchRequest = page.waitForRequest(
-    (request) => request.method() === "PATCH" && request.url().endsWith(`/platform/plans/${plan.id}`),
+    (request) =>
+      request.method() === "PATCH" &&
+      request.url().endsWith(`/platform/plans/${plan.id}`),
   );
   await dialog.getByRole("button", { name: "Save changes" }).click();
   const patch = await patchRequest;
+  expect(patch.headers()["idempotency-key"]).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  );
   expect(patch.postDataJSON()).toEqual({
     description: null,
     entitlements: {
@@ -127,22 +158,41 @@ test("requires a reason to change availability and displays a commercial conflic
   page,
   request,
 }) => {
-  await createPlanViaApi(request, { code: "starter-monthly", name: "Starter Monthly" });
+  await createPlanViaApi(request, {
+    code: "starter-monthly",
+    name: "Starter Monthly",
+  });
   await login(page, E2E_USERS.platformAdmin);
   await switchToEnglish(page);
   await page.goto("/platform/plans");
 
-  await page.getByRole("button", { name: "Deactivate Starter Monthly" }).click();
-  const availabilityDialog = page.getByRole("alertdialog", { name: "Deactivate plan" });
-  await availabilityDialog.getByRole("button", { name: "Deactivate plan" }).click();
-  await expect(availabilityDialog.getByText("Enter a reason for this availability change.")).toBeVisible();
-  await availabilityDialog.getByLabel("Reason").fill("Retired from the current catalog");
-  await availabilityDialog.getByRole("button", { name: "Deactivate plan" }).click();
+  await page
+    .getByRole("button", { name: "Deactivate Starter Monthly" })
+    .click();
+  const availabilityDialog = page.getByRole("alertdialog", {
+    name: "Deactivate plan",
+  });
+  await availabilityDialog
+    .getByRole("button", { name: "Deactivate plan" })
+    .click();
+  await expect(
+    availabilityDialog.getByText(
+      "Enter a reason for this availability change.",
+    ),
+  ).toBeVisible();
+  await availabilityDialog
+    .getByLabel("Reason")
+    .fill("Retired from the current catalog");
+  await availabilityDialog
+    .getByRole("button", { name: "Deactivate plan" })
+    .click();
   await expect(availabilityDialog).toHaveCount(0);
   await expect(page.getByText("Inactive", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Edit Starter Monthly" }).click();
-  const editDialog = page.getByRole("dialog", { name: "Edit subscription plan" });
+  const editDialog = page.getByRole("dialog", {
+    name: "Edit subscription plan",
+  });
   await editDialog.getByLabel("Plan name").fill("Starter Plus");
   await page.route("**/platform/plans/*", async (route) => {
     if (route.request().method() === "PATCH") {
@@ -150,7 +200,8 @@ test("requires a reason to change availability and displays a commercial conflic
         contentType: "application/json",
         status: 409,
         body: JSON.stringify({
-          message: "A subscription plan with subscription history can only change availability.",
+          message:
+            "A subscription plan with subscription history can only change availability.",
         }),
       });
       return;
@@ -160,7 +211,9 @@ test("requires a reason to change availability and displays a commercial conflic
   });
   await editDialog.getByRole("button", { name: "Save changes" }).click();
   await expect(
-    editDialog.getByText("A subscription plan with subscription history can only change availability."),
+    editDialog.getByText(
+      "A subscription plan with subscription history can only change availability.",
+    ),
   ).toBeVisible();
   await expect(editDialog.getByLabel("Plan name")).toHaveValue("Starter Plus");
 });
@@ -207,6 +260,7 @@ async function createPlanViaApi(
   await expect(loginResponse).toBeOK();
 
   const createResponse = await request.post(`${API_URL}/platform/plans`, {
+    headers: { "Idempotency-Key": randomUUID() },
     data: {
       amount: 250000,
       billingInterval: "MONTHLY",

@@ -10,6 +10,7 @@ import { LoggingInterceptor } from 'src/common/interceptors/logging.interceptor'
 import { AppLogger } from 'src/common/logging/app-logger.service';
 import { CustomValidationPipe } from 'src/common/pipes/custom-validation.pipe';
 import { AppConfigService } from 'src/config/app-config.service';
+import { IdempotencyInterceptor } from 'src/modules/idempotency/idempotency.interceptor';
 
 let app: INestApplication;
 
@@ -47,8 +48,9 @@ export async function initApp() {
   );
 
   app.useGlobalInterceptors(
-    new ClassSerializerInterceptor(app.get(Reflector)),
     new LoggingInterceptor(app.get(AppLogger), appConfig),
+    app.get(IdempotencyInterceptor),
+    new ClassSerializerInterceptor(app.get(Reflector)),
   );
 
   app.useGlobalFilters(new GlobalExceptionFilter());

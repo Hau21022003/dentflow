@@ -190,9 +190,7 @@ describe('Audit logs (e2e)', () => {
       .expect(404);
 
     const branchResponse = await branchSession.agent
-      .get(
-        `/tenants/${tenantA.slug}/branches/${branchA.slug}/audit-logs`,
-      )
+      .get(`/tenants/${tenantA.slug}/branches/${branchA.slug}/audit-logs`)
       .expect(200);
     const branchPage = auditPage(branchResponse);
     expect(branchPage.items.map((item) => item.id)).toEqual(

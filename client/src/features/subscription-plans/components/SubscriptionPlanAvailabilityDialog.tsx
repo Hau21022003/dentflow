@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertDialog,
@@ -17,6 +17,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useUpdateSubscriptionPlanMutation } from "@/features/subscription-plans/subscription-plans.hooks";
 import type { SubscriptionPlan } from "@/features/subscription-plans/subscription-plans.types";
 import { getErrorMessage } from "@/shared/lib/error";
+import {
+  idempotencyKeyForIntent,
+  type IdempotencyIntent,
+} from "@/shared/lib/idempotency";
 
 type SubscriptionPlanAvailabilityDialogProps = {
   onOpenChange: (open: boolean) => void;
@@ -31,6 +35,7 @@ export function SubscriptionPlanAvailabilityDialog({
   const updateMutation = useUpdateSubscriptionPlanMutation();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const idempotencyIntent = useRef<IdempotencyIntent | null>(null);
   const isActivating = Boolean(plan && !plan.isActive);
 
   function handleOpenChange(open: boolean) {
@@ -54,12 +59,18 @@ export function SubscriptionPlanAvailabilityDialog({
     }
 
     try {
+      const input = {
+        isActive: !plan.isActive,
+        reason: trimmedReason,
+      };
+      idempotencyIntent.current = idempotencyKeyForIntent(
+        idempotencyIntent.current,
+        { operation: "platform.plan.update", planId: plan.id, input },
+      );
       await updateMutation.mutateAsync({
         planId: plan.id,
-        input: {
-          isActive: !plan.isActive,
-          reason: trimmedReason,
-        },
+        input,
+        idempotencyKey: idempotencyIntent.current.key,
       });
       onOpenChange(false);
     } catch (mutationError) {
@@ -73,7 +84,11 @@ export function SubscriptionPlanAvailabilityDialog({
         <form className="grid gap-4" noValidate onSubmit={handleSubmit}>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t(isActivating ? "availability.activateTitle" : "availability.deactivateTitle")}
+              {t(
+                isActivating
+                  ? "availability.activateTitle"
+                  : "availability.deactivateTitle",
+              )}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {t(
@@ -121,8 +136,14 @@ export function SubscriptionPlanAvailabilityDialog({
               type="submit"
               variant={isActivating ? "default" : "destructive"}
             >
-              {updateMutation.isPending && <Spinner aria-label={t("actions.saving")} />}
-              {t(isActivating ? "availability.activateConfirm" : "availability.deactivateConfirm")}
+              {updateMutation.isPending && (
+                <Spinner aria-label={t("actions.saving")} />
+              )}
+              {t(
+                isActivating
+                  ? "availability.activateConfirm"
+                  : "availability.deactivateConfirm",
+              )}
             </Button>
           </AlertDialogFooter>
         </form>

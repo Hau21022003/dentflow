@@ -111,9 +111,9 @@ Các endpoint nội bộ dưới `/platform/*` yêu cầu `PLATFORM_ADMIN`. Tài
 - `POST /platform/billing/webhook-events/:eventId/retry`
 - `GET /platform/audit-logs`, `GET /platform/audit-logs/:id`: chỉ trả audit domain Platform/Security; không trả clinical hay payment điều trị của tenant.
 
-Các command tenant lifecycle cần body gồm `reason` (bắt buộc với suspend/extend/reactivate thủ công) và `idempotencyKey`. Endpoint retry chỉ chạy lại business processing đã lưu, không gọi provider để tạo giao dịch mới.
+Các command tenant lifecycle cần body gồm `reason` (bắt buộc với suspend/extend/reactivate thủ công). Khi được triển khai, command có side effect phải nhận header `Idempotency-Key` UUID v4; không nhận key trong body. Endpoint retry chỉ chạy lại business processing đã lưu, không gọi provider để tạo giao dịch mới.
 
-Plan catalog chỉ dành cho Platform Admin. `GET /platform/plans` trả cả plan active và inactive; `POST` luôn tạo plan active; `PATCH` không nhận đổi `code` và chỉ thay toàn bộ object `entitlements` khi field này được gửi. Thay đổi `isActive` cần `reason`; lệnh lặp lại trạng thái hiện có không tạo audit mới. Catalog chưa có idempotency persistence riêng: `code` và provider plan ID được unique. Plan từng được subscription tham chiếu chỉ được đổi `isActive`.
+Plan catalog chỉ dành cho Platform Admin. `GET /platform/plans` trả cả plan active và inactive; `POST` luôn tạo plan active; `PATCH` không nhận đổi `code` và chỉ thay toàn bộ object `entitlements` khi field này được gửi. `POST` và `PATCH` bắt buộc header `Idempotency-Key` UUID v4; retry cùng key và request trả outcome đã lưu, còn reuse key với request khác trả `409`. Thay đổi `isActive` cần `reason`; lệnh lặp lại trạng thái hiện có không tạo audit mới. `code` và provider plan ID vẫn unique business constraint, không thay thế idempotency persistence. Plan từng được subscription tham chiếu chỉ được đổi `isActive`.
 
 ## 8. Acceptance criteria và test
 

@@ -2,7 +2,7 @@
 
 ## 1. Trạng thái và quy tắc nền tảng
 
-Backend đã có kết nối BullMQ/Redis dùng chung nhưng chưa đăng ký queue hoặc processor nào. Tài liệu này là contract bắt buộc trước khi thêm background job đầu tiên.
+Backend có kết nối BullMQ/Redis dùng chung nhưng chưa đăng ký queue hoặc processor nào. Retention `IdempotencyRecord` không phải BullMQ job: Nest Scheduler chạy một truy vấn xóa idempotent trong API mỗi ngày lúc 03:15 UTC. Tài liệu này là contract bắt buộc trước khi thêm background job tiếp theo.
 
 > **BullMQ là execution transport, không phải nguồn trạng thái nghiệp vụ. Mọi processor phải idempotent và an toàn khi job bị chạy lại.**
 
@@ -20,7 +20,7 @@ Job chỉ dùng cho tác vụ nền: gọi provider, gửi notification, xử l�
 
 ## 3. Runtime và module structure
 
-Production chạy API và worker bằng hai process/container từ cùng source build:
+Khi có background job thực sự cần retry, I/O chậm hoặc execution policy riêng, production chạy API và worker bằng hai process/container từ cùng source build:
 
 ```text
 API process
@@ -30,7 +30,7 @@ Worker process
   BullMQ processor → domain service / provider → PostgreSQL
 ```
 
-API process chỉ đăng ký producer; worker process mới đăng ký processor. Điều này tách I/O chậm, retry và concurrency khỏi HTTP traffic. Development/test có thể dùng runtime `all` để chạy cả hai nhằm đơn giản hoá trải nghiệm local, nhưng production không chạy processor trong API process.
+API process chỉ đăng ký producer; worker process mới đăng ký processor. Điều này tách I/O chậm, retry và concurrency khỏi HTTP traffic. Development/test có thể dùng runtime `all` để chạy cả hai nhằm đơn giản hoá trải nghiệm local, nhưng production không chạy processor trong API process. Hiện chưa có worker runtime vì retention idempotency không cần queue/processor.
 
 Đề xuất cấu trúc mã nguồn:
 
@@ -62,6 +62,8 @@ Các queue được phép dùng trước khi có nhu cầu thực tế:
 
 Queue mới cần nêu rõ lý do tách: concurrency, retry/backoff, rate limit, độ ưu tiên hoặc ownership vận hành khác. Scheduled maintenance chỉ được thêm queue riêng khi có job thực tế; không tạo sẵn.
 
+`IdempotencyRecordPurgeService` chạy trong API mỗi ngày lúc 03:15 UTC bằng `@nestjs/schedule`, với `waitForCompletion` để không chồng lần chạy trong cùng process. Nó chỉ xóa `IdempotencyRecord(COMPLETED)` đã vượt `expiresAt`, không tạo side effect nghiệp vụ và an toàn khi nhiều API instance cùng chạy. Lỗi được log; lần chạy kế tiếp sẽ thử lại. Tác vụ này không cần queue, retry policy hay worker riêng.
+
 Mọi job name là constant và payload có version. Payload tối thiểu chứa:
 
 ```text
@@ -92,13 +94,13 @@ Processor không dựa vào HTTP `Idempotency-Key` để an toàn. HTTP idempote
 
 - BullMQ failed state là đủ cho MVP; không thêm dead-letter queue riêng.
 - Retry/replay thủ công chỉ được bổ sung theo workflow của từng domain. Với billing webhook, retry chỉ chạy xử lý nội bộ của `PaymentEvent` đã lưu, theo [02-platform-admin.md](./02-platform-admin.md), không giả lập event hoặc gọi provider tạo giao dịch mới.
-- Worker phải graceful shutdown: dừng lấy job mới và để job đang chạy hoàn tất/được BullMQ retry theo policy.
+- Worker phải graceful shutdown: dừng lấy job mới và để job đang chạy hoàn tất/được BullMQ retry theo policy. Điều này áp dụng khi có worker thực tế; retention idempotency hiện không dùng worker.
 - CPU-bound/heavy work không chạy trong processor Node.js thông thường; tách service/worker chuyên dụng khi có nhu cầu thay vì làm nghẽn event loop API.
 - Test integration dùng Redis test tách biệt và phải kiểm tra retry, duplicate/stalled job, tenant isolation trong worker, cùng hành vi failed job.
 
 ## 7. Điều chưa làm
 
-- Không có queue/processor nào được tạo chỉ vì đã có BullMQ dependency.
+- Không tạo queue/processor chỉ vì đã có BullMQ dependency. Retention idempotency dùng tác vụ API trực tiếp vì chỉ là truy vấn xóa idempotent, không cần worker.
 - Không có BullMQ Flow, queue per tenant, generic `default` queue, dead-letter queue riêng hoặc transactional outbox tổng quát trong MVP.
 - Không có API/UI để tenant tự xem, pause, retry hoặc cấu hình queue/job.
 - Khi thêm queue đầu tiên, cập nhật tài liệu domain tương ứng với job name, producer, retry policy và operational owner trong cùng PR.

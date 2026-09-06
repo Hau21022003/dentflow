@@ -11,6 +11,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AppLogger } from './common/logging/app-logger.service';
 import { CustomValidationPipe } from './common/pipes/custom-validation.pipe';
 import { AppConfigService } from './config/app-config.service';
+import { IdempotencyInterceptor } from './modules/idempotency/idempotency.interceptor';
 import {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
@@ -67,8 +68,9 @@ async function bootstrap() {
   });
 
   app.useGlobalInterceptors(
-    new ClassSerializerInterceptor(app.get(Reflector)),
     new LoggingInterceptor(app.get(AppLogger), app.get(AppConfigService)),
+    app.get(IdempotencyInterceptor),
+    new ClassSerializerInterceptor(app.get(Reflector)),
   );
 
   app.useGlobalFilters(new GlobalExceptionFilter());

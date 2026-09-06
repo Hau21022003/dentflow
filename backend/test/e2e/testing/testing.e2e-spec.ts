@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  INestApplication,
-  type ExecutionContext,
-} from '@nestjs/common';
+import { ForbiddenException, INestApplication } from '@nestjs/common';
 import { AppConfigService } from 'src/config/app-config.service';
 import { AuthSession } from 'src/modules/auth/sessions/entities/auth-session.entity';
 import {
@@ -107,15 +103,13 @@ describe('TestingGuard', () => {
   it('permits the testing endpoint in the test environment', () => {
     const guard = createGuard(true);
 
-    expect(guard.canActivate({} as ExecutionContext)).toBe(true);
+    expect(guard.canActivate({})).toBe(true);
   });
 
   it('rejects the testing endpoint outside the test environment', () => {
     const guard = createGuard(false);
 
-    expect(() => guard.canActivate({} as ExecutionContext)).toThrow(
-      ForbiddenException,
-    );
+    expect(() => guard.canActivate({})).toThrow(ForbiddenException);
   });
 
   function createGuard(isTesting: boolean): TestingGuard {

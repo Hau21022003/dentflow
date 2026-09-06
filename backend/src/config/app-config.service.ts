@@ -40,6 +40,21 @@ export class AppConfigService {
     };
   }
 
+  get idempotencyConfig() {
+    const processingLease = this.config.getOrThrow<string>(
+      'app.idempotency.processingLease',
+    );
+    const completedRetention = this.config.getOrThrow<string>(
+      'app.idempotency.completedRetention',
+    );
+
+    return {
+      hmacSecret: this.config.getOrThrow<string>('app.idempotency.hmacSecret'),
+      processingLeaseMs: ms(processingLease as StringValue),
+      completedRetentionMs: ms(completedRetention as StringValue),
+    };
+  }
+
   get corsConfig() {
     return {
       frontendOrigin: this.config.getOrThrow<string>('app.cors.frontendOrigin'),

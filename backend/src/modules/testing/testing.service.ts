@@ -19,18 +19,17 @@ export class TestingService {
     try {
       await queryRunner.startTransaction();
 
-      const tables: { qualifiedName: string }[] = await queryRunner.query(
+      const tableRows: unknown = await queryRunner.query(
         `SELECT format('%I.%I', schemaname, tablename) AS "qualifiedName"
          FROM pg_tables
          WHERE schemaname = 'public'
            AND tablename != 'migrations'`,
       );
+      const tables = this.qualifiedTableNames(tableRows);
 
       if (tables.length > 0) {
         await queryRunner.query(
-          `TRUNCATE TABLE ${tables
-            .map(({ qualifiedName }) => qualifiedName)
-            .join(', ')} RESTART IDENTITY CASCADE`,
+          `TRUNCATE TABLE ${tables.join(', ')} RESTART IDENTITY CASCADE`,
         );
       }
 
@@ -65,5 +64,30 @@ export class TestingService {
 
       await queryRunner.query(sql);
     }
+  }
+
+  private qualifiedTableNames(tableRows: unknown): string[] {
+    if (!Array.isArray(tableRows)) {
+      return [];
+    }
+
+    const rows = tableRows as unknown[];
+
+    return rows.reduce<string[]>((qualifiedNames, row) => {
+      if (this.isQualifiedTable(row)) {
+        qualifiedNames.push(row.qualifiedName);
+      }
+
+      return qualifiedNames;
+    }, []);
+  }
+
+  private isQualifiedTable(row: unknown): row is { qualifiedName: string } {
+    return (
+      typeof row === 'object' &&
+      row !== null &&
+      'qualifiedName' in row &&
+      typeof row.qualifiedName === 'string'
+    );
   }
 }

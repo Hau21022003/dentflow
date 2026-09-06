@@ -32,6 +32,7 @@ export default defineConfig({
         APP_URL: apiUrl,
         FRONTEND_ORIGIN: frontendUrl,
         AUDIT_IP_HMAC_SECRET: "secret",
+        IDEMPOTENCY_HMAC_SECRET: "idempotency-test-secret",
         PORT: "3001",
       },
     },

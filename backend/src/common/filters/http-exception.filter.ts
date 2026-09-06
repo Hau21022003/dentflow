@@ -13,6 +13,7 @@ interface ErrorResponseBody {
   statusCode: number;
   message: ClientErrorMessage;
   error?: string;
+  code?: string;
   errors?: Record<string, string[]>;
   path: string;
   timestamp: string;
@@ -50,7 +51,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const timestamp = new Date().toISOString();
 
     // Không lộ chi tiết nội bộ của bất kỳ lỗi 5xx nào.
-    if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    const internalServerErrorStatus = Number(HttpStatus.INTERNAL_SERVER_ERROR);
+    if (statusCode >= internalServerErrorStatus) {
       return {
         statusCode,
         message: 'Internal server error',
@@ -79,6 +81,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const body = exceptionResponse as {
         message?: ClientErrorMessage;
         error?: string;
+        code?: string;
         errors?: Record<string, string[]>;
       };
 
@@ -86,6 +89,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         statusCode,
         message: body.message ?? 'Request failed',
         ...(body.error ? { error: body.error } : {}),
+        ...(body.code ? { code: body.code } : {}),
         ...(body.errors ? { errors: body.errors } : {}),
         path,
         timestamp,

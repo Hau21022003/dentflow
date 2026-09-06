@@ -5,19 +5,32 @@ import type {
   UpdateSubscriptionPlanInput,
 } from "./subscription-plans.types";
 
+export type CreateSubscriptionPlanCommand = {
+  input: CreateSubscriptionPlanInput;
+  idempotencyKey: string;
+};
+
+export type UpdateSubscriptionPlanCommand = {
+  planId: string;
+  input: UpdateSubscriptionPlanInput;
+  idempotencyKey: string;
+};
+
 export const subscriptionPlansService = {
   async list(): Promise<SubscriptionPlan[]> {
-    const { payload } = await http.get<SubscriptionPlan[]>(
-      "/platform/plans",
-    );
+    const { payload } = await http.get<SubscriptionPlan[]>("/platform/plans");
 
     return payload;
   },
 
-  async create(input: CreateSubscriptionPlanInput): Promise<SubscriptionPlan> {
+  async create({
+    input,
+    idempotencyKey,
+  }: CreateSubscriptionPlanCommand): Promise<SubscriptionPlan> {
     const { payload } = await http.post<SubscriptionPlan>(
       "/platform/plans",
       input,
+      { headers: { "Idempotency-Key": idempotencyKey } },
     );
 
     return payload;
@@ -26,13 +39,12 @@ export const subscriptionPlansService = {
   async update({
     planId,
     input,
-  }: {
-    planId: string;
-    input: UpdateSubscriptionPlanInput;
-  }): Promise<SubscriptionPlan> {
+    idempotencyKey,
+  }: UpdateSubscriptionPlanCommand): Promise<SubscriptionPlan> {
     const { payload } = await http.patch<SubscriptionPlan>(
       `/platform/plans/${encodeURIComponent(planId)}`,
       input,
+      { headers: { "Idempotency-Key": idempotencyKey } },
     );
 
     return payload;

@@ -1,5 +1,9 @@
 # DentFlow — Kế hoạch triển khai Idempotency
 
+> Trạng thái triển khai (2026-09-07): Foundation và Pilot Plan đã được thực hiện cho `POST /platform/plans` và `PATCH /platform/plans/:planId`. Retention `IdempotencyRecord` chạy trực tiếp trong API mỗi ngày lúc 03:15 UTC bằng Nest Scheduler; không dùng queue hoặc worker riêng cho tác vụ xóa idempotent này. Tenant lifecycle, clinical/financial command, provider checkout và webhook vẫn là các giai đoạn rollout sau.
+
+Sơ đồ đọc nhanh cho developer: [Idempotency request flow](./flows/idempotency-request-flow.md).
+
 ## 1. Trạng thái và mục tiêu
 
 Tài liệu này chốt hướng triển khai trước khi viết code. Mục tiêu là để một command backend được retry do timeout, mất response hoặc gửi trùng trả lại cùng outcome đã lưu, mà không phải thêm idempotency logic vào từng service.
@@ -30,7 +34,7 @@ Idempotency khác với `X-Request-Id`:
 Developer chỉ khai báo policy tại controller:
 
 ```text
-@Idempotent('platform.plan.create.v1')
+@Idempotent('platform.plan.create')
 POST /platform/plans
 ```
 

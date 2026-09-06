@@ -52,6 +52,11 @@ export default registerAs('app', () => {
     audit: {
       ipHmacSecret: env.AUDIT_IP_HMAC_SECRET,
     },
+    idempotency: {
+      hmacSecret: env.IDEMPOTENCY_HMAC_SECRET,
+      processingLease: env.IDEMPOTENCY_PROCESSING_LEASE,
+      completedRetention: env.IDEMPOTENCY_COMPLETED_RETENTION,
+    },
     email: {
       provider: env.MAIL_PROVIDER,
       from: env.MAIL_FROM,

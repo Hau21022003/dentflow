@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core/constants';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -31,6 +32,7 @@ const runtimeEnvOnly = process.env.RUNTIME_ENV_ONLY === 'true';
       load: [appConfig],
       validate: validateEnvironment,
     }),
+    ScheduleModule.forRoot(),
     AppConfigModule,
     TypeOrmModule.forRootAsync({
       inject: [AppConfigService],
