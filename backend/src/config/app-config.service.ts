@@ -7,6 +7,7 @@ import {
   RuntimeEnvironment,
   SaaSBillingProvider,
 } from './environment.constants';
+import type { EmailConfig } from './email.config';
 
 @Injectable()
 export class AppConfigService {
@@ -84,10 +85,10 @@ export class AppConfigService {
   }
 
   // ========== EMAIL ==========
-  get emailConfig() {
+  get emailConfig(): EmailConfig {
     const provider = this.config.getOrThrow<MailProvider>('app.email.provider');
     const from = this.config.getOrThrow<string>('app.email.from');
-    const redirectTo = this.config.getOrThrow<string>('app.email.redirectTo');
+    const redirectTo = this.config.get<string>('app.email.redirectTo');
 
     if (provider === 'smtp') {
       return {
@@ -97,8 +98,9 @@ export class AppConfigService {
         smtp: {
           host: this.config.getOrThrow<string>('app.email.smtp.host'),
           port: this.config.getOrThrow<number>('app.email.smtp.port'),
-          user: this.config.getOrThrow<string>('app.email.smtp.user'),
-          pass: this.config.getOrThrow<string>('app.email.smtp.pass'),
+          secure: this.config.getOrThrow<boolean>('app.email.smtp.secure'),
+          user: this.config.get<string>('app.email.smtp.user'),
+          pass: this.config.get<string>('app.email.smtp.pass'),
         },
       };
     }
@@ -117,6 +119,8 @@ export class AppConfigService {
         },
       };
     }
+
+    throw new Error('Unsupported mail provider.');
   }
 
   // ========== UPLOAD ==========

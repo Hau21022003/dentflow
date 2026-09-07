@@ -13,6 +13,7 @@ import { AppConfigModule } from './config/app-config.module';
 import { AppConfigService } from './config/app-config.service';
 import appConfig from './config/app.config';
 import { validateEnvironment } from './config/env.validation';
+import { InfrastructureModule } from './infrastructure/infrastructure.module';
 import { AppI18nModule } from './i18n/app-i18n.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { ModulesModule } from './modules/modules.module';
@@ -69,6 +70,7 @@ const runtimeEnvOnly = process.env.RUNTIME_ENV_ONLY === 'true';
         },
       }),
     }),
+    InfrastructureModule,
     ModulesModule,
     LoggingModule,
     RequestContextModule,

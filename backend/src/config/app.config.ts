@@ -65,6 +65,7 @@ export default registerAs('app', () => {
       smtp: {
         host: env.MAIL_HOST,
         port: env.MAIL_PORT,
+        secure: env.MAIL_SECURE ?? env.MAIL_PORT === 465,
         user: env.MAIL_USER,
         pass: env.MAIL_PASS,
       },

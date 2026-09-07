@@ -33,6 +33,16 @@ const optionalText = z.preprocess(
   z.string().trim().optional(),
 );
 
+const requiredEmailAddress = z.preprocess(
+  emptyToUndefined,
+  z.string().trim().email('must be a valid email address.'),
+);
+
+const optionalEmailAddress = z.preprocess(
+  emptyToUndefined,
+  z.string().trim().email('must be a valid email address.').optional(),
+);
+
 const currencyCode = z.preprocess(
   emptyToUndefined,
   z
@@ -124,10 +134,11 @@ export const envSchema = z
     MAIL_PROVIDER: z
       .preprocess(emptyToUndefined, z.enum(MAIL_PROVIDERS))
       .default('smtp'),
-    MAIL_FROM: requiredText,
-    MAIL_REDIRECT_TO: requiredText,
+    MAIL_FROM: requiredEmailAddress,
+    MAIL_REDIRECT_TO: optionalEmailAddress,
     MAIL_HOST: optionalText,
     MAIL_PORT: optionalPositiveInteger,
+    MAIL_SECURE: booleanFlag.optional(),
     MAIL_USER: optionalText,
     MAIL_PASS: optionalText,
     AWS_SES_REGION: optionalText,
@@ -175,16 +186,40 @@ export const envSchema = z
       if (!environment.MAIL_PORT) {
         addRequiredIssue('MAIL_PORT');
       }
-      if (!environment.MAIL_USER) {
-        addRequiredIssue('MAIL_USER');
-      }
       if (!environment.MAIL_PASS) {
-        addRequiredIssue('MAIL_PASS');
+        if (environment.MAIL_USER) {
+          addRequiredIssue('MAIL_PASS');
+        }
+      }
+      if (!environment.MAIL_USER && environment.MAIL_PASS) {
+        addRequiredIssue('MAIL_USER');
       }
     }
 
-    if (environment.MAIL_PROVIDER === 'ses' && !environment.AWS_SES_REGION) {
-      addRequiredIssue('AWS_SES_REGION');
+    if (environment.MAIL_PROVIDER === 'ses') {
+      if (!environment.AWS_SES_REGION) {
+        addRequiredIssue('AWS_SES_REGION');
+      }
+      if (
+        environment.AWS_SES_ACCESS_KEY_ID &&
+        !environment.AWS_SES_SECRET_ACCESS_KEY
+      ) {
+        addRequiredIssue('AWS_SES_SECRET_ACCESS_KEY');
+      }
+      if (
+        !environment.AWS_SES_ACCESS_KEY_ID &&
+        environment.AWS_SES_SECRET_ACCESS_KEY
+      ) {
+        addRequiredIssue('AWS_SES_ACCESS_KEY_ID');
+      }
+    }
+
+    if (
+      (environment.NODE_ENV === 'development' ||
+        environment.NODE_ENV === 'staging') &&
+      !environment.MAIL_REDIRECT_TO
+    ) {
+      addRequiredIssue('MAIL_REDIRECT_TO');
     }
 
     if (environment.SAAS_BILLING_PROVIDER === 'stripe') {

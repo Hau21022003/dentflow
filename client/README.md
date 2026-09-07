@@ -39,6 +39,22 @@ npm run build
   Endpoint chỉ được một service/feature dùng thì khai báo trực tiếp tại service;
   chỉ đưa vào `src/shared/constants/endpoint.constants.ts` khi URL thực sự được
   tái sử dụng ở nhiều nơi.
+
+### Xử lý lỗi API và feedback mutation
+
+- Chuẩn hoá lỗi tại mutation boundary bằng `handleApiError` từ
+  `src/shared/lib/error.ts`; không tự parse payload lỗi ở từng component. Luôn ưu tiên
+  thông điệp backend trả về, chỉ dùng fallback khi response không có message hợp lệ.
+- Form dùng React Hook Form truyền `setError` vào `handleApiError`. Lỗi theo field được
+  hiển thị tại field tương ứng; lỗi không gắn field được gán vào `root.server` và phải
+  được render bằng `<Alert variant="destructive">` trong form.
+- Dialog hoặc form không dùng React Hook Form truyền callback `onMessage` để lưu lỗi
+  cấp form, rồi render cùng `<Alert variant="destructive">`. Không truyền state setter
+  của `useState` vào tham số `setError`, vì tham số đó chỉ dành cho React Hook Form.
+- Dùng `Alert` cho lỗi người dùng cần sửa hoặc retry khi form/dialog vẫn mở. Toast chỉ
+  dành cho feedback thành công sau khi dialog đóng, hoặc lỗi không thuộc một form/dialog
+  đang mở.
+
 - Route guard chỉ phục vụ UX. Backend vẫn phải xác thực quyền và tenant context
   cho mọi request.
 - Chỉ dùng dữ liệu demo synthetic. Không đưa dữ liệu bệnh nhân thật vào mock,
