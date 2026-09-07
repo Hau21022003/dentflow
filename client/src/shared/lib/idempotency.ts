@@ -3,6 +3,10 @@ export type IdempotencyIntent = {
   signature: string;
 };
 
+export type IdempotentCommand = {
+  idempotencyKey: string;
+};
+
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(canonicalize);

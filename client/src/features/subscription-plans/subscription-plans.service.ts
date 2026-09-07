@@ -1,19 +1,18 @@
 import http from "@/shared/lib/http";
+import type { IdempotentCommand } from "@/shared/lib/idempotency";
 import type {
   CreateSubscriptionPlanInput,
   SubscriptionPlan,
   UpdateSubscriptionPlanInput,
 } from "./subscription-plans.types";
 
-export type CreateSubscriptionPlanCommand = {
+export type CreateSubscriptionPlanCommand = IdempotentCommand & {
   input: CreateSubscriptionPlanInput;
-  idempotencyKey: string;
 };
 
-export type UpdateSubscriptionPlanCommand = {
+export type UpdateSubscriptionPlanCommand = IdempotentCommand & {
   planId: string;
   input: UpdateSubscriptionPlanInput;
-  idempotencyKey: string;
 };
 
 export const subscriptionPlansService = {
@@ -30,7 +29,7 @@ export const subscriptionPlansService = {
     const { payload } = await http.post<SubscriptionPlan>(
       "/platform/plans",
       input,
-      { headers: { "Idempotency-Key": idempotencyKey } },
+      { idempotencyKey },
     );
 
     return payload;
@@ -44,7 +43,7 @@ export const subscriptionPlansService = {
     const { payload } = await http.patch<SubscriptionPlan>(
       `/platform/plans/${encodeURIComponent(planId)}`,
       input,
-      { headers: { "Idempotency-Key": idempotencyKey } },
+      { idempotencyKey },
     );
 
     return payload;

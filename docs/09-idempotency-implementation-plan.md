@@ -29,6 +29,43 @@ Idempotency khác với `X-Request-Id`:
 - `PROCESSING` có lease ngắn, cấu hình được (mặc định 5 phút). Sau khi lease hết hạn, retry cùng key được phép chạy lại command. Nếu lần chạy trước đã commit nhưng chưa kịp lưu outcome, lần chạy lại có thể tạo kết quả trùng; đây là giới hạn đã được chấp nhận của hướng best effort.
 - Record là technical data nội bộ, không có API đọc. Key và fingerprint chỉ lưu dạng HMAC, không lưu raw key/body. Record `COMPLETED` được giữ mặc định 30 ngày; nó không thay thế `AuditLog` tối thiểu 7 năm.
 
+### 2.1. Quy ước client frontend
+
+Frontend chỉ gửi `Idempotency-Key` cho command mà API contract yêu cầu; việc có
+field `idempotencyKey` trong type không tự làm endpoint trở thành idempotent.
+
+- UI tạo intent ngay trước khi submit bằng
+  `idempotencyKeyForIntent(currentIntent, command)`. `command` phải chứa operation,
+  resource ID trên URL khi có, và payload cuối cùng sẽ gửi. Hàm giữ UUID hiện có khi
+  command không đổi, hoặc tạo UUID v4 mới khi command thay đổi.
+- Giữ `IdempotencyIntent` trong state hoặc `useRef` của luồng UI để một lần retry do
+  timeout, mất response, hoặc lỗi tạm thời dùng lại đúng key. Khi command thành công,
+  người dùng hủy/đóng luồng, hoặc bắt đầu một intent mới, xóa intent cũ.
+- Mutation service nhận command kế thừa `IdempotentCommand` và truyền
+  `{ idempotencyKey }` cho `http.post`, `http.patch`, `http.put` hoặc `http.delete`.
+  Không truyền `Idempotency-Key` thủ công trong `headers`.
+- `CustomOptions.idempotencyKey` trong `client/src/shared/lib/http.ts` chuyển giá trị
+  thành header `Idempotency-Key`. Giá trị custom option được ưu tiên nếu cả option và
+  raw header cùng được truyền. Khi HTTP client retry request sau khi refresh token,
+  options gốc được giữ lại nên key không đổi.
+- Không sinh key trong HTTP client, service, hoặc render UI: các lớp này không biết
+  ranh giới một command intent. Mỗi UI flow chịu trách nhiệm cung cấp command đã
+  canonicalized cho `idempotencyKeyForIntent`.
+- Với `409 idempotency_request_in_progress`, giữ key hiện tại và chỉ retry theo
+  `Retry-After`. Với `409 idempotency_key_reused_with_different_request`, báo lỗi;
+  không tự sinh key mới rồi gửi lại vì điều đó có thể biến một retry thành command mới.
+
+Ví dụ type dùng chung:
+
+```ts
+type CreatePlanCommand = IdempotentCommand & {
+  input: CreateSubscriptionPlanInput;
+};
+```
+
+Quy ước này hiện áp dụng cho pilot Plan. Không áp dụng nó cho `GET`, login/refresh,
+webhook, hoặc command chưa được backend đánh dấu idempotent.
+
 ## 3. Kiến trúc thực thi
 
 Developer chỉ khai báo policy tại controller:
