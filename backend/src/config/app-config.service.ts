@@ -56,6 +56,17 @@ export class AppConfigService {
     };
   }
 
+  get tenantInvitationConfig() {
+    const ttl = this.config.getOrThrow<string>('app.tenantInvitation.ttl');
+
+    return {
+      tokenSecret: this.config.getOrThrow<string>(
+        'app.tenantInvitation.tokenSecret',
+      ),
+      ttlMs: ms(ttl as StringValue),
+    };
+  }
+
   get corsConfig() {
     return {
       frontendOrigin: this.config.getOrThrow<string>('app.cors.frontendOrigin'),

@@ -10,13 +10,13 @@ Platform Admin không quản lý lịch hẹn, visit, treatment plan, `PatientIn
 
 MVP dùng một role `PLATFORM_ADMIN` duy nhất; tài khoản được provision nội bộ, không có public registration. Các role vận hành hẹp hơn như Billing Operator, Support Agent và Read-only Analyst là roadmap sau MVP.
 
-| Năng lực | Được phép | Bị cấm / giới hạn |
-| --- | --- | --- |
-| Tenant | Tạo, xem, cập nhật thông tin SaaS, khóa/mở khóa, gia hạn trial | Không sửa dữ liệu lâm sàng hoặc tài chính điều trị |
-| Plan | Tạo, ẩn/kích hoạt lại plan; thay đổi metadata plan chưa từng được dùng | `code` bất biến; plan đã có subscription history chỉ đổi availability, không đổi giá/quyền hồi tố |
-| SaaS billing | Xem subscription/invoice/event; mở Stripe dashboard/link; ghi nhận chuyển khoản qua luồng kiểm soát | Không đánh dấu giao dịch Stripe là paid bằng thao tác thủ công |
-| Support | Gửi lại lời mời, yêu cầu reset Tenant Admin, xem audit log SaaS | Không support access âm thầm, không xem dữ liệu nhạy cảm mặc định |
-| System | Xem webhook failures, job failures và feature flags | Không chỉnh sửa dữ liệu production trực tiếp qua database |
+| Năng lực     | Được phép                                                                                           | Bị cấm / giới hạn                                                                                 |
+| ------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Tenant       | Tạo, xem, cập nhật thông tin SaaS, khóa/mở khóa, gia hạn trial                                      | Không sửa dữ liệu lâm sàng hoặc tài chính điều trị                                                |
+| Plan         | Tạo, ẩn/kích hoạt lại plan; thay đổi metadata plan chưa từng được dùng                              | `code` bất biến; plan đã có subscription history chỉ đổi availability, không đổi giá/quyền hồi tố |
+| SaaS billing | Xem subscription/invoice/event; mở Stripe dashboard/link; ghi nhận chuyển khoản qua luồng kiểm soát | Không đánh dấu giao dịch Stripe là paid bằng thao tác thủ công                                    |
+| Support      | Gửi lại lời mời, yêu cầu reset Tenant Admin, xem audit log SaaS                                     | Không support access âm thầm, không xem dữ liệu nhạy cảm mặc định                                 |
+| System       | Xem webhook failures, job failures và feature flags                                                 | Không chỉnh sửa dữ liệu production trực tiếp qua database                                         |
 
 Mọi tác vụ ghi dữ liệu của Platform Admin tạo `AuditLog` với actor, action, resource type/ID, timestamp, request ID, giá trị trước/sau phù hợp và lý do khi thao tác có ảnh hưởng quyền truy cập.
 
@@ -24,14 +24,14 @@ Mọi tác vụ ghi dữ liệu của Platform Admin tạo `AuditLog` với acto
 
 ### Trạng thái tenant
 
-| Trạng thái | Ý nghĩa | Hành vi |
-| --- | --- | --- |
-| `PROVISIONING` | Đang tạo tenant và owner | Chưa đăng nhập được |
-| `TRIAL` | Dùng thử hợp lệ | Dùng theo plan trial |
-| `ACTIVE` | Có subscription SaaS hợp lệ | Dùng đầy đủ theo entitlements |
-| `PAST_DUE` | Thanh toán SaaS thất bại | Cảnh báo, áp dụng grace period |
-| `SUSPENDED` | Bị khóa bởi chính sách hoặc hết grace period | Chỉ Tenant Admin vào Billing/export theo chính sách |
-| `CANCELED` | Tenant đã hủy và hết kỳ trả tiền | Read-only/Billing theo retention policy |
+| Trạng thái     | Ý nghĩa                                      | Hành vi                                             |
+| -------------- | -------------------------------------------- | --------------------------------------------------- |
+| `PROVISIONING` | Đang tạo tenant và owner                     | Chưa đăng nhập được                                 |
+| `TRIAL`        | Dùng thử hợp lệ                              | Dùng theo plan trial                                |
+| `ACTIVE`       | Có subscription SaaS hợp lệ                  | Dùng đầy đủ theo entitlements                       |
+| `PAST_DUE`     | Thanh toán SaaS thất bại                     | Cảnh báo, áp dụng grace period                      |
+| `SUSPENDED`    | Bị khóa bởi chính sách hoặc hết grace period | Chỉ Tenant Admin vào Billing/export theo chính sách |
+| `CANCELED`     | Tenant đã hủy và hết kỳ trả tiền             | Read-only/Billing theo retention policy             |
 
 `Tenant.status` là trạng thái quyền truy cập cấp tổ chức. `Subscription.status` lưu trạng thái đồng bộ từ Stripe. Chỉ một service tổng hợp xác định transition của `Tenant.status`; controller không tự cập nhật trực tiếp từ input client.
 
@@ -77,15 +77,15 @@ Nếu bán cho doanh nghiệp có nhu cầu chuyển khoản, tạo `ManualSaaSP
 
 ## 5. Màn hình và hành động
 
-| Route | Nội dung | Hành động chính |
-| --- | --- | --- |
-| `/platform/dashboard` | Active/trial/past-due, MRR demo, trial sắp hết, payment failure và webhook lỗi gần nhất | Đi tới tenant/invoice cần xử lý |
-| `/platform/tenants` | Tìm kiếm, lọc trạng thái/plan/hạn dùng, usage tóm tắt | Tạo tenant, mở chi tiết |
-| `/platform/tenants/:id` | Profile SaaS, subscription, usage, owner, chi nhánh/user count, audit log | Resend invite, extend trial, suspend/reactivate |
-| `/platform/plans` | Danh mục plan, giá, billing cycle, entitlement và availability | Tạo/ẩn plan mới |
-| `/platform/billing/invoices` | Invoice SaaS, trạng thái provider, failure reason | Mở hosted invoice/Stripe dashboard |
-| `/platform/billing/webhook-events` | Provider event ID, loại, trạng thái xử lý, lỗi | Retry xử lý nội bộ theo quyền |
-| `/platform/audit-logs` | Nhật ký Platform Admin và tenant lifecycle | Lọc, xem chi tiết |
+| Route                              | Nội dung                                                                                | Hành động chính                                 |
+| ---------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `/platform/dashboard`              | Active/trial/past-due, MRR demo, trial sắp hết, payment failure và webhook lỗi gần nhất | Đi tới tenant/invoice cần xử lý                 |
+| `/platform/tenants`                | Tìm kiếm, lọc trạng thái/plan/hạn dùng, usage tóm tắt                                   | Tạo tenant, mở chi tiết                         |
+| `/platform/tenants/:id`            | Profile SaaS, subscription, usage, owner, chi nhánh/user count, audit log               | Resend invite, extend trial, suspend/reactivate |
+| `/platform/plans`                  | Danh mục plan, giá, billing cycle, entitlement và availability                          | Tạo/ẩn plan mới                                 |
+| `/platform/billing/invoices`       | Invoice SaaS, trạng thái provider, failure reason                                       | Mở hosted invoice/Stripe dashboard              |
+| `/platform/billing/webhook-events` | Provider event ID, loại, trạng thái xử lý, lỗi                                          | Retry xử lý nội bộ theo quyền                   |
+| `/platform/audit-logs`             | Nhật ký Platform Admin và tenant lifecycle                                              | Lọc, xem chi tiết                               |
 
 Dashboard sử dụng số liệu SaaS tổng hợp. Không hiển thị chi tiết bệnh nhân hay doanh thu điều trị giữa các tenant. Chỉ hiển thị usage phi lâm sàng như số branch/user nếu plan cần quota.
 
@@ -114,6 +114,16 @@ Các endpoint nội bộ dưới `/platform/*` yêu cầu `PLATFORM_ADMIN`. Tài
 Các command tenant lifecycle cần body gồm `reason` (bắt buộc với suspend/extend/reactivate thủ công). Khi được triển khai, command có side effect phải nhận header `Idempotency-Key` UUID v4; không nhận key trong body. Endpoint retry chỉ chạy lại business processing đã lưu, không gọi provider để tạo giao dịch mới.
 
 Plan catalog chỉ dành cho Platform Admin. `GET /platform/plans` trả cả plan active và inactive; `POST` luôn tạo plan active; `PATCH` không nhận đổi `code` và chỉ thay toàn bộ object `entitlements` khi field này được gửi. `POST` và `PATCH` bắt buộc header `Idempotency-Key` UUID v4; retry cùng key và request trả outcome đã lưu, còn reuse key với request khác trả `409`. Thay đổi `isActive` cần `reason`; lệnh lặp lại trạng thái hiện có không tạo audit mới. `code` và provider plan ID vẫn unique business constraint, không thay thế idempotency persistence. Plan từng được subscription tham chiếu chỉ được đổi `isActive`.
+
+### Trạng thái triển khai tenant management
+
+Tenant catalog dùng offset pagination: `GET /platform/tenants?page=1&limit=10` trả `{ items, meta: { page, limit, total, totalPages } }`. `page` bắt đầu từ 1, `limit` tối đa 100; cursor và `nextCursor` không còn hỗ trợ. Query hỗ trợ `search`, `status`, `planId`, `trialEndingBefore`, `sortBy` (`displayName`, `planName`, `branchCount`, `status`, `createdAt`) và `sortOrder` (`ASC`/`DESC`). Search chỉ truy vấn SaaS profile/current plan; response không có clinical hoặc patient-payment data.
+
+`GET /platform/tenants`, `GET /platform/tenants/:tenantId`, `POST /platform/tenants`, `PATCH /platform/tenants/:tenantId`, resend invitation, extend trial, suspend và reactivate đã được triển khai với `PLATFORM_TENANT_MANAGE` và idempotency cho mọi command. `PATCH` không sửa `slug`, owner hoặc `status`; `TenantLifecycleService` là nơi duy nhất chuyển access status.
+
+Provisioning tạo `Tenant(PROVISIONING)`, một current `Subscription(TRIAL)`, owner invitation và audit trong cùng transaction, sau đó chuyển tenant sang `TRIAL`. Invitation chỉ lưu hash capability; `POST /auth/tenant-owner-invitations/accept` cho phép owner mới đặt password hoặc owner đã đăng nhập với đúng email nhận role `TENANT_ADMIN`. Acceptance replay cùng capability trả lại owner đã được tạo mà không ghi role/audit lần hai; các command Platform còn lại dùng `Idempotency-Key`. Job notifications gửi link sau commit, nên enqueue/delivery failure không xóa tenant và Platform Admin dùng resend để tạo capability mới.
+
+`SubscriptionGuard` đã chạy sau tenant-context resolution và trước authorization ở mọi tenant/branch route. `TRIAL`, `ACTIVE` và `PAST_DUE` được phép vận hành trong grace state hiện tại; `PROVISIONING`, `SUSPENDED` và `CANCELED` bị chặn trừ route billing/read-only gắn `@AllowInactiveTenantAccess()`. Grace-period scheduler/provider transition là phần billing chưa triển khai.
 
 ## 8. Acceptance criteria và test
 

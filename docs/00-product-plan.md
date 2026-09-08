@@ -132,7 +132,7 @@ Tài liệu này chỉ mô tả route nội bộ của backend và không ghi c�
 - `POST /auth/refresh`: chỉ đọc refresh cookie, xác minh JWT, session và bcrypt hash, rồi rotate refresh token trong transaction/row lock trước khi đặt lại hai cookies và trả authorization snapshot mới tính từ database.
 - `GET /auth/me`: yêu cầu access-token cookie hợp lệ, lấy user ID từ JWT đã xác minh rồi đọc lại user đang `ACTIVE`; trả `id`, `email`, `fullName` và authorization snapshot, không nhận user hay tenant ID từ client.
 - `POST /auth/logout`: revoke session của refresh cookie hiện tại, xoá hai cookies và không làm logout các thiết bị khác. Auth endpoint không nhận `tenantId`; các guard nghiệp vụ sau này vẫn phải lấy tenant context từ xác thực đã kiểm chứng.
-- `GET/POST /tenants`, `GET/PATCH /tenants/:id`: chỉ Platform Admin.
+- `GET/POST /platform/tenants`, `GET/PATCH /platform/tenants/:tenantId`: chỉ Platform Admin; lifecycle dùng các command riêng `/resend-owner-invite`, `/extend-trial`, `/suspend` và `/reactivate` với idempotency.
 - `GET/POST /branches`, `GET/POST /users`, `POST /role-assignments`: Tenant/Branch Admin theo phạm vi.
 - `GET/POST /patients`, `GET/POST /appointments`, `POST /appointments/:id/check-in`, `POST /appointments/:id/start`, `POST /appointments/:id/complete`.
 - `GET/POST /visits`, `GET/POST /treatment-plans`, `POST /treatment-items/:id/complete`.

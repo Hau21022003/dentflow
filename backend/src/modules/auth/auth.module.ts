@@ -10,11 +10,12 @@ import { AuthService } from './auth.service';
 import { PasskeysModule } from './passkeys/passkeys.module';
 import { AuthSession } from './sessions/entities/auth-session.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { OptionalJwtAuthGuard } from './guards/optional-jwt-auth.guard';
 import { TotpModule } from './totp/totp.module';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, OptionalJwtAuthGuard],
   imports: [
     JwtModule.register({}),
     PassportModule,
@@ -24,5 +25,6 @@ import { TotpModule } from './totp/totp.module';
     PasskeysModule,
     TotpModule,
   ],
+  exports: [OptionalJwtAuthGuard],
 })
 export class AuthModule {}

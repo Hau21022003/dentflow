@@ -1,40 +1,49 @@
-'use client'
+"use client";
 
-import { type ColumnDef, type FilterFnOption, type Row } from '@tanstack/react-table'
-import { isAfter, isBefore, isDate, isSameDay } from 'date-fns'
-import { useMemo } from 'react'
+import {
+  type ColumnDef,
+  type FilterFnOption,
+  type Row,
+} from "@tanstack/react-table";
+import { isAfter, isBefore, isDate, isSameDay } from "date-fns";
+import { useMemo } from "react";
 
-import { Spinner } from '@/components/ui/spinner'
-import { Table } from '@/components/ui/table'
+import { Spinner } from "@/components/ui/spinner";
+import { Table } from "@/components/ui/table";
 
-import { defaultDataTableLocale } from './config/locale'
-import { DataTableLocaleProvider } from './contexts/data-table-locale-context'
-import { DataTableBody, type DataTableBodyProps } from './data-table-body'
-import { DataTableHeader } from './data-table-header'
+import { defaultDataTableLocale } from "./config/locale";
+import { DataTableLocaleProvider } from "./contexts/data-table-locale-context";
+import { DataTableBody, type DataTableBodyProps } from "./data-table-body";
+import { DataTableHeader } from "./data-table-header";
 import {
   DataTablePagination,
   type DataTablePaginationConfig,
-} from './data-table-pagination'
+} from "./data-table-pagination";
 import {
   type DataTableRowSelectionConfig,
   createRowSelectionColumn,
-} from './data-table-row-selection'
-import { DataTableToolbar, type DataTableToolbarConfig } from './data-table-toolbar'
-import { useShadcnTable } from './hooks/use-shadcn-table'
-import { type FilterValue } from './types/filters'
-import { type DataTableLocale } from './types/locale'
+} from "./data-table-row-selection";
+import {
+  DataTableToolbar,
+  type DataTableToolbarConfig,
+} from "./data-table-toolbar";
+import { useShadcnTable } from "./hooks/use-shadcn-table";
+import { type FilterValue } from "./types/filters";
+import { type DataTableLocale } from "./types/locale";
+import { type DataTableServerState } from "./types/server-state";
 
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
-  emptyState?: DataTableBodyProps<TData>['emptyState']
-  isLoading?: boolean
-  isFetching?: boolean
-  locale?: Partial<DataTableLocale>
-  onRowClick?: (row: TData) => void
-  pagination?: DataTablePaginationConfig
-  rowSelection?: DataTableRowSelectionConfig<TData>
-  toolbar?: DataTableToolbarConfig
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  emptyState?: DataTableBodyProps<TData>["emptyState"];
+  isLoading?: boolean;
+  isFetching?: boolean;
+  locale?: Partial<DataTableLocale>;
+  onRowClick?: (row: TData) => void;
+  pagination?: DataTablePaginationConfig;
+  rowSelection?: DataTableRowSelectionConfig<TData>;
+  serverState?: DataTableServerState;
+  toolbar?: DataTableToolbarConfig;
 }
 
 export function DataTable<TData, TValue>({
@@ -47,11 +56,13 @@ export function DataTable<TData, TValue>({
   onRowClick,
   pagination,
   rowSelection,
+  serverState,
   toolbar,
 }: DataTableProps<TData, TValue>) {
-  'use no memo'
+  "use no memo";
   const isManualPagination =
-    pagination?.manual === true && typeof pagination.onPaginationChange === 'function'
+    pagination?.manual === true &&
+    typeof pagination.onPaginationChange === "function";
 
   const manualPagination = isManualPagination
     ? {
@@ -61,16 +72,28 @@ export function DataTable<TData, TValue>({
         rowCount: pagination.rowCount,
         onPaginationChange: pagination.onPaginationChange,
       }
-    : undefined
+    : undefined;
 
   const mergedLocale = useMemo(() => {
     return {
       body: { ...defaultDataTableLocale.body, ...locale?.body },
-      pagination: { ...defaultDataTableLocale.pagination, ...locale?.pagination },
+      pagination: {
+        ...defaultDataTableLocale.pagination,
+        ...locale?.pagination,
+      },
       toolbar: { ...defaultDataTableLocale.toolbar, ...locale?.toolbar },
-      viewOptions: { ...defaultDataTableLocale.viewOptions, ...locale?.viewOptions },
-      rowSelection: { ...defaultDataTableLocale.rowSelection, ...locale?.rowSelection },
-      columnHeader: { ...defaultDataTableLocale.columnHeader, ...locale?.columnHeader },
+      viewOptions: {
+        ...defaultDataTableLocale.viewOptions,
+        ...locale?.viewOptions,
+      },
+      rowSelection: {
+        ...defaultDataTableLocale.rowSelection,
+        ...locale?.rowSelection,
+      },
+      columnHeader: {
+        ...defaultDataTableLocale.columnHeader,
+        ...locale?.columnHeader,
+      },
       filters: {
         select: {
           ...defaultDataTableLocale.filters.select,
@@ -85,51 +108,57 @@ export function DataTable<TData, TValue>({
           ...locale?.filters?.numberRange,
         },
       },
-    }
-  }, [locale])
+    };
+  }, [locale]);
 
   const prepareColumns = useMemo(() => {
-    const tmpColumns = [...columns]
+    const tmpColumns = [...columns];
     if (rowSelection) {
-      tmpColumns.unshift(createRowSelectionColumn<TData>())
+      tmpColumns.unshift(createRowSelectionColumn<TData>());
     }
     return tmpColumns.map((column) => {
-      if (column.meta?.filterConfig?.variant === 'multi-select') {
+      if (column.meta?.filterConfig?.variant === "multi-select") {
         return {
           ...column,
-          filterFn: 'arrIncludesSome' as FilterFnOption<TData>,
-        }
-      } else if (column.meta?.filterConfig?.variant === 'select') {
+          filterFn: "arrIncludesSome" as FilterFnOption<TData>,
+        };
+      } else if (column.meta?.filterConfig?.variant === "select") {
         return {
           ...column,
-          filterFn: 'equals' as FilterFnOption<TData>,
-        }
-      } else if (column.meta?.filterConfig?.variant === 'date-range') {
+          filterFn: "equals" as FilterFnOption<TData>,
+        };
+      } else if (column.meta?.filterConfig?.variant === "date-range") {
         return {
           ...column,
-          filterFn: (row: Row<TData>, columnId: string, filterValue: FilterValue) => {
-            const date = row.getValue<Date>(columnId)
-            if (!isDate(date)) return false
-            if (!filterValue) return true
+          filterFn: (
+            row: Row<TData>,
+            columnId: string,
+            filterValue: FilterValue,
+          ) => {
+            const date = row.getValue<Date>(columnId);
+            if (!isDate(date)) return false;
+            if (!filterValue) return true;
             if (
-              typeof filterValue === 'object' &&
-              'from' in filterValue &&
-              'to' in filterValue &&
+              typeof filterValue === "object" &&
+              "from" in filterValue &&
+              "to" in filterValue &&
               filterValue.from &&
               filterValue.to
             ) {
               return (
-                (isSameDay(date, filterValue.from) || isAfter(date, filterValue.from)) &&
-                (isSameDay(date, filterValue.to) || isBefore(date, filterValue.to))
-              )
+                (isSameDay(date, filterValue.from) ||
+                  isAfter(date, filterValue.from)) &&
+                (isSameDay(date, filterValue.to) ||
+                  isBefore(date, filterValue.to))
+              );
             }
-            return true
+            return true;
           },
-        }
+        };
       }
-      return column
-    })
-  }, [columns, rowSelection])
+      return column;
+    });
+  }, [columns, rowSelection]);
 
   const table = useShadcnTable({
     data,
@@ -137,13 +166,21 @@ export function DataTable<TData, TValue>({
     pageSize: pagination?.pageSize,
     rowSelectionConfig: rowSelection,
     manualPagination,
-  })
+    serverFiltering: serverState?.filtering,
+    serverSorting: serverState?.sorting,
+  });
 
   return (
     <DataTableLocaleProvider locale={mergedLocale}>
-      <div className='space-y-4'>
-        <DataTableToolbar config={toolbar} isLoading={isLoading} table={table} />
-        <div className='relative overflow-hidden rounded-md border'>
+      <div className="space-y-4">
+        <DataTableToolbar
+          config={toolbar}
+          globalFilter={serverState?.filtering?.globalFilter}
+          isLoading={isLoading}
+          onGlobalFilterChange={serverState?.filtering?.onGlobalFilterChange}
+          table={table}
+        />
+        <div className="relative overflow-hidden rounded-md border">
           <Table>
             <DataTableHeader table={table} />
             <DataTableBody
@@ -154,7 +191,7 @@ export function DataTable<TData, TValue>({
             />
           </Table>
           {isFetching && !isLoading && (
-            <div className='absolute inset-0 top-10 z-10 flex items-center justify-center'>
+            <div className="absolute inset-0 top-10 z-10 flex items-center justify-center">
               <Spinner />
             </div>
           )}
@@ -166,5 +203,5 @@ export function DataTable<TData, TValue>({
         />
       </div>
     </DataTableLocaleProvider>
-  )
+  );
 }

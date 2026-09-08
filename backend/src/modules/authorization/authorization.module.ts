@@ -9,6 +9,7 @@ import { PlatformRoleAssignment } from './entities/platform-role-assignment.enti
 import { RoleAssignment } from './entities/role-assignment.entity';
 import { AuthorizationGuard } from './guards/authorization.guard';
 import { TenantContextGuard } from './guards/tenant-context.guard';
+import { SubscriptionGuard } from './guards/subscription.guard';
 import { TenantContextService } from './tenant-context.service';
 
 @Module({
@@ -26,12 +27,14 @@ import { TenantContextService } from './tenant-context.service';
     AuthorizationRepository,
     AuthorizationGuard,
     TenantContextGuard,
+    SubscriptionGuard,
     TenantContextService,
   ],
   exports: [
     AuthorizationService,
     AuthorizationGuard,
     TenantContextGuard,
+    SubscriptionGuard,
     TenantContextService,
   ],
 })

@@ -1,6 +1,6 @@
 # DentFlow — Kế hoạch triển khai Idempotency
 
-> Trạng thái triển khai (2026-09-07): Foundation và Pilot Plan đã được thực hiện cho `POST /platform/plans` và `PATCH /platform/plans/:planId`. Retention `IdempotencyRecord` chạy trực tiếp trong API mỗi ngày lúc 03:15 UTC bằng Nest Scheduler; không dùng queue hoặc worker riêng cho tác vụ xóa idempotent này. Tenant lifecycle, clinical/financial command, provider checkout và webhook vẫn là các giai đoạn rollout sau.
+> Trạng thái triển khai (2026-09-08): Foundation, Pilot Plan và tenant lifecycle đã được thực hiện. Các command tenant gồm create/update, resend owner invitation, extend trial, suspend và reactivate đều yêu cầu `Idempotency-Key`. Retention `IdempotencyRecord` chạy trực tiếp trong API mỗi ngày lúc 03:15 UTC bằng Nest Scheduler; không dùng queue hoặc worker riêng cho tác vụ xóa idempotent này. Clinical/financial command, provider checkout và webhook vẫn là các giai đoạn rollout sau.
 
 Sơ đồ đọc nhanh cho developer: [Idempotency request flow](./flows/idempotency-request-flow.md).
 

@@ -123,6 +123,8 @@ export const envSchema = z
     IDEMPOTENCY_HMAC_SECRET: requiredText,
     IDEMPOTENCY_PROCESSING_LEASE: duration.default('5m'),
     IDEMPOTENCY_COMPLETED_RETENTION: duration.default('30d'),
+    TENANT_INVITATION_TOKEN_SECRET: optionalText,
+    TENANT_INVITATION_TTL: duration.default('7d'),
 
     PORT: optionalPositiveInteger,
     UPLOAD_MAX_FILE_SIZE_MB: optionalPositiveInteger,
@@ -177,6 +179,12 @@ export const envSchema = z
 
     if (environment.NODE_ENV !== 'test' && !environment.DEFAULT_PASSWORD) {
       addRequiredIssue('DEFAULT_PASSWORD');
+    }
+    if (
+      environment.NODE_ENV !== 'test' &&
+      !environment.TENANT_INVITATION_TOKEN_SECRET
+    ) {
+      addRequiredIssue('TENANT_INVITATION_TOKEN_SECRET');
     }
 
     if (environment.MAIL_PROVIDER === 'smtp') {

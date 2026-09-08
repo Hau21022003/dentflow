@@ -19,7 +19,7 @@ Mỗi row có actor type/user/session, tenant/branch khi áp dụng, action, dom
 - Patient audit chỉ lưu tên các field đã đổi. Treatment audit chỉ lưu state/ID. Financial audit chỉ lưu amount, currency, method, reference an toàn và reason code.
 - Free-text reason chỉ dùng cho action Platform/Tenant Admin có policy cho phép. Clinical và financial dùng `metadata.reasonCode`.
 
-Các action là constants ở code, không phải database enum, gồm quyền/scope, tenant lifecycle, SaaS billing, tenant/branch/service/user, patient/appointment/treatment state, patient invoice/payment và security event. MVP hiện ghi `AUTH_ACCOUNT_LOCKED`; các command nghiệp vụ chưa được tạo phải tích hợp action phù hợp trước khi merge.
+Các action là constants ở code, không phải database enum, gồm quyền/scope, tenant lifecycle, SaaS billing, tenant/branch/service/user, patient/appointment/treatment state, patient invoice/payment và security event. Tenant provisioning ghi `TENANT_CREATED`; owner invitation ghi `TENANT_OWNER_INVITATION_CREATED`, `TENANT_OWNER_INVITATION_RESENT` và `TENANT_OWNER_INVITATION_ACCEPTED`. Payload invitation chỉ có state, tuyệt đối không có email hoặc raw/hash token. Các command nghiệp vụ chưa được tạo phải tích hợp action phù hợp trước khi merge.
 
 Plan catalog dùng `PLAN_CREATED`, `PLAN_UPDATED`, `PLAN_DEACTIVATED` và `PLAN_ACTIVATED`. Snapshot của các action này chỉ chứa `changedFields`, `isActive`, `amount` và `currency`; thay đổi availability lưu thêm free-text `reason` theo policy Platform.
 

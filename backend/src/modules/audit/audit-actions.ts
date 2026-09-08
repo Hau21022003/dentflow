@@ -14,6 +14,9 @@ export const AuditAction = {
   TENANT_REACTIVATED: 'TENANT_REACTIVATED',
   TENANT_TRIAL_EXTENDED: 'TENANT_TRIAL_EXTENDED',
   TENANT_CANCELED: 'TENANT_CANCELED',
+  TENANT_OWNER_INVITATION_CREATED: 'TENANT_OWNER_INVITATION_CREATED',
+  TENANT_OWNER_INVITATION_RESENT: 'TENANT_OWNER_INVITATION_RESENT',
+  TENANT_OWNER_INVITATION_ACCEPTED: 'TENANT_OWNER_INVITATION_ACCEPTED',
   PLAN_CREATED: 'PLAN_CREATED',
   PLAN_UPDATED: 'PLAN_UPDATED',
   PLAN_DEACTIVATED: 'PLAN_DEACTIVATED',
@@ -47,6 +50,7 @@ export type AuditResourceType =
   | 'USER'
   | 'ROLE_ASSIGNMENT'
   | 'TENANT'
+  | 'TENANT_OWNER_INVITATION'
   | 'PLAN'
   | 'SAAS_SUBSCRIPTION'
   | 'SAAS_INVOICE'
@@ -97,6 +101,11 @@ const ROLE_ASSIGNMENT_PAYLOAD: AuditPayloadPolicy = {
 const TENANT_CHANGE_PAYLOAD: AuditPayloadPolicy = {
   before: ['status', 'changedFields', 'trialDays'],
   after: ['status', 'changedFields', 'trialDays'],
+  metadata: ['reasonCode'],
+};
+const TENANT_OWNER_INVITATION_PAYLOAD: AuditPayloadPolicy = {
+  before: ['status'],
+  after: ['status'],
   metadata: ['reasonCode'],
 };
 const PLAN_CHANGE_PAYLOAD: AuditPayloadPolicy = {
@@ -245,6 +254,24 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     'TENANT',
     true,
     TENANT_CHANGE_PAYLOAD,
+  ),
+  [AuditAction.TENANT_OWNER_INVITATION_CREATED]: definition(
+    AuditDomain.PLATFORM,
+    'TENANT_OWNER_INVITATION',
+    false,
+    TENANT_OWNER_INVITATION_PAYLOAD,
+  ),
+  [AuditAction.TENANT_OWNER_INVITATION_RESENT]: definition(
+    AuditDomain.PLATFORM,
+    'TENANT_OWNER_INVITATION',
+    false,
+    TENANT_OWNER_INVITATION_PAYLOAD,
+  ),
+  [AuditAction.TENANT_OWNER_INVITATION_ACCEPTED]: definition(
+    AuditDomain.PLATFORM,
+    'TENANT_OWNER_INVITATION',
+    false,
+    TENANT_OWNER_INVITATION_PAYLOAD,
   ),
   [AuditAction.PLAN_CREATED]: definition(
     AuditDomain.PLATFORM,

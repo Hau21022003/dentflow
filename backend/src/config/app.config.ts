@@ -57,6 +57,12 @@ export default registerAs('app', () => {
       processingLease: env.IDEMPOTENCY_PROCESSING_LEASE,
       completedRetention: env.IDEMPOTENCY_COMPLETED_RETENTION,
     },
+    tenantInvitation: {
+      tokenSecret:
+        env.TENANT_INVITATION_TOKEN_SECRET ??
+        'test-only-tenant-invitation-token-secret',
+      ttl: env.TENANT_INVITATION_TTL,
+    },
     email: {
       provider: env.MAIL_PROVIDER,
       from: env.MAIL_FROM,

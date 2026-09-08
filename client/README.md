@@ -113,11 +113,13 @@ const dataTableLocale = useMemo(
   `DataTableLocale`; override được merge theo từng nhóm và chỉ dành cho text
   đặc thù bảng. Select/multi-select không cần `filterConfig.placeholder` nếu
   dùng placeholder chung từ locale.
-- POC hiện xử lý search, filter, sort và pagination ở client với mock data.
-- DataTable đã hỗ trợ server-side pagination qua `pagination.manual`,
-  `pageIndex`, `pageSize`, `rowCount` và `onPaginationChange`. Khi nối API thật,
-  cần mở rộng tiếp server-side search, filter và sort; không được chỉ lọc/sort
-  trên một trang dữ liệu đã tải.
+- `DataTable` hỗ trợ server-side state: `pagination.manual` cho `pageIndex`,
+  `pageSize`, `rowCount`, `onPaginationChange`; `serverState.sorting` và
+  `serverState.filtering` cho sort, global search và column filters. Khi dùng
+  `serverState`, TanStack không sort/lọc local trên một trang đã tải.
+- Trang `/platform/tenants` là reference implementation: API dùng page 1-based,
+  client đổi từ `pageIndex` 0-based, debounce search 300ms, reset về trang đầu
+  khi đổi search/filter/sort/page size, và truyền `meta.total` vào `rowCount`.
 - Khi dùng `DropdownMenuLabel` với Base UI, đặt nó trong `DropdownMenuGroup`.
 
 Thư mục này là source đã được đưa vào dự án và chỉnh tương thích với UI
