@@ -1,0 +1,25 @@
+{
+  "title": "Activate your Tenant Admin account",
+  "description": "Complete this invitation to administer your DentFlow tenant.",
+  "invalidTitle": "Invalid invitation link",
+  "invalidDescription": "This link does not contain an invitation token. Open the link from your invitation email.",
+  "signedInTitle": "Accept with your current account",
+  "signedInDescription": "You are signed in as {{email}}. This account must match the invited email address.",
+  "newOwnerTitle": "Set your password",
+  "newOwnerDescription": "You will become the first Tenant Admin after activating the account.",
+  "fields": {
+    "fullName": "Full name",
+    "password": "Password"
+  },
+  "passwordHint": "At least 12 characters.",
+  "actions": {
+    "activate": "Activate account",
+    "activating": "Activating...",
+    "accept": "Accept invitation",
+    "accepting": "Accepting..."
+  },
+  "success": {
+    "newOwner": "Your account is active. Sign in to continue.",
+    "existingOwner": "Invitation accepted. Opening the tenant workspace..."
+  }
+}

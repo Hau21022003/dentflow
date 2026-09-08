@@ -3,9 +3,13 @@ import {
   ValidationPipe,
   ValidationPipeOptions,
 } from '@nestjs/common';
-import { defaultMetadataStorage } from 'class-transformer/cjs/storage';
+import { defaultMetadataStorage as classTransformerMetadataStorage } from 'class-transformer/cjs/storage';
+import type { MetadataStorage } from 'class-transformer/types/MetadataStorage';
 import { ValidationError } from 'class-validator';
 import { I18nContext } from 'nestjs-i18n';
+
+const defaultMetadataStorage =
+  classTransformerMetadataStorage as MetadataStorage;
 
 function resolveFieldName(error: ValidationError): string {
   const target = error.target;
@@ -39,7 +43,7 @@ function translateValidationMessage(message: string): string {
   const argsString = message.slice(separatorIndex + 1);
 
   try {
-    const args = argsString ? JSON.parse(argsString) : {};
+    const args = argsString ? parseTranslationArgs(argsString) : {};
 
     return i18n.t(key, {
       lang: i18n.lang,
@@ -48,6 +52,16 @@ function translateValidationMessage(message: string): string {
   } catch {
     return message;
   }
+}
+
+function parseTranslationArgs(argsString: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(argsString);
+
+  if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+    return parsed as Record<string, unknown>;
+  }
+
+  return {};
 }
 
 function formatErrors(

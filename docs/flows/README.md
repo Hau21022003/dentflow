@@ -6,6 +6,8 @@ Sơ đồ **không** thay thế quy tắc domain hoặc implementation contract.
 
 - [Authorization request flow](./authorization-request-flow.md): thứ tự JWT, context, role/permission và service.
 - [Tenant–branch isolation flow](./tenant-branch-isolation.md): các tình huống truy cập chéo tenant/branch.
+- [Audit log write flow](./audit-log-write-flow.md): context request, transaction nghiệp vụ và bản ghi audit append-only.
+- [Idempotency request flow](./idempotency-request-flow.md): claim/replay, lease, HTTP outcome và retention cho command idempotent.
 - [Role workflows và implementation contract](../03-role-workflows.md): quy tắc authorization chuẩn.
 
 Đọc hai sơ đồ trước để định hướng, rồi đọc mục 10.8 của `03-role-workflows.md` trước khi thêm API nghiệp vụ.

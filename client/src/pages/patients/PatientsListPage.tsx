@@ -1,12 +1,13 @@
 import { Plus, UsersRound } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PATHS } from "../../app/router/paths";
+import { PatientCreateDialog } from "./components/PatientCreateDialog";
 
 export function PatientsListPage() {
   const { t } = useTranslation("patients");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   return (
     <div className="space-y-7">
@@ -18,11 +19,9 @@ export function PatientsListPage() {
           </h1>
           <p className="text-sm leading-6 text-muted-foreground sm:text-base">{t("description")}</p>
         </div>
-        <Button asChild className="h-10">
-          <RouterLink to={PATHS.newPatient}>
-            <Plus aria-hidden="true" />
-            {t("actions.create")}
-          </RouterLink>
+        <Button className="h-10" onClick={() => setIsCreateDialogOpen(true)}>
+          <Plus aria-hidden="true" />
+          {t("actions.create")}
         </Button>
       </div>
 
@@ -37,6 +36,8 @@ export function PatientsListPage() {
           </p>
         </CardContent>
       </Card>
+
+      <PatientCreateDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
     </div>
   );
 }

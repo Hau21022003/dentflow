@@ -4,5 +4,7 @@ export const SHARED_ENDPOINTS = {
     LOGOUT: "/auth/logout",
     ME: "/auth/me",
     REFRESH: "/auth/refresh",
+    TENANT_OWNER_INVITATIONS_ACCEPT:
+      "/auth/tenant-owner-invitations/accept",
   },
 } as const;

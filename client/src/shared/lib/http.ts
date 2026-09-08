@@ -16,6 +16,11 @@ export type CustomOptions = Omit<RequestInit, "body" | "method"> & {
   baseUrl?: string | undefined;
   params?: Record<string, QueryValue>;
   timeout?: number; // ms
+  /**
+   * Key for an idempotent mutation. It is sent as the `Idempotency-Key`
+   * header; reuse it only when retrying the same command intent.
+   */
+  idempotencyKey?: string;
   // default true - Xác định có cần mở login modal không khi không login
   authRequired?: boolean;
 };
@@ -193,6 +198,7 @@ const request = async <T>(
     timeout,
     signal,
     authRequired = true,
+    idempotencyKey,
     // Nếu không truyền baseUrl (hoặc baseUrl = undefined) thì lấy từ envConfig.NEXT_PUBLIC_API_ENDPOINT
     // Nếu truyền baseUrl thì lấy giá trị truyền vào
     // Truyền vào '' thì đồng nghĩa với việc chúng ta gọi API đến Next.js Server
@@ -229,6 +235,9 @@ const request = async <T>(
     headers: {
       ...baseHeaders,
       ...headers,
+      ...(idempotencyKey === undefined
+        ? {}
+        : { "Idempotency-Key": idempotencyKey }),
     },
     body: parsedBody,
     method,

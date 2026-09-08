@@ -1,6 +1,12 @@
 import { SHARED_ENDPOINTS } from "../../shared/constants/endpoint.constants";
 import http from "../../shared/lib/http";
-import type { AuthResponse, AuthUser, LoginInput } from "./auth.types";
+import type {
+  AcceptTenantOwnerInvitationInput,
+  AcceptTenantOwnerInvitationResponse,
+  AuthResponse,
+  AuthUser,
+  LoginInput,
+} from "./auth.types";
 
 export const authService = {
   async login(credentials: LoginInput): Promise<AuthUser> {
@@ -25,5 +31,16 @@ export const authService = {
     await http.post<void>(SHARED_ENDPOINTS.AUTH.LOGOUT, undefined, {
       authRequired: false,
     });
+  },
+
+  async acceptTenantOwnerInvitation(
+    input: AcceptTenantOwnerInvitationInput,
+  ): Promise<AcceptTenantOwnerInvitationResponse> {
+    const { payload } = await http.post<AcceptTenantOwnerInvitationResponse>(
+      SHARED_ENDPOINTS.AUTH.TENANT_OWNER_INVITATIONS_ACCEPT,
+      input,
+      { authRequired: false },
+    );
+    return payload;
   },
 };

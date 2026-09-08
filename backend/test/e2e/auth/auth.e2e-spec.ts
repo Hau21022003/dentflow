@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import { compare } from 'src/common/utils/hash.util';
 import { AppConfigService } from 'src/config/app-config.service';
+import { AuditAction } from 'src/modules/audit/audit-actions';
+import { AuditLog } from 'src/modules/audit/entities/audit-log.entity';
 import {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
@@ -29,6 +31,7 @@ describe('Authentication (e2e)', () => {
   let dataSource: DataSource;
   let usersRepository: Repository<User>;
   let sessionsRepository: Repository<AuthSession>;
+  let auditLogsRepository: Repository<AuditLog>;
   let appConfig: AppConfigService;
   let authFixtures: ReturnType<typeof createAuthFixtures>;
 
@@ -37,6 +40,7 @@ describe('Authentication (e2e)', () => {
     dataSource = app.get(DataSource);
     usersRepository = dataSource.getRepository(User);
     sessionsRepository = dataSource.getRepository(AuthSession);
+    auditLogsRepository = dataSource.getRepository(AuditLog);
     appConfig = app.get(AppConfigService);
     authFixtures = createAuthFixtures({
       manager: dataSource.manager,
@@ -87,10 +91,7 @@ describe('Authentication (e2e)', () => {
       .addSelect('session.refreshTokenHash')
       .where('session.userId = :userId', { userId: user.id })
       .getOneOrFail();
-    const rawRefreshToken = cookieValue(
-      refreshSetCookie,
-      REFRESH_TOKEN_COOKIE,
-    );
+    const rawRefreshToken = cookieValue(refreshSetCookie, REFRESH_TOKEN_COOKIE);
 
     expect(session.refreshTokenHash).not.toBe(rawRefreshToken);
     await expect(
@@ -267,10 +268,16 @@ describe('Authentication (e2e)', () => {
       attempt < appConfig.securityConfig.maxLoginAttempts;
       attempt += 1
     ) {
-      await request(app.getHttpServer())
+      const loginRequest = request(app.getHttpServer())
         .post('/auth/login')
-        .send({ email: user.email, password: 'wrong-password' })
-        .expect(401);
+        .send({ email: user.email, password: 'wrong-password' });
+      if (attempt === appConfig.securityConfig.maxLoginAttempts - 1) {
+        loginRequest.set(
+          'X-Request-Id',
+          '00000000-0000-4000-8000-000000000456',
+        );
+      }
+      await loginRequest.expect(401);
     }
 
     let lockedUser = await usersRepository.findOneByOrFail({ id: user.id });
@@ -278,6 +285,17 @@ describe('Authentication (e2e)', () => {
       appConfig.securityConfig.maxLoginAttempts,
     );
     expect(lockedUser.lockedUntil).not.toBeNull();
+    const accountLockAudit = await auditLogsRepository.findOneByOrFail({
+      action: AuditAction.AUTH_ACCOUNT_LOCKED,
+      resourceId: user.id,
+    });
+    expect(accountLockAudit.actorUserId).toBeNull();
+    expect(accountLockAudit.requestId).toBe(
+      '00000000-0000-4000-8000-000000000456',
+    );
+    expect(accountLockAudit.metadata).toEqual({
+      reasonCode: 'MAX_FAILED_LOGIN_ATTEMPTS',
+    });
 
     await request(app.getHttpServer())
       .post('/auth/login')

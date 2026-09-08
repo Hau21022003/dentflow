@@ -1,0 +1,136 @@
+{
+  "title": "Quản lý tenant",
+  "description": "Quản lý tenant SaaS, owner, subscription và vòng đời truy cập trên DentFlow.",
+  "loading": "Đang tải tenant...",
+  "empty": "Không tìm thấy tenant phù hợp.",
+  "statuses": {
+    "PROVISIONING": "Đang khởi tạo",
+    "TRIAL": "Dùng thử",
+    "ACTIVE": "Đang hoạt động",
+    "PAST_DUE": "Quá hạn thanh toán",
+    "SUSPENDED": "Đã tạm khóa",
+    "CANCELED": "Đã hủy"
+  },
+  "fields": {
+    "legalName": "Tên pháp lý",
+    "displayName": "Tên hiển thị",
+    "slug": "Slug tenant",
+    "billingEmail": "Email billing",
+    "ownerFullName": "Tên Tenant Admin",
+    "ownerEmail": "Email Tenant Admin",
+    "plan": "Gói dịch vụ",
+    "trialDays": "Số ngày trial",
+    "contactEmail": "Email liên hệ",
+    "contactPhone": "Số điện thoại liên hệ",
+    "logoUrl": "URL logo",
+    "defaultLocale": "Locale mặc định",
+    "defaultTimezone": "Múi giờ mặc định",
+    "reason": "Lý do"
+  },
+  "actions": {
+    "create": "Tạo tenant",
+    "save": "Lưu thay đổi",
+    "edit": "Chỉnh sửa",
+    "retry": "Thử lại",
+    "cancel": "Hủy",
+    "saving": "Đang lưu",
+    "openPlans": "Mở danh mục plan",
+    "backToCatalog": "Quay lại danh sách tenant",
+    "viewDetail": "Xem chi tiết",
+    "openActions": "Mở thao tác cho {{name}}",
+    "resendInvite": "Gửi lại lời mời",
+    "extendTrial": "Gia hạn trial",
+    "suspend": "Tạm khóa tenant",
+    "reactivate": "Mở khóa tenant"
+  },
+  "form": {
+    "createTitle": "Tạo tenant",
+    "createDescription": "Provision tenant trial, subscription và lời mời Tenant Admin.",
+    "editTitle": "Chỉnh sửa tenant",
+    "editDescription": "Cập nhật hồ sơ SaaS. Slug, owner, plan và trạng thái không thay đổi tại đây.",
+    "ownerAndPlan": "Owner và gói dịch vụ",
+    "slugHint": "Chỉ dùng chữ thường, số và dấu gạch nối.",
+    "slugLocked": "Slug là URL key bất biến sau khi tạo.",
+    "planPlaceholder": "Chọn gói dịch vụ active",
+    "planTrialDays": "Plan này có trial mặc định {{days}} ngày; nhập số ngày để ghi đè.",
+    "trialOverrideHint": "Plan chưa có trial mặc định; bắt buộc nhập số ngày trial.",
+    "trialDaysRequired": "Nhập số ngày trial cho plan đã chọn.",
+    "noActivePlans": "Cần có ít nhất một plan đang active để tạo tenant."
+  },
+  "table": {
+    "title": "Tenant trên hệ thống",
+    "description": "Tìm kiếm, lọc, sắp xếp và phân trang được xử lý bởi Platform API.",
+    "tenant": "Tenant",
+    "owner": "Owner",
+    "plan": "Gói dịch vụ",
+    "trialEnd": "Kết thúc trial",
+    "branches": "Chi nhánh",
+    "branchCount": "{{count}} chi nhánh",
+    "status": "Trạng thái",
+    "createdAt": "Ngày tạo",
+    "actions": "Thao tác"
+  },
+  "filters": {
+    "statusTitle": "Lọc theo trạng thái",
+    "statusDescription": "Chỉ hiển thị tenant có trạng thái đã chọn.",
+    "statusPlaceholder": "Chọn trạng thái",
+    "planTitle": "Lọc theo gói dịch vụ",
+    "planDescription": "Chỉ hiển thị tenant đang dùng gói đã chọn.",
+    "planPlaceholder": "Chọn gói dịch vụ",
+    "trialEndingBefore": "Trial kết thúc trước ngày"
+  },
+  "detail": {
+    "profileTitle": "Hồ sơ SaaS",
+    "usageTitle": "Usage phi lâm sàng",
+    "branches": "Chi nhánh",
+    "users": "Người dùng active",
+    "subscriptionTitle": "Subscription SaaS",
+    "plan": "Plan hiện tại",
+    "price": "Giá subscription",
+    "currentPeriod": "Kỳ hiện tại kết thúc",
+    "ownerTitle": "Tenant owner",
+    "ownerState": "Trạng thái owner",
+    "invitationDelivery": "Trạng thái gửi lời mời",
+    "notSet": "Chưa thiết lập",
+    "noSubscription": "Chưa có subscription hiện tại.",
+    "noOwner": "Chưa có owner hoặc lời mời pending."
+  },
+  "ownerStates": {
+    "ACCEPTED": "Đã chấp nhận",
+    "PENDING": "Đang chờ chấp nhận",
+    "EXPIRED": "Lời mời đã hết hạn"
+  },
+  "deliveryStates": {
+    "PENDING": "Đang chờ gửi",
+    "SENT": "Đã gửi",
+    "FAILED": "Gửi thất bại"
+  },
+  "lifecycle": {
+    "reasonRequired": "Nhập lý do cho thao tác này.",
+    "reasonTooLong": "Lý do không được vượt quá 500 ký tự.",
+    "daysInvalid": "Số ngày phải là số nguyên từ 1 đến 32767.",
+    "resendInvite": {
+      "title": "Gửi lại lời mời owner",
+      "description": "Lời mời pending hiện tại của {{name}} sẽ bị thay thế.",
+      "confirm": "Gửi lại lời mời"
+    },
+    "extendTrial": {
+      "title": "Gia hạn trial",
+      "description": "Gia hạn subscription trial của {{name}} và ghi audit log.",
+      "confirm": "Gia hạn trial"
+    },
+    "suspend": {
+      "title": "Tạm khóa tenant",
+      "description": "Tenant {{name}} sẽ bị chặn khỏi các API vận hành cho đến khi được mở khóa.",
+      "confirm": "Tạm khóa tenant"
+    },
+    "reactivate": {
+      "title": "Mở khóa tenant",
+      "description": "Khôi phục {{name}} theo trạng thái subscription SaaS hợp lệ hiện tại.",
+      "confirm": "Mở khóa tenant"
+    }
+  },
+  "errors": {
+    "list": "Không thể tải danh sách tenant."
+  }
+}

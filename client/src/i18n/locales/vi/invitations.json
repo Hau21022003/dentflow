@@ -1,0 +1,25 @@
+{
+  "title": "Kích hoạt tài khoản Tenant Admin",
+  "description": "Hoàn tất lời mời để quản trị tenant của bạn trên DentFlow.",
+  "invalidTitle": "Liên kết lời mời không hợp lệ",
+  "invalidDescription": "Liên kết không có invitation token. Hãy mở lại liên kết trong email lời mời.",
+  "signedInTitle": "Xác nhận lời mời bằng tài khoản hiện tại",
+  "signedInDescription": "Bạn đang đăng nhập bằng {{email}}. Tài khoản này phải trùng email đã nhận lời mời.",
+  "newOwnerTitle": "Tạo mật khẩu",
+  "newOwnerDescription": "Bạn sẽ trở thành Tenant Admin đầu tiên sau khi kích hoạt tài khoản.",
+  "fields": {
+    "fullName": "Họ và tên",
+    "password": "Mật khẩu"
+  },
+  "passwordHint": "Tối thiểu 12 ký tự.",
+  "actions": {
+    "activate": "Kích hoạt tài khoản",
+    "activating": "Đang kích hoạt...",
+    "accept": "Chấp nhận lời mời",
+    "accepting": "Đang xác nhận..."
+  },
+  "success": {
+    "newOwner": "Tài khoản đã được kích hoạt. Hãy đăng nhập để tiếp tục.",
+    "existingOwner": "Đã chấp nhận lời mời. Đang mở workspace tenant..."
+  }
+}

@@ -3,6 +3,8 @@
     "patients": "Bệnh nhân",
     "demoLogin": "Đăng nhập mẫu",
     "platform": "Nền tảng",
+    "tenants": "Quản lý tenant",
+    "plans": "Danh mục plan",
     "tenantAdministration": "Quản trị tenant",
     "branchOperations": "Vận hành chi nhánh",
     "tenantOverview": "Tổng quan tenant",
@@ -52,6 +54,65 @@
       "checking": "Đang kiểm tra phiên đăng nhập...",
       "unavailable": "Không thể xác minh phiên đăng nhập. Vui lòng thử lại.",
       "retry": "Thử lại"
+    }
+  },
+  "formDialog": {
+    "close": "Đóng",
+    "cancel": "Hủy",
+    "submitting": "Đang lưu",
+    "discardChanges": {
+      "title": "Bỏ các thay đổi?",
+      "description": "Các thông tin chưa lưu sẽ bị mất.",
+      "keepEditing": "Tiếp tục nhập",
+      "discard": "Bỏ thay đổi"
+    }
+  },
+  "dataTable": {
+    "body": {
+      "noResults": "Không có kết quả phù hợp."
+    },
+    "pagination": {
+      "rowsSelected": "dòng được chọn.",
+      "rowsPerPage": "Số dòng mỗi trang",
+      "page": "Trang",
+      "of": "trên",
+      "goToFirstPage": "Đến trang đầu",
+      "goToPreviousPage": "Trang trước",
+      "goToNextPage": "Trang sau",
+      "goToLastPage": "Đến trang cuối"
+    },
+    "toolbar": {
+      "searchPlaceholder": "Tìm kiếm..."
+    },
+    "viewOptions": {
+      "view": "Hiển thị",
+      "toggleColumns": "Ẩn hoặc hiện cột"
+    },
+    "rowSelection": {
+      "selectAll": "Chọn tất cả các dòng",
+      "selectRow": "Chọn dòng"
+    },
+    "columnHeader": {
+      "sortAscending": "Sắp xếp tăng dần",
+      "sortDescending": "Sắp xếp giảm dần",
+      "clearSorting": "Xóa sắp xếp",
+      "hideColumn": "Ẩn cột",
+      "clearFilter": "Xóa bộ lọc",
+      "sortMenuLabel": "Mở tùy chọn sắp xếp",
+      "filterMenuLabel": "Mở bộ lọc cột"
+    },
+    "filters": {
+      "select": {
+        "placeholder": "Chọn giá trị"
+      },
+      "multiSelect": {
+        "search": "Tìm lựa chọn...",
+        "noResults": "Không có lựa chọn phù hợp."
+      },
+      "numberRange": {
+        "min": "Từ",
+        "max": "Đến"
+      }
     }
   }
 }

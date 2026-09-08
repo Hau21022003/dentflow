@@ -3,10 +3,16 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 import enCommon from "./locales/en/common.json";
 import enPatients from "./locales/en/patients.json";
+import enPlans from "./locales/en/plans.json";
 import enValidation from "./locales/en/validation.json";
+import enTenants from "./locales/en/tenants.json";
+import enInvitations from "./locales/en/invitations.json";
 import viCommon from "./locales/vi/common.json";
 import viPatients from "./locales/vi/patients.json";
+import viPlans from "./locales/vi/plans.json";
 import viValidation from "./locales/vi/validation.json";
+import viTenants from "./locales/vi/tenants.json";
+import viInvitations from "./locales/vi/invitations.json";
 
 export const supportedLanguages = ["vi", "en"] as const;
 
@@ -17,11 +23,25 @@ i18n
     fallbackLng: "vi",
     supportedLngs: supportedLanguages,
     load: "languageOnly",
-    ns: ["common", "patients", "validation"],
+    ns: ["common", "invitations", "patients", "plans", "tenants", "validation"],
     defaultNS: "common",
     resources: {
-      en: { common: enCommon, patients: enPatients, validation: enValidation },
-      vi: { common: viCommon, patients: viPatients, validation: viValidation },
+      en: {
+        common: enCommon,
+        invitations: enInvitations,
+        patients: enPatients,
+        plans: enPlans,
+        tenants: enTenants,
+        validation: enValidation,
+      },
+      vi: {
+        common: viCommon,
+        invitations: viInvitations,
+        patients: viPatients,
+        plans: viPlans,
+        tenants: viTenants,
+        validation: viValidation,
+      },
     },
     detection: {
       order: ["localStorage", "navigator"],

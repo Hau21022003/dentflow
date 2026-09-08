@@ -5,6 +5,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { catchError, Observable, tap, throwError } from 'rxjs';
 import { AppConfigService } from 'src/config/app-config.service';
 import { AppLogger } from '../logging/app-logger.service';
@@ -16,19 +17,20 @@ export class LoggingInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const request = context.switchToHttp().getRequest();
-    const response = context.switchToHttp().getResponse();
+    const request = context.switchToHttp().getRequest<Request>();
+    const response = context.switchToHttp().getResponse<Response>();
 
     const startedAt = Date.now();
     const path = request.path ?? request.url?.split('?')[0] ?? 'unknown';
 
-    if (this.configService.runtimeConfig.isDevelopment && request.body) {
+    if (this.configService.runtimeConfig.isDevelopment) {
       this.logger.debug(
         'http_request_started',
         {
           method: request.method,
           path,
           body: request.body,
+          requestId: response.getHeader('X-Request-Id'),
         },
         LoggingInterceptor.name,
       );
@@ -41,6 +43,7 @@ export class LoggingInterceptor implements NestInterceptor {
           {
             method: request.method,
             path,
+            requestId: response.getHeader('X-Request-Id'),
             statusCode: response.statusCode,
             durationMs: Date.now() - startedAt,
           },
@@ -54,6 +57,7 @@ export class LoggingInterceptor implements NestInterceptor {
         const fields = {
           method: request.method,
           path,
+          requestId: response.getHeader('X-Request-Id'),
           statusCode,
           durationMs: Date.now() - startedAt,
         };

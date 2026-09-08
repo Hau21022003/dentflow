@@ -5,6 +5,7 @@ import {
 } from 'src/modules/authorization/authorization.constants';
 import { AuthorizationGuard } from 'src/modules/authorization/guards/authorization.guard';
 import { TenantContextGuard } from 'src/modules/authorization/guards/tenant-context.guard';
+import { SubscriptionGuard } from 'src/modules/authorization/guards/subscription.guard';
 
 type TenantScope = Extract<AuthorizationScope, 'tenant' | 'branch'>;
 
@@ -13,6 +14,6 @@ export function TenantScope(
 ): ClassDecorator & MethodDecorator {
   return applyDecorators(
     SetMetadata(AUTHORIZATION_SCOPE_KEY, scope),
-    UseGuards(TenantContextGuard, AuthorizationGuard),
+    UseGuards(TenantContextGuard, SubscriptionGuard, AuthorizationGuard),
   );
 }

@@ -49,6 +49,20 @@ export default registerAs('app', () => {
         expiresIn: env.JWT_REFRESH_EXPIRES_IN,
       },
     },
+    audit: {
+      ipHmacSecret: env.AUDIT_IP_HMAC_SECRET,
+    },
+    idempotency: {
+      hmacSecret: env.IDEMPOTENCY_HMAC_SECRET,
+      processingLease: env.IDEMPOTENCY_PROCESSING_LEASE,
+      completedRetention: env.IDEMPOTENCY_COMPLETED_RETENTION,
+    },
+    tenantInvitation: {
+      tokenSecret:
+        env.TENANT_INVITATION_TOKEN_SECRET ??
+        'test-only-tenant-invitation-token-secret',
+      ttl: env.TENANT_INVITATION_TTL,
+    },
     email: {
       provider: env.MAIL_PROVIDER,
       from: env.MAIL_FROM,
@@ -57,6 +71,7 @@ export default registerAs('app', () => {
       smtp: {
         host: env.MAIL_HOST,
         port: env.MAIL_PORT,
+        secure: env.MAIL_SECURE ?? env.MAIL_PORT === 465,
         user: env.MAIL_USER,
         pass: env.MAIL_PASS,
       },

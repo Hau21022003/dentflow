@@ -195,20 +195,20 @@ Không hard-delete assignment. Thu hồi quyền đặt `revoked_at`; cấp lạ
 
 ### 10.3 `role_assignments`
 
-| Cột | Kiểu / quy tắc | Ý nghĩa |
-| --- | --- | --- |
-| `id` | UUID PK | Định danh grant scoped |
-| `user_id` | UUID FK → `users.id`, `NOT NULL` | User được cấp role |
-| `tenant_id` | UUID FK → `tenants.id`, `NOT NULL` | Tenant mà grant có hiệu lực |
-| `branch_id` | UUID nullable, composite FK với `tenant_id` → `branches(id, tenant_id)` | `NULL` chỉ với Tenant Admin; khác `NULL` là branch scope cụ thể |
-| `role_code` | `tenant_role_code_enum`, `NOT NULL` | Một trong bốn role tenant-facing của MVP |
-| `assigned_by_user_id` | UUID FK → `users.id`, nullable | Actor cấp role; nullable chỉ cho provisioning/bootstrap |
-| `assigned_at` | `timestamptz`, `NOT NULL` | Thời điểm có hiệu lực |
-| `assignment_reason` | `varchar(500)`, nullable | Lý do cấp, nếu policy yêu cầu |
-| `revoked_by_user_id` | UUID FK → `users.id`, nullable | Actor thu hồi role/scope |
-| `revoked_at` | `timestamptz`, nullable | `NULL` nghĩa là grant còn hiệu lực |
-| `revocation_reason` | `varchar(500)`, nullable | Lý do thu hồi |
-| `created_at`, `updated_at` | `timestamptz` | Metadata kỹ thuật |
+| Cột                        | Kiểu / quy tắc                                                          | Ý nghĩa                                                         |
+| -------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `id`                       | UUID PK                                                                 | Định danh grant scoped                                          |
+| `user_id`                  | UUID FK → `users.id`, `NOT NULL`                                        | User được cấp role                                              |
+| `tenant_id`                | UUID FK → `tenants.id`, `NOT NULL`                                      | Tenant mà grant có hiệu lực                                     |
+| `branch_id`                | UUID nullable, composite FK với `tenant_id` → `branches(id, tenant_id)` | `NULL` chỉ với Tenant Admin; khác `NULL` là branch scope cụ thể |
+| `role_code`                | `tenant_role_code_enum`, `NOT NULL`                                     | Một trong bốn role tenant-facing của MVP                        |
+| `assigned_by_user_id`      | UUID FK → `users.id`, nullable                                          | Actor cấp role; nullable chỉ cho provisioning/bootstrap         |
+| `assigned_at`              | `timestamptz`, `NOT NULL`                                               | Thời điểm có hiệu lực                                           |
+| `assignment_reason`        | `varchar(500)`, nullable                                                | Lý do cấp, nếu policy yêu cầu                                   |
+| `revoked_by_user_id`       | UUID FK → `users.id`, nullable                                          | Actor thu hồi role/scope                                        |
+| `revoked_at`               | `timestamptz`, nullable                                                 | `NULL` nghĩa là grant còn hiệu lực                              |
+| `revocation_reason`        | `varchar(500)`, nullable                                                | Lý do thu hồi                                                   |
+| `created_at`, `updated_at` | `timestamptz`                                                           | Metadata kỹ thuật                                               |
 
 Các field định nghĩa phạm vi (`user_id`, `tenant_id`, `branch_id`, `role_code`) là bất biến sau khi tạo. Đổi role, tenant hoặc branch phải tạo grant mới và thu hồi grant cũ; không `UPDATE` trực tiếp để audit dễ đọc và tránh cửa sổ cấp quyền không rõ ràng.
 
@@ -261,22 +261,22 @@ Policy hiện có capability Platform (`platform.*`), quản trị tenant (`tena
 
 Role và branch scope chỉ trả lời "người này có thể làm loại thao tác này ở đâu". Chúng không tự trả lời "người này có được thao tác trên ca này không". Những entity nghiệp vụ sau phải lưu ownership/assignment rõ ràng:
 
-| Entity nghiệp vụ | Thuộc tính authorization cần có | Quy tắc dành cho Dentist |
-| --- | --- | --- |
-| `Appointment` | `tenant_id`, `branch_id`, `assigned_dentist_user_id` | Chỉ dentist đang được gán mới bắt đầu/ghi clinical data |
-| `Visit` | `tenant_id`, `branch_id`, `appointment_id`, `opened_by_user_id` | Phải cùng tenant/branch và bắt nguồn từ appointment hợp lệ |
-| `TreatmentPlan` / `TreatmentItem` | `tenant_id`, `branch_id`, `visit_id`, `responsible_dentist_user_id` | Cần dentist role + branch scope + assignment ca phù hợp |
-| `PatientInvoice` / `Payment` | `tenant_id`, `branch_id`, `recorded_by_user_id` | Receptionist/Branch Admin trong đúng branch; không có update/delete payment thường |
+| Entity nghiệp vụ                  | Thuộc tính authorization cần có                                     | Quy tắc dành cho Dentist                                                           |
+| --------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `Appointment`                     | `tenant_id`, `branch_id`, `assigned_dentist_user_id`                | Chỉ dentist đang được gán mới bắt đầu/ghi clinical data                            |
+| `Visit`                           | `tenant_id`, `branch_id`, `appointment_id`, `opened_by_user_id`     | Phải cùng tenant/branch và bắt nguồn từ appointment hợp lệ                         |
+| `TreatmentPlan` / `TreatmentItem` | `tenant_id`, `branch_id`, `visit_id`, `responsible_dentist_user_id` | Cần dentist role + branch scope + assignment ca phù hợp                            |
+| `PatientInvoice` / `Payment`      | `tenant_id`, `branch_id`, `recorded_by_user_id`                     | Receptionist/Branch Admin trong đúng branch; không có update/delete payment thường |
 
 Nếu sau này cần nhiều dentist/assistant trong một appointment hoặc cần lịch sử chuyển giao riêng, bổ sung `appointment_clinician_assignments` ở module Appointment, không mở rộng `role_assignments` để mang dữ liệu ca. Bảng đó phải mang `tenant_id`, `branch_id`, `appointment_id`, `clinician_user_id`, `assignment_kind`, `assigned_by_user_id`, `assigned_at`, `ended_at`, lý do và composite FK cùng tenant. Một partial unique index bảo đảm chỉ một `PRIMARY_DENTIST` active cho một appointment trong MVP.
 
 ### 10.6 Audit, lifecycle và thứ tự migration
 
 - Mọi `INSERT`/thu hồi `PlatformRoleAssignment` hoặc `RoleAssignment` tạo `AuditLog` với action (`ROLE_GRANTED`, `ROLE_REVOKED`, `BRANCH_SCOPE_GRANTED`, `BRANCH_SCOPE_REVOKED`), actor, tenant/branch khi có, resource ID, request ID, reason và before/after an toàn. Không ghi password, token hoặc clinical detail vào audit payload.
-- Authorization guard chỉ xem active role assignment (`revoked_at IS NULL`) trong từng request scoped; thu hồi role vì vậy có hiệu lực ngay mà không cần user đăng nhập lại. User bị `DISABLED` hoặc logout không bị tra cứu lại ở generic protected route: access JWT đã phát hành vẫn dùng đến khi hết hạn, còn login/refresh và `GET /auth/me` vẫn từ chối user không active. Tenant lifecycle sẽ được enforce riêng khi Subscription Guard được triển khai; foundation authorization hiện chưa suy diễn quyền từ `Tenant.status`.
+- Authorization guard chỉ xem active role assignment (`revoked_at IS NULL`) trong từng request scoped; thu hồi role vì vậy có hiệu lực ngay mà không cần user đăng nhập lại. User bị `DISABLED` hoặc logout không bị tra cứu lại ở generic protected route: access JWT đã phát hành vẫn dùng đến khi hết hạn, còn login/refresh và `GET /auth/me` vẫn từ chối user không active. `SubscriptionGuard` hiện chạy sau tenant-context resolution và trước authorization: `PROVISIONING`, `SUSPENDED` và `CANCELED` bị chặn khỏi route vận hành, còn billing/read-only phải opt-in rõ ràng.
 - Không cascade delete từ `users`, `tenants` hoặc `branches` sang assignment/audit. Tenant và branch được ngừng hoạt động theo lifecycle; lịch sử quyền phải còn nguyên.
 - Thứ tự triển khai schema: `Tenant` → `Branch` (bao gồm `UNIQUE (id, tenant_id)`) → enum/tables assignment → fixture seed assignment synthetic → `AuditLog` → authorization guard/service.
-- `AuditLog` và Subscription Guard vẫn chưa được triển khai. Tenant-context resolver và authorization guard hiện là foundation dùng lại được: route gắn `@PlatformScope()` hoặc `@TenantScope('tenant' | 'branch')`, khai báo `@RequirePermissions(...)`, rồi guard tải active assignment scoped từ database để enforce. Route không gắn scope decorator hiện chỉ yêu cầu JWT; snapshot auth vẫn chỉ dành cho UI, không thay enforcement ở API. Khi thêm command cấp/thu hồi role, các command đó phải ghi audit và không được sửa trực tiếp các field scope bất biến.
+- `AuditLog` đã có module/schema append-only, request ID và API đọc theo Platform/Tenant/Branch scope; xem [05-audit-log.md](./05-audit-log.md). `TenantScope()` kết hợp `TenantContextGuard` → `SubscriptionGuard` → `AuthorizationGuard`; route gắn `@PlatformScope()` không có tenant context. Route không gắn scope decorator hiện chỉ yêu cầu JWT; snapshot auth vẫn chỉ dành cho UI, không thay enforcement ở API. Khi thêm command cấp/thu hồi role, các command đó phải ghi audit trong cùng transaction và không được sửa trực tiếp các field scope bất biến.
 
 ### 10.7 Thuật toán guard cho service scoped
 

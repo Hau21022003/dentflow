@@ -9,6 +9,9 @@
     "description": "Khi tích hợp API, danh sách bệnh nhân của tenant đã xác thực sẽ xuất hiện ở đây."
   },
   "form": {
+    "title": "Thêm bệnh nhân",
+    "description": "Nhập thông tin hành chính để khởi tạo hồ sơ bệnh nhân.",
+    "submit": "Lưu mẫu",
     "fields": {
       "fullName": "họ và tên",
       "phone": "số điện thoại",

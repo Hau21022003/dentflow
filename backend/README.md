@@ -1,98 +1,138 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# DentFlow Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend NestJS cho DentFlow. Tài liệu sản phẩm, tenant isolation, phân quyền,
+payment và background jobs nằm tại [../docs/README.md](../docs/README.md).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Chạy local
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```powershell
+cd backend
+npm install
+Copy-Item .env.development.example .env.development
+npm run setup:dev
+npm run start:dev
 ```
 
-## Compile and run the project
+`setup:dev` chạy migration và seed dữ liệu synthetic. Chỉ cấu hình
+`.env.development` trỏ vào database local dành riêng cho development.
 
-```bash
-# development
-$ npm run start
+Các lệnh thường dùng:
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```powershell
+npm test
+npm run build
+npm run lint
 ```
 
-## Run tests
+`npm run lint` chạy ESLint với `--fix`. Dùng `npx eslint
+"{src,apps,libs,test}/**/*.ts"` khi chỉ muốn kiểm tra mà không sửa file.
 
-```bash
-# unit tests
-$ npm run test
+Để chạy E2E, tạo database test riêng và dùng configuration test:
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```powershell
+Copy-Item .env.test.example .env.test
+npm run setup:test
+npm run test:e2e
 ```
 
-## Deployment
+## Cấu trúc mã nguồn
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```text
+src/
+  common/           # HTTP và cross-cutting primitives dùng chung
+  config/           # env validation, typed runtime configuration
+  database/         # TypeORM data source, migrations và synthetic seeds
+  infrastructure/   # adapter cho external providers
+  i18n/             # translations và i18n services
+  modules/          # domain/application modules
+  app.module.ts     # application composition root
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### `common/`
 
-## Resources
+Chỉ chứa thành phần không thuộc một domain cụ thể: decorators, pipes, filters,
+request context, logging và utility thuần. Không đặt provider SDK, repository
+hay business workflow vào đây.
 
-Check out a few resources that may come in handy when working with NestJS:
+### `config/`
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Chịu trách nhiệm validate biến môi trường và chuyển chúng thành các contract
+typed dùng tại runtime. Cấu hình provider có type riêng, ví dụ
+`email.config.ts`, để infrastructure không phải phụ thuộc vào
+`AppConfigService` chỉ để dùng type.
 
-## Support
+### `infrastructure/`
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Chứa integration adapter có side effect với hệ thống bên ngoài. Mỗi capability
+có Nest module riêng; `InfrastructureModule` chỉ tổng hợp và export chúng tại
+application composition root. Domain module cần một integration phải import
+module nhỏ nhất cần dùng, không dựa vào provider global.
 
-## Stay in touch
+Hiện có `infrastructure/email`:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- Export `EMAIL_SENDER`, một port nội bộ với `send({ to, subject, text, html })`.
+- Chọn adapter SMTP (`nodemailer`) hoặc Amazon SESv2 theo `MAIL_PROVIDER`.
+- Sender address luôn là `MAIL_FROM`; caller không thể override.
+- Ở development và staging, mọi recipient được thay bằng `MAIL_REDIRECT_TO`.
+  Production gửi đến recipient gốc.
+- Adapter không có template, queue, controller, notification state hoặc business
+  knowledge. Notification workflow tương lai thuộc `modules/notifications` và
+  phải theo [background-job architecture](../docs/10-background-jobs-architecture.md).
 
-## License
+Ví dụ domain module inject email port:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```ts
+import { Inject, Injectable } from '@nestjs/common';
+import {
+  EMAIL_SENDER,
+  EmailSender,
+} from 'src/infrastructure/email';
+
+@Injectable()
+export class ExampleService {
+  constructor(
+    @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender,
+  ) {}
+}
+```
+
+### `modules/`
+
+Mỗi thư mục là một domain/application capability, ví dụ auth, authorization,
+tenant, branch, audit và subscription plans. Module sở hữu controller, service,
+repository, entity và policy của domain đó. Infrastructure adapter không được
+import module nghiệp vụ hoặc quyết định business state.
+
+## Quy tắc dependency và tenant isolation
+
+```text
+HTTP controller -> domain module -> infrastructure port -> external provider
+```
+
+- `common/` không phụ thuộc `modules/` hoặc `infrastructure/`.
+- Infrastructure không biết tenant workflow hay business entity; domain module
+  chịu trách nhiệm xác thực authorization và tenant context trước khi gọi adapter.
+- Mọi dữ liệu tenant-owned phải query theo tenant context đã xác thực ở server,
+  không theo tenant ID do client tự cung cấp.
+- Không đưa dữ liệu bệnh nhân thật vào seed, test hoặc log.
+
+## Cấu hình email
+
+Chọn một provider trong file environment phù hợp:
+
+```dotenv
+MAIL_PROVIDER=smtp # hoặc ses
+MAIL_FROM=no-reply@example.test
+```
+
+Với SMTP, `MAIL_HOST` và `MAIL_PORT` là bắt buộc. `MAIL_USER` và `MAIL_PASS`
+hoặc cùng được cấu hình, hoặc cùng để trống. `MAIL_SECURE` mặc định là `true`
+khi port là `465`, còn lại mặc định `false`.
+
+Với SES, `AWS_SES_REGION` là bắt buộc. Có thể cấu hình cả
+`AWS_SES_ACCESS_KEY_ID` và `AWS_SES_SECRET_ACCESS_KEY`, hoặc để trống cả hai để
+AWS SDK dùng default credential chain (IAM role, AWS profile hoặc environment
+credentials).
+
+`MAIL_REDIRECT_TO` là bắt buộc ở development/staging và không có tác dụng ở
+production. Không commit file `.env.*` chứa credential thật.

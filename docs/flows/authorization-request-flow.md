@@ -1,6 +1,6 @@
 # Authorization Request Flow
 
-Sơ đồ này mô tả luồng authorization hiện có cho một endpoint protected. Nó không thể hiện `Subscription Guard`, vì guard đó chưa được triển khai.
+Sơ đồ này mô tả luồng authorization cho một endpoint protected, gồm Subscription Guard ở tenant/branch scope.
 
 ```mermaid
 flowchart TD
@@ -19,11 +19,15 @@ flowchart TD
   tenantContext --> tenantFound{Tenant tồn tại?}
   tenantFound -- Không --> tenantNotFound[404 Tenant not found]
   tenantFound -- Có --> branchScope{Branch scope?}
-  branchScope -- Không --> tenantAuthorization[AuthorizationGuard]
+  branchScope -- Không --> subscriptionGuard[SubscriptionGuard]
   branchScope -- Có --> branchContext[Resolve branch bằng tenantId và branchSlug]
   branchContext --> branchFound{Branch thuộc tenant trên URL?}
   branchFound -- Không --> branchNotFound[404 Branch not found]
-  branchFound -- Có --> tenantAuthorization
+  branchFound -- Có --> subscriptionGuard
+
+  subscriptionGuard --> subscriptionAllowed{Tenant được phép vận hành?}
+  subscriptionAllowed -- Không --> subscriptionBlocked[403 Subscription access blocked]
+  subscriptionAllowed -- Có --> tenantAuthorization
 
   tenantAuthorization --> tenantAccess[Tải active role assignment theo user và context]
   tenantAccess --> tenantPermission{Có role và đủ permission?}
@@ -38,6 +42,7 @@ flowchart TD
 ## Cách đọc
 
 - `TenantContextGuard` chỉ xác định tenant/branch mục tiêu từ URL. Nó không kiểm tra quyền của user.
+- `SubscriptionGuard` chạy sau khi context đã resolve và trước `AuthorizationGuard`. `PROVISIONING`, `SUSPENDED` và `CANCELED` bị chặn; route billing/read-only phải khai báo rõ `@AllowInactiveTenantAccess()`.
 - `AuthorizationGuard` dùng context đã resolve và `userId` trong JWT để kiểm tra active assignment cùng permission. Target tồn tại nhưng user không có scope hoặc thiếu permission trả `403`.
 - Service vẫn chịu trách nhiệm kiểm tra ownership/case và chỉ truy vấn trong context đã xác thực. ID từ body chỉ là resource reference, không cấp quyền.
 

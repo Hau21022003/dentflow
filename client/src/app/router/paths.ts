@@ -1,11 +1,12 @@
 export const PATHS = {
   root: "/",
   login: "/login",
+  acceptTenantOwnerInvitation: "/accept-tenant-owner-invitation",
   forbidden: "/forbidden",
   patients: "/patients",
-  newPatient: "/patients/new",
   platform: "/platform",
   platformTenants: "/platform/tenants",
+  platformPlans: "/platform/plans",
   workspace: "/workspace",
   workspaceTenant: "/workspace/:tenantSlug",
   workspaceTenantHome: "/workspace/:tenantSlug/tenant",
@@ -23,6 +24,8 @@ function toPathSegment(value: string): string {
 }
 
 export const pathFor = {
+  platformTenantDetail: (tenantId: string) =>
+    `/platform/tenants/${toPathSegment(tenantId)}`,
   workspace: (tenantSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}`,
   workspaceTenantHome: (tenantSlug: string) =>

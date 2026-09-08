@@ -100,6 +100,7 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 - Invoice và payment nội bộ cho chi phí điều trị của bệnh nhân.
 - Dashboard theo quyền: lịch hôm nay, số bệnh nhân, lịch hẹn theo trạng thái, doanh thu đã thu trong ngày và treatment plan đang mở.
 - Audit log cho thay đổi quyền, chi nhánh, bệnh nhân, lịch hẹn, kế hoạch điều trị và billing SaaS.
+- Chi tiết schema append-only, payload redaction, API đọc và retention nằm tại [05-audit-log.md](./05-audit-log.md).
 
 ### Trải nghiệm và kỹ thuật
 
@@ -125,13 +126,13 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 
 ## 6. API và nguyên tắc bảo mật
 
-Các API nghiệp vụ sẽ được tổ chức theo tiền tố `/api/v1`. Trong khi global prefix chưa được chuẩn hoá ở backend, auth giữ các route hiện hành `/auth/*` dưới API base URL. Backend hiện lấy tenant context từ `:tenantSlug` trong route; branch context lấy từ cặp `:tenantSlug` + `:branchSlug`. Không nhận tenant/branch context từ header, body hoặc query và không tin tưởng tenant ID do client tự gửi.
+Tài liệu này chỉ mô tả route nội bộ của backend và không ghi cứng API prefix hay version. URL công khai, gồm tiền tố như `/api/v1` và việc rewrite/strip prefix, là contract deployment do Nginx/gateway sở hữu; backend không khai báo các tiền tố đó. Auth giữ các route nội bộ hiện hành `/auth/*`. Backend lấy tenant context từ `:tenantSlug` trong route; branch context lấy từ cặp `:tenantSlug` + `:branchSlug`. Không nhận tenant/branch context từ header, body hoặc query và không tin tưởng tenant ID do client tự gửi.
 
 - `POST /auth/login`: nhận email/password, kiểm tra trạng thái và login lock, tạo một `AuthSession` cho thiết bị hiện tại, rồi đặt access/refresh cookies và trả user an toàn cùng authorization snapshot active.
 - `POST /auth/refresh`: chỉ đọc refresh cookie, xác minh JWT, session và bcrypt hash, rồi rotate refresh token trong transaction/row lock trước khi đặt lại hai cookies và trả authorization snapshot mới tính từ database.
 - `GET /auth/me`: yêu cầu access-token cookie hợp lệ, lấy user ID từ JWT đã xác minh rồi đọc lại user đang `ACTIVE`; trả `id`, `email`, `fullName` và authorization snapshot, không nhận user hay tenant ID từ client.
 - `POST /auth/logout`: revoke session của refresh cookie hiện tại, xoá hai cookies và không làm logout các thiết bị khác. Auth endpoint không nhận `tenantId`; các guard nghiệp vụ sau này vẫn phải lấy tenant context từ xác thực đã kiểm chứng.
-- `GET/POST /tenants`, `GET/PATCH /tenants/:id`: chỉ Platform Admin.
+- `GET/POST /platform/tenants`, `GET/PATCH /platform/tenants/:tenantId`: chỉ Platform Admin; lifecycle dùng các command riêng `/resend-owner-invite`, `/extend-trial`, `/suspend` và `/reactivate` với idempotency.
 - `GET/POST /branches`, `GET/POST /users`, `POST /role-assignments`: Tenant/Branch Admin theo phạm vi.
 - `GET/POST /patients`, `GET/POST /appointments`, `POST /appointments/:id/check-in`, `POST /appointments/:id/start`, `POST /appointments/:id/complete`.
 - `GET/POST /visits`, `GET/POST /treatment-plans`, `POST /treatment-items/:id/complete`.

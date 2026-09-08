@@ -1,0 +1,98 @@
+{
+  "title": "Quản lý plan",
+  "description": "Quản lý danh mục plan SaaS toàn nền tảng, thông tin thương mại và trạng thái availability.",
+  "catalogTitle": "Danh mục plan",
+  "catalogDescription": "Platform Admin xem được toàn bộ plan đang hoạt động và đã ẩn.",
+  "loading": "Đang tải plan",
+  "actions": {
+    "create": "Tạo plan",
+    "retry": "Thử lại",
+    "edit": "Chỉnh sửa",
+    "editPlan": "Chỉnh sửa {{name}}",
+    "activate": "Kích hoạt",
+    "activatePlan": "Kích hoạt {{name}}",
+    "deactivate": "Ẩn plan",
+    "deactivatePlan": "Ẩn {{name}}",
+    "cancel": "Hủy",
+    "saving": "Đang lưu"
+  },
+  "billingIntervals": {
+    "MONTHLY": "Hàng tháng",
+    "YEARLY": "Hàng năm"
+  },
+  "analyticsOptions": {
+    "enabled": "Bật",
+    "disabled": "Tắt",
+    "unconfigured": "Chưa cấu hình"
+  },
+  "form": {
+    "createTitle": "Tạo plan thuê bao",
+    "createDescription": "Plan mới sẽ hoạt động ngay sau khi được tạo.",
+    "createSubmit": "Tạo plan",
+    "editTitle": "Chỉnh sửa plan thuê bao",
+    "editDescription": "Plan đã có lịch sử subscription chỉ có thể thay đổi availability.",
+    "editSubmit": "Lưu thay đổi",
+    "codeLocked": "Không thể thay đổi code sau khi tạo plan.",
+    "amountLimit": "Giá trị amount sau quy đổi không được vượt quá {{max}} đơn vị tiền tệ nhỏ nhất.",
+    "fields": {
+      "code": "Code plan",
+      "name": "Tên plan",
+      "description": "Mô tả",
+      "billingInterval": "Chu kỳ thanh toán",
+      "currency": "Tiền tệ",
+      "price": "Giá",
+      "trialDays": "Số ngày trial mặc định",
+      "providerPlanId": "Provider plan ID",
+      "maxBranches": "Số branch tối đa",
+      "maxUsers": "Số người dùng tối đa",
+      "analytics": "Analytics"
+    }
+  },
+  "entitlements": {
+    "title": "Entitlement",
+    "description": "Thiết lập quota branch, người dùng và quyền analytics chuẩn cho plan này.",
+    "maxBranches": "Branch",
+    "maxUsers": "Người dùng",
+    "analytics": "Analytics",
+    "notConfigured": "Chưa cấu hình",
+    "unknownTitle": "Entitlement bổ sung",
+    "unknownDescription": "Các giá trị catalog này chỉ đọc tại đây và sẽ được giữ nguyên khi lưu entitlement được hỗ trợ."
+  },
+  "availability": {
+    "active": "Đang hoạt động",
+    "inactive": "Đã ẩn",
+    "activateTitle": "Kích hoạt plan",
+    "activateDescription": "Cho phép {{name}} được dùng cho subscription SaaS trong tương lai.",
+    "activateConfirm": "Kích hoạt plan",
+    "deactivateTitle": "Ẩn plan",
+    "deactivateDescription": "Ẩn {{name}} khỏi subscription SaaS trong tương lai. Lịch sử hiện có không thay đổi.",
+    "deactivateConfirm": "Ẩn plan",
+    "reason": "Lý do",
+    "reasonRequired": "Nhập lý do cho thay đổi availability này.",
+    "reasonTooLong": "Lý do không được vượt quá 500 ký tự."
+  },
+  "empty": {
+    "title": "Chưa có plan",
+    "description": "Tạo plan thuê bao SaaS đầu tiên cho DentFlow."
+  },
+  "table": {
+    "searchPlaceholder": "Tìm plan...",
+    "noTrial": "Không có trial",
+    "trialDays": "{{days}} ngày",
+    "columns": {
+      "plan": "Plan",
+      "billingInterval": "Chu kỳ",
+      "price": "Giá",
+      "trial": "Trial",
+      "entitlements": "Entitlement",
+      "availability": "Availability",
+      "actions": "Thao tác"
+    },
+    "filters": {
+      "billingInterval": "Chu kỳ thanh toán",
+      "billingIntervalDescription": "Chỉ hiển thị plan theo chu kỳ đã chọn.",
+      "availability": "Availability",
+      "availabilityDescription": "Chỉ hiển thị plan đang hoạt động hoặc đã ẩn."
+    }
+  }
+}

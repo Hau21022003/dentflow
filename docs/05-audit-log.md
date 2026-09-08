@@ -1,0 +1,42 @@
+# DentFlow — Audit Log
+
+## 1. Mục đích và bất biến
+
+`AuditLog` là nhật ký nghiệp vụ append-only: ghi ai hoặc hệ thống đã thực hiện hành động rủi ro nào, trên resource nào và khi nào. Nó không thay thế technical log, event webhook hay lịch sử clinical.
+
+- Bản ghi tenant luôn được tạo và đọc trong tenant context đã xác minh; `tenantId`/`branchId` từ client không cấp quyền.
+- `audit_logs` không có API update/delete. Database trigger từ chối `UPDATE` và `DELETE`; không có cascade delete từ tenant, branch hoặc user.
+- Audit row phải được ghi trong cùng transaction với command nghiệp vụ. Nếu audit không ghi được, command rollback.
+- Không backfill lịch sử trước migration này. Các command mới phải gọi `AuditLogService.record(manager, event)` trong PR của chính command đó.
+
+## 2. Nội dung được lưu
+
+Mỗi row có actor type/user/session, tenant/branch khi áp dụng, action, domain, resource type/ID, request ID, timestamp và metadata nguồn request.
+
+- Domain: `PLATFORM`, `TENANT_ADMIN`, `CLINICAL`, `FINANCIAL`, `SECURITY`.
+- IP chỉ lưu HMAC-SHA256 với `AUDIT_IP_HMAC_SECRET`; không lưu IP thô. MVP lấy địa chỉ socket trực tiếp và không tin `X-Forwarded-For` khi chưa có cấu hình trusted proxy. User agent được giới hạn 512 ký tự.
+- `before`, `after`, `metadata` là JSONB theo allowlist. Cấm password, token, cookie, secret, thông tin nhận diện bệnh nhân, clinical note, diagnosis và patient alert.
+- Patient audit chỉ lưu tên các field đã đổi. Treatment audit chỉ lưu state/ID. Financial audit chỉ lưu amount, currency, method, reference an toàn và reason code.
+- Free-text reason chỉ dùng cho action Platform/Tenant Admin có policy cho phép. Clinical và financial dùng `metadata.reasonCode`.
+
+Các action là constants ở code, không phải database enum, gồm quyền/scope, tenant lifecycle, SaaS billing, tenant/branch/service/user, patient/appointment/treatment state, patient invoice/payment và security event. Tenant provisioning ghi `TENANT_CREATED`; owner invitation ghi `TENANT_OWNER_INVITATION_CREATED`, `TENANT_OWNER_INVITATION_RESENT` và `TENANT_OWNER_INVITATION_ACCEPTED`. Payload invitation chỉ có state, tuyệt đối không có email hoặc raw/hash token. Các command nghiệp vụ chưa được tạo phải tích hợp action phù hợp trước khi merge.
+
+Plan catalog dùng `PLAN_CREATED`, `PLAN_UPDATED`, `PLAN_DEACTIVATED` và `PLAN_ACTIVATED`. Snapshot của các action này chỉ chứa `changedFields`, `isActive`, `amount` và `currency`; thay đổi availability lưu thêm free-text `reason` theo policy Platform.
+
+## 3. API đọc
+
+Các API dưới đây là route nội bộ của backend và chỉ trả audit data đã redacted. URL công khai, API prefix/version và việc rewrite/strip prefix do Nginx/gateway quản lý khi deploy, nên không được ghi cứng ở đây. List không trả payload; endpoint detail mới trả `before`, `after`, `metadata` an toàn. Tất cả list dùng cursor `(occurredAt,id)`, mặc định 50 và tối đa 100.
+
+| Endpoint                                                                  | Quyền và phạm vi                           | Dữ liệu trả về                                                                 |
+| ------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| `GET /platform/audit-logs`, `/:id`                                        | `PLATFORM_AUDIT_LOG_READ` + Platform scope | Chỉ domain `PLATFORM` và `SECURITY`; không có clinical/patient financial audit |
+| `GET /tenants/:tenantSlug/audit-logs`, `/:id`                             | `AUDIT_LOG_READ` + tenant scope            | Audit record của tenant đã resolve                                             |
+| `GET /tenants/:tenantSlug/branches/:branchSlug/audit-logs`, `/:id`        | `AUDIT_LOG_READ` + branch scope            | Chỉ record của branch đã resolve                                               |
+
+List hỗ trợ `from`, `to`, `action`, `resourceType`, `resourceId`, `actorUserId`, `cursor`, `limit`; tenant list nhận thêm `branchSlug`, được resolve trong tenant. Record ngoài scope trả `404`; thiếu JWT là `401` và thiếu grant/permission là `403`.
+
+## 4. Retention và vận hành
+
+Audit log được giữ tối thiểu 7 năm sau khi tenant hủy. MVP chưa có purge tự động để không làm suy yếu tính bất biến. Trước khi bổ sung purge phải có legal review, legal-hold policy và database role riêng có kiểm soát.
+
+`X-Request-Id` chỉ nhận UUID hợp lệ hoặc được server sinh mới, được trả trong response và gắn vào audit/technical log.

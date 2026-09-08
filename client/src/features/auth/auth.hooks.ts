@@ -40,3 +40,9 @@ export function useLogoutMutation() {
     },
   });
 }
+
+export function useAcceptTenantOwnerInvitationMutation() {
+  return useMutation({
+    mutationFn: authService.acceptTenantOwnerInvitation,
+  });
+}
