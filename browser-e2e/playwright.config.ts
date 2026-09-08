@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { E2E_TENANT_INVITATION_TOKEN_SECRET } from "./tests/support/tenant-invitation";
 
 const apiUrl = "http://127.0.0.1:3001";
 const frontendUrl = "http://127.0.0.1:5174";
@@ -33,6 +34,7 @@ export default defineConfig({
         FRONTEND_ORIGIN: frontendUrl,
         AUDIT_IP_HMAC_SECRET: "secret",
         IDEMPOTENCY_HMAC_SECRET: "idempotency-test-secret",
+        TENANT_INVITATION_TOKEN_SECRET: E2E_TENANT_INVITATION_TOKEN_SECRET,
         PORT: "3001",
       },
     },

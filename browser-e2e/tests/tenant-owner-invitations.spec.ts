@@ -2,9 +2,9 @@ import { createHmac, randomUUID } from "node:crypto";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { resetDatabase } from "./support/database";
 import { E2E_USERS, login, submitLogin } from "./support/login";
+import { E2E_TENANT_INVITATION_TOKEN_SECRET } from "./support/tenant-invitation";
 
 const API_URL = "http://127.0.0.1:3001";
-const INVITATION_TOKEN_SECRET = "test-only-tenant-invitation-token-secret";
 
 type PendingInvitationTenant = {
   id: string;
@@ -150,7 +150,7 @@ function invitationToken(tenant: PendingInvitationTenant, ownerEmail: string): s
     ownerEmail.toLowerCase(),
     new Date(invitation.expiresAt).toISOString(),
   ].join(":");
-  const signature = createHmac("sha256", INVITATION_TOKEN_SECRET)
+  const signature = createHmac("sha256", E2E_TENANT_INVITATION_TOKEN_SECRET)
     .update(payload)
     .digest("base64url");
 
