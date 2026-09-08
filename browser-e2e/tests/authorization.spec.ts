@@ -17,7 +17,9 @@ test("platform admin reaches Platform routes and is denied a workspace route", a
   await submitLogin(page, E2E_USERS.platformAdmin);
 
   await expect(page).toHaveURL(/\/platform\/tenants$/);
-  await expect(page.getByRole("heading", { name: "Quản lý tenant" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Quản lý tenant|Tenant management/ }),
+  ).toBeVisible();
 
   await page.goto(`/workspace/${brightSmileSlug}`);
   await expect(page.getByText("403 · Không có quyền truy cập")).toBeVisible();

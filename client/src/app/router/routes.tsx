@@ -1,10 +1,12 @@
 import { Navigate, type RouteObject } from "react-router-dom";
 import { PERMISSIONS } from "@/features/auth/auth.types";
 import { LoginPage } from "../../pages/auth/LoginPage";
+import { AcceptTenantOwnerInvitationPage } from "../../pages/auth/AcceptTenantOwnerInvitationPage";
 import { PatientsListPage } from "../../pages/patients/PatientsListPage";
 import { PlatformHomePage } from "../../pages/platform/PlatformHomePage";
 import { SubscriptionPlanManagementPage } from "../../pages/platform/SubscriptionPlanManagementPage";
 import { TenantManagementPage } from "../../pages/platform/TenantManagementPage";
+import { TenantDetailPage } from "../../pages/platform/TenantDetailPage";
 import { BranchWorkspaceHomePage } from "../../pages/workspace/branch/BranchWorkspaceHomePage";
 import { StaffManagementPage } from "../../pages/workspace/branch/StaffManagementPage";
 import { DoctorHomePage } from "../../pages/workspace/doctor/DoctorHomePage";
@@ -28,6 +30,10 @@ import { RequireTenantPermission } from "./guards/RequireTenantPermission";
 import { PATHS } from "./paths";
 
 export const routes: RouteObject[] = [
+  {
+    path: PATHS.acceptTenantOwnerInvitation,
+    element: <AcceptTenantOwnerInvitationPage />,
+  },
   {
     path: PATHS.login,
     element: <RedirectIfAuthenticated />,
@@ -58,7 +64,10 @@ export const routes: RouteObject[] = [
                     permission={PERMISSIONS.platformTenantManage}
                   />
                 ),
-                children: [{ index: true, element: <TenantManagementPage /> }],
+                children: [
+                  { index: true, element: <TenantManagementPage /> },
+                  { path: ":tenantId", element: <TenantDetailPage /> },
+                ],
               },
             ],
           },

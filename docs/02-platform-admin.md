@@ -117,6 +117,8 @@ Plan catalog chỉ dành cho Platform Admin. `GET /platform/plans` trả cả pl
 
 ### Trạng thái triển khai tenant management
 
+Frontend có route onboarding công khai `/accept-tenant-owner-invitation?token=...`, được dùng từ link trong email owner invitation và không yêu cầu quyền `PLATFORM_ADMIN` hay tenant grant trước đó. Route chỉ gửi capability tới `POST /auth/tenant-owner-invitations/accept`; không hiển thị, lưu trữ hoặc ghi log token. Owner mới nhập họ tên/mật khẩu rồi được chuyển tới đăng nhập vì endpoint accept không tạo session. Owner đã đăng nhập bằng đúng email có thể xác nhận trên cùng route; client refresh authorization snapshot trước khi mở workspace của tenant vừa được cấp quyền.
+
 Tenant catalog dùng offset pagination: `GET /platform/tenants?page=1&limit=10` trả `{ items, meta: { page, limit, total, totalPages } }`. `page` bắt đầu từ 1, `limit` tối đa 100; cursor và `nextCursor` không còn hỗ trợ. Query hỗ trợ `search`, `status`, `planId`, `trialEndingBefore`, `sortBy` (`displayName`, `planName`, `branchCount`, `status`, `createdAt`) và `sortOrder` (`ASC`/`DESC`). Search chỉ truy vấn SaaS profile/current plan; response không có clinical hoặc patient-payment data.
 
 `GET /platform/tenants`, `GET /platform/tenants/:tenantId`, `POST /platform/tenants`, `PATCH /platform/tenants/:tenantId`, resend invitation, extend trial, suspend và reactivate đã được triển khai với `PLATFORM_TENANT_MANAGE` và idempotency cho mọi command. `PATCH` không sửa `slug`, owner hoặc `status`; `TenantLifecycleService` là nơi duy nhất chuyển access status.

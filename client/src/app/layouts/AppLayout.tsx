@@ -255,6 +255,16 @@ export function AppLayout() {
       });
     }
 
+    if (hasPlatformPermission(user, PERMISSIONS.platformTenantManage)) {
+      items.push({
+        end: false,
+        icon: Building2,
+        kind: "link",
+        label: t("navigation.tenants"),
+        to: PATHS.platformTenants,
+      });
+    }
+
     if (hasPlatformPermission(user, PERMISSIONS.platformPlanManage)) {
       items.push({
         end: true,

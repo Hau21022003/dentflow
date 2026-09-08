@@ -1,0 +1,136 @@
+{
+  "title": "Tenant management",
+  "description": "Manage SaaS tenants, owners, subscriptions, and access lifecycle across DentFlow.",
+  "loading": "Loading tenants...",
+  "empty": "No matching tenants found.",
+  "statuses": {
+    "PROVISIONING": "Provisioning",
+    "TRIAL": "Trial",
+    "ACTIVE": "Active",
+    "PAST_DUE": "Past due",
+    "SUSPENDED": "Suspended",
+    "CANCELED": "Canceled"
+  },
+  "fields": {
+    "legalName": "Legal name",
+    "displayName": "Display name",
+    "slug": "Tenant slug",
+    "billingEmail": "Billing email",
+    "ownerFullName": "Tenant Admin name",
+    "ownerEmail": "Tenant Admin email",
+    "plan": "Subscription plan",
+    "trialDays": "Trial days",
+    "contactEmail": "Contact email",
+    "contactPhone": "Contact phone",
+    "logoUrl": "Logo URL",
+    "defaultLocale": "Default locale",
+    "defaultTimezone": "Default timezone",
+    "reason": "Reason"
+  },
+  "actions": {
+    "create": "Create tenant",
+    "save": "Save changes",
+    "edit": "Edit",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "saving": "Saving",
+    "openPlans": "Open plan catalog",
+    "backToCatalog": "Back to tenant catalog",
+    "viewDetail": "View details",
+    "openActions": "Open actions for {{name}}",
+    "resendInvite": "Resend invitation",
+    "extendTrial": "Extend trial",
+    "suspend": "Suspend tenant",
+    "reactivate": "Reactivate tenant"
+  },
+  "form": {
+    "createTitle": "Create tenant",
+    "createDescription": "Provision a trial tenant, subscription, and Tenant Admin invitation.",
+    "editTitle": "Edit tenant",
+    "editDescription": "Update the SaaS profile. Slug, owner, plan, and status cannot be changed here.",
+    "ownerAndPlan": "Owner and subscription plan",
+    "slugHint": "Use lowercase letters, numbers, and hyphens only.",
+    "slugLocked": "The slug is immutable after creation.",
+    "planPlaceholder": "Select an active subscription plan",
+    "planTrialDays": "This plan defaults to {{days}} trial days; enter a value to override it.",
+    "trialOverrideHint": "This plan has no default trial; enter trial days.",
+    "trialDaysRequired": "Enter trial days for the selected plan.",
+    "noActivePlans": "An active subscription plan is required before creating a tenant."
+  },
+  "table": {
+    "title": "Tenants on the platform",
+    "description": "Search, filters, sorting, and pagination are handled by the Platform API.",
+    "tenant": "Tenant",
+    "owner": "Owner",
+    "plan": "Subscription plan",
+    "trialEnd": "Trial end",
+    "branches": "Branches",
+    "branchCount": "{{count}} branches",
+    "status": "Status",
+    "createdAt": "Created",
+    "actions": "Actions"
+  },
+  "filters": {
+    "statusTitle": "Filter by status",
+    "statusDescription": "Show tenants with the selected status only.",
+    "statusPlaceholder": "Select a status",
+    "planTitle": "Filter by subscription plan",
+    "planDescription": "Show tenants using the selected plan only.",
+    "planPlaceholder": "Select a subscription plan",
+    "trialEndingBefore": "Trial ending before"
+  },
+  "detail": {
+    "profileTitle": "SaaS profile",
+    "usageTitle": "Non-clinical usage",
+    "branches": "Branches",
+    "users": "Active users",
+    "subscriptionTitle": "SaaS subscription",
+    "plan": "Current plan",
+    "price": "Subscription price",
+    "currentPeriod": "Current period ends",
+    "ownerTitle": "Tenant owner",
+    "ownerState": "Owner state",
+    "invitationDelivery": "Invitation delivery",
+    "notSet": "Not set",
+    "noSubscription": "No current subscription.",
+    "noOwner": "No accepted owner or pending invitation."
+  },
+  "ownerStates": {
+    "ACCEPTED": "Accepted",
+    "PENDING": "Pending acceptance",
+    "EXPIRED": "Invitation expired"
+  },
+  "deliveryStates": {
+    "PENDING": "Pending delivery",
+    "SENT": "Sent",
+    "FAILED": "Delivery failed"
+  },
+  "lifecycle": {
+    "reasonRequired": "Enter a reason for this action.",
+    "reasonTooLong": "The reason must not exceed 500 characters.",
+    "daysInvalid": "Days must be an integer from 1 to 32767.",
+    "resendInvite": {
+      "title": "Resend owner invitation",
+      "description": "The current pending invitation for {{name}} will be replaced.",
+      "confirm": "Resend invitation"
+    },
+    "extendTrial": {
+      "title": "Extend trial",
+      "description": "Extend the trial subscription for {{name}} and write an audit record.",
+      "confirm": "Extend trial"
+    },
+    "suspend": {
+      "title": "Suspend tenant",
+      "description": "{{name}} will be blocked from operational APIs until it is reactivated.",
+      "confirm": "Suspend tenant"
+    },
+    "reactivate": {
+      "title": "Reactivate tenant",
+      "description": "Restore {{name}} using its current valid SaaS subscription state.",
+      "confirm": "Reactivate tenant"
+    }
+  },
+  "errors": {
+    "list": "We could not load the tenant catalog."
+  }
+}
