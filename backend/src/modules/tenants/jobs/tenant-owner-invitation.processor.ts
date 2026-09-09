@@ -6,6 +6,15 @@ import { DataSource } from 'typeorm';
 import { AppConfigService } from '../../../config/app-config.service';
 import { EMAIL_SENDER, type EmailSender } from '../../../infrastructure/email';
 import {
+  EmailTemplateRenderError,
+  EmailTemplateRenderer,
+} from '../../email-templates/email-template-renderer.service';
+import {
+  EmailTemplateKey,
+  EmailTemplateLocale,
+  normalizeEmailTemplateLocale,
+} from '../../email-templates/email-template-registry';
+import {
   SendTenantOwnerInvitationJob,
   TenantInvitationJobName,
   TenantInvitationQueueName,
@@ -25,6 +34,7 @@ export class TenantOwnerInvitationProcessor extends WorkerHost {
     @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender,
     private readonly appConfig: AppConfigService,
     private readonly tokenService: TenantInvitationTokenService,
+    private readonly emailTemplateRenderer: EmailTemplateRenderer,
   ) {
     super();
   }
@@ -58,14 +68,28 @@ export class TenantOwnerInvitationProcessor extends WorkerHost {
         this.appConfig.corsConfig.frontendOrigin,
       );
       invitationUrl.searchParams.set('token', token);
+      const locale = normalizeEmailTemplateLocale(
+        invitation.tenant.defaultLocale,
+      );
+      const renderedTemplate = await this.emailTemplateRenderer.renderPublished(
+        EmailTemplateKey.TENANT_OWNER_INVITATION,
+        locale,
+        {
+          tenantDisplayName: invitation.tenant.displayName,
+          invitationUrl: invitationUrl.toString(),
+          expiresAt: new Intl.DateTimeFormat(
+            locale === EmailTemplateLocale.EN ? 'en-US' : 'vi-VN',
+            {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+              timeZone: invitation.tenant.defaultTimezone,
+            },
+          ).format(invitation.expiresAt),
+        },
+      );
       await this.emailSender.send({
         to: [invitation.ownerEmail],
-        subject: `Activate your ${invitation.tenant.displayName} DentFlow account`,
-        text: [
-          `You were invited to administer ${invitation.tenant.displayName}.`,
-          `Activate your account: ${invitationUrl.toString()}`,
-          `This invitation expires at ${invitation.expiresAt.toISOString()}.`,
-        ].join('\n\n'),
+        ...renderedTemplate,
       });
       await this.dataSource
         .getRepository(TenantOwnerInvitation)
@@ -75,6 +99,10 @@ export class TenantOwnerInvitationProcessor extends WorkerHost {
           lastDeliveryErrorCode: null,
         });
     } catch (error) {
+      if (error instanceof EmailTemplateRenderError) {
+        await this.markFailed(invitation.id, error.code);
+        return;
+      }
       await this.markFailed(invitation.id, 'DELIVERY_FAILED');
       throw error;
     }

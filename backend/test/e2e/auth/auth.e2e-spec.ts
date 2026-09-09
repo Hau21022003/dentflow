@@ -177,6 +177,7 @@ describe('Authentication (e2e)', () => {
           roles: [PlatformRoleCode.PLATFORM_ADMIN],
           permissions: [
             'platform.audit-log.read',
+            'platform.email-template.manage',
             'platform.plan.manage',
             'platform.saas-billing.read',
             'platform.support.manage',

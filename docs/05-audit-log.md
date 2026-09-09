@@ -23,6 +23,8 @@ Các action là constants ở code, không phải database enum, gồm quyền/s
 
 Plan catalog dùng `PLAN_CREATED`, `PLAN_UPDATED`, `PLAN_DEACTIVATED` và `PLAN_ACTIVATED`. Snapshot của các action này chỉ chứa `changedFields`, `isActive`, `amount` và `currency`; thay đổi availability lưu thêm free-text `reason` theo policy Platform.
 
+Email template global dùng `EMAIL_TEMPLATE_DRAFT_SAVED` và `EMAIL_TEMPLATE_PUBLISHED`, resource type `EMAIL_TEMPLATE_REVISION`, domain `PLATFORM`. Snapshot chỉ có `templateKey`, `locale`, `version`, `status` và `changedFields`; tuyệt đối không ghi subject, text, HTML, recipient hoặc giá trị biến đã render.
+
 ## 3. API đọc
 
 Các API dưới đây là route nội bộ của backend và chỉ trả audit data đã redacted. URL công khai, API prefix/version và việc rewrite/strip prefix do Nginx/gateway quản lý khi deploy, nên không được ghi cứng ở đây. List không trả payload; endpoint detail mới trả `before`, `after`, `metadata` an toàn. Tất cả list dùng cursor `(occurredAt,id)`, mặc định 50 và tối đa 100.

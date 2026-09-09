@@ -5,6 +5,7 @@ import { AuthModule } from '../auth/auth.module';
 import { AuthorizationModule } from '../authorization/authorization.module';
 import { AuditModule } from '../audit/audit.module';
 import { EmailModule } from '../../infrastructure/email/email.module';
+import { EmailTemplatesModule } from '../email-templates/email-templates.module';
 import { SubscriptionPlan } from '../subscription-plans/entities/subscription-plan.entity';
 import { Subscription } from '../subscriptions/entities/subscription.entity';
 import { User } from '../users/entities/user.entity';
@@ -37,6 +38,7 @@ const invitationQueueModule = BullModule.registerQueue({
     AuditModule,
     AuthModule,
     EmailModule,
+    EmailTemplatesModule,
     ...(isTesting ? [] : [invitationQueueModule]),
   ],
   controllers: [TenantsController],

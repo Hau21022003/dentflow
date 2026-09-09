@@ -16,6 +16,7 @@ MVP dùng một role `PLATFORM_ADMIN` duy nhất; tài khoản được provisio
 | Plan         | Tạo, ẩn/kích hoạt lại plan; thay đổi metadata plan chưa từng được dùng                              | `code` bất biến; plan đã có subscription history chỉ đổi availability, không đổi giá/quyền hồi tố |
 | SaaS billing | Xem subscription/invoice/event; mở Stripe dashboard/link; ghi nhận chuyển khoản qua luồng kiểm soát | Không đánh dấu giao dịch Stripe là paid bằng thao tác thủ công                                    |
 | Support      | Gửi lại lời mời, yêu cầu reset Tenant Admin, xem audit log SaaS                                     | Không support access âm thầm, không xem dữ liệu nhạy cảm mặc định                                 |
+| Email template | Xem, lưu draft và publish template email hệ thống toàn cục                                          | Không chỉnh template theo tenant, không tạo key email tự do hoặc gửi email preview                |
 | System       | Xem webhook failures, job failures và feature flags                                                 | Không chỉnh sửa dữ liệu production trực tiếp qua database                                         |
 
 Mọi tác vụ ghi dữ liệu của Platform Admin tạo `AuditLog` với actor, action, resource type/ID, timestamp, request ID, giá trị trước/sau phù hợp và lý do khi thao tác có ảnh hưởng quyền truy cập.
@@ -85,6 +86,7 @@ Nếu bán cho doanh nghiệp có nhu cầu chuyển khoản, tạo `ManualSaaSP
 | `/platform/plans`                  | Danh mục plan, giá, billing cycle, entitlement và availability                          | Tạo/ẩn plan mới                                 |
 | `/platform/billing/invoices`       | Invoice SaaS, trạng thái provider, failure reason                                       | Mở hosted invoice/Stripe dashboard              |
 | `/platform/billing/webhook-events` | Provider event ID, loại, trạng thái xử lý, lỗi                                          | Retry xử lý nội bộ theo quyền                   |
+| `/platform/email-templates`        | Template email hệ thống theo key/locale, draft, published revision và lịch sử           | Lưu draft, publish trực tiếp hoặc publish draft |
 | `/platform/audit-logs`             | Nhật ký Platform Admin và tenant lifecycle                                              | Lọc, xem chi tiết                               |
 
 Dashboard sử dụng số liệu SaaS tổng hợp. Không hiển thị chi tiết bệnh nhân hay doanh thu điều trị giữa các tenant. Chỉ hiển thị usage phi lâm sàng như số branch/user nếu plan cần quota.
@@ -109,11 +111,17 @@ Các endpoint nội bộ dưới `/platform/*` yêu cầu `PLATFORM_ADMIN`. Tài
 - `GET/POST /platform/plans`, `PATCH /platform/plans/:planId`
 - `GET /platform/billing/invoices`, `GET /platform/billing/webhook-events`
 - `POST /platform/billing/webhook-events/:eventId/retry`
+- `GET /platform/email-templates`, `GET /platform/email-templates/:templateKey/:locale`
+- `PUT /platform/email-templates/:templateKey/:locale/draft`
+- `POST /platform/email-templates/:templateKey/:locale/publish`
+- `POST /platform/email-templates/:templateKey/:locale/draft/publish`
 - `GET /platform/audit-logs`, `GET /platform/audit-logs/:id`: chỉ trả audit domain Platform/Security; không trả clinical hay payment điều trị của tenant.
 
 Các command tenant lifecycle cần body gồm `reason` (bắt buộc với suspend/extend/reactivate thủ công). Khi được triển khai, command có side effect phải nhận header `Idempotency-Key` UUID v4; không nhận key trong body. Endpoint retry chỉ chạy lại business processing đã lưu, không gọi provider để tạo giao dịch mới.
 
 Plan catalog chỉ dành cho Platform Admin. `GET /platform/plans` trả cả plan active và inactive; `POST` luôn tạo plan active; `PATCH` không nhận đổi `code` và chỉ thay toàn bộ object `entitlements` khi field này được gửi. `POST` và `PATCH` bắt buộc header `Idempotency-Key` UUID v4; retry cùng key và request trả outcome đã lưu, còn reuse key với request khác trả `409`. Thay đổi `isActive` cần `reason`; lệnh lặp lại trạng thái hiện có không tạo audit mới. `code` và provider plan ID vẫn unique business constraint, không thay thế idempotency persistence. Plan từng được subscription tham chiếu chỉ được đổi `isActive`.
+
+Email template hệ thống là global Platform state; chỉ `PLATFORM_EMAIL_TEMPLATE_MANAGE` được quản lý. V1 chỉ có key `tenant-owner-invitation` với locale `vi` và `en`; API không nhận tenant ID, không có tenant override và mọi command lưu draft/publish đều bắt buộc `Idempotency-Key`. Nội dung published không sửa trực tiếp: Platform Admin có thể direct publish nội dung form để tạo revision published mới, hoặc lưu draft rồi publish; cả hai đều archive bản published cũ. Direct publish trả `409` nếu đang có draft để không làm mất draft. Xem [12-email-template-management.md](./12-email-template-management.md).
 
 ### Trạng thái triển khai tenant management
 

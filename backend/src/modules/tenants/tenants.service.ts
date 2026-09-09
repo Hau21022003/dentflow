@@ -277,7 +277,7 @@ export class TenantsService {
         });
         await manager.getRepository(Subscription).save(subscription);
 
-        const invitation = this.createInvitation(
+        const invitation = await this.createInvitation(
           manager,
           savedTenant.id,
           input,
@@ -404,7 +404,7 @@ export class TenantsService {
       current.status = TenantOwnerInvitationStatus.REVOKED;
       current.revokedAt = new Date();
       await invitations.save(current);
-      const replacement = this.createInvitation(
+      const replacement = await this.createInvitation(
         manager,
         tenant.id,
         {
@@ -569,13 +569,13 @@ export class TenantsService {
     return this.getPlatformDetail(tenantId);
   }
 
-  private createInvitation(
+  private async createInvitation(
     manager: EntityManager,
     tenantId: string,
     input: Pick<CreatePlatformTenantDto, 'ownerEmail' | 'ownerFullName'>,
     createdByUserId: string,
     now: Date,
-  ): TenantOwnerInvitation {
+  ): Promise<TenantOwnerInvitation> {
     const invitation = manager.create(TenantOwnerInvitation, {
       id: randomUUID(),
       tenantId,

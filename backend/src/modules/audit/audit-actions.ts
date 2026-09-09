@@ -21,6 +21,8 @@ export const AuditAction = {
   PLAN_UPDATED: 'PLAN_UPDATED',
   PLAN_DEACTIVATED: 'PLAN_DEACTIVATED',
   PLAN_ACTIVATED: 'PLAN_ACTIVATED',
+  EMAIL_TEMPLATE_DRAFT_SAVED: 'EMAIL_TEMPLATE_DRAFT_SAVED',
+  EMAIL_TEMPLATE_PUBLISHED: 'EMAIL_TEMPLATE_PUBLISHED',
   SAAS_SUBSCRIPTION_UPDATED: 'SAAS_SUBSCRIPTION_UPDATED',
   SAAS_INVOICE_UPDATED: 'SAAS_INVOICE_UPDATED',
   SAAS_WEBHOOK_RETRIED: 'SAAS_WEBHOOK_RETRIED',
@@ -52,6 +54,7 @@ export type AuditResourceType =
   | 'TENANT'
   | 'TENANT_OWNER_INVITATION'
   | 'PLAN'
+  | 'EMAIL_TEMPLATE_REVISION'
   | 'SAAS_SUBSCRIPTION'
   | 'SAAS_INVOICE'
   | 'SAAS_WEBHOOK_EVENT'
@@ -112,6 +115,11 @@ const PLAN_CHANGE_PAYLOAD: AuditPayloadPolicy = {
   before: ['changedFields', 'isActive', 'amount', 'currency'],
   after: ['changedFields', 'isActive', 'amount', 'currency'],
   metadata: ['reasonCode'],
+};
+const EMAIL_TEMPLATE_CHANGE_PAYLOAD: AuditPayloadPolicy = {
+  before: ['templateKey', 'locale', 'version', 'status', 'changedFields'],
+  after: ['templateKey', 'locale', 'version', 'status', 'changedFields'],
+  metadata: [],
 };
 const SAAS_PAYLOAD: AuditPayloadPolicy = {
   before: ['status', 'amount', 'currency', 'currentPeriodEnd'],
@@ -296,6 +304,18 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     'PLAN',
     true,
     PLAN_CHANGE_PAYLOAD,
+  ),
+  [AuditAction.EMAIL_TEMPLATE_DRAFT_SAVED]: definition(
+    AuditDomain.PLATFORM,
+    'EMAIL_TEMPLATE_REVISION',
+    false,
+    EMAIL_TEMPLATE_CHANGE_PAYLOAD,
+  ),
+  [AuditAction.EMAIL_TEMPLATE_PUBLISHED]: definition(
+    AuditDomain.PLATFORM,
+    'EMAIL_TEMPLATE_REVISION',
+    false,
+    EMAIL_TEMPLATE_CHANGE_PAYLOAD,
   ),
   [AuditAction.SAAS_SUBSCRIPTION_UPDATED]: definition(
     AuditDomain.PLATFORM,

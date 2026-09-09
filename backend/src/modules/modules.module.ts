@@ -4,6 +4,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { BranchesModule } from './branches/branches.module';
 import { IdempotencyModule } from './idempotency/idempotency.module';
+import { EmailTemplatesModule } from './email-templates/email-templates.module';
 import { TestingModule } from './testing/testing.module';
 import { SubscriptionPlansModule } from './subscription-plans/subscription-plans.module';
 import { TenantsModule } from './tenants/tenants.module';
@@ -16,6 +17,7 @@ import { UsersModule } from './users/users.module';
     SubscriptionPlansModule,
     BranchesModule,
     IdempotencyModule,
+    EmailTemplatesModule,
     AuditModule,
     AuthorizationModule,
     AuthModule,
