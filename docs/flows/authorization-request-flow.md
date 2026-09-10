@@ -27,7 +27,11 @@ flowchart TD
 
   subscriptionGuard --> subscriptionAllowed{Tenant được phép vận hành?}
   subscriptionAllowed -- Không --> subscriptionBlocked[403 Subscription access blocked]
-  subscriptionAllowed -- Có --> tenantAuthorization
+  subscriptionAllowed -- Có --> branchActivityScope{Branch scope và route vận hành?}
+  branchActivityScope -- Không --> tenantAuthorization
+  branchActivityScope -- Có --> branchActive{Branch ACTIVE?}
+  branchActive -- Không --> branchInactive[403 Branch inactive]
+  branchActive -- Có --> tenantAuthorization
 
   tenantAuthorization --> tenantAccess[Tải active role assignment theo user và context]
   tenantAccess --> tenantPermission{Có role và đủ permission?}
@@ -43,6 +47,7 @@ flowchart TD
 
 - `TenantContextGuard` chỉ xác định tenant/branch mục tiêu từ URL. Nó không kiểm tra quyền của user.
 - `SubscriptionGuard` chạy sau khi context đã resolve và trước `AuthorizationGuard`. `PROVISIONING`, `SUSPENDED` và `CANCELED` bị chặn; route billing/read-only phải khai báo rõ `@AllowInactiveTenantAccess()`.
+- `BranchActivityGuard` chạy sau `SubscriptionGuard` và trước `AuthorizationGuard`. Route branch-scoped vận hành bị chặn khi branch `INACTIVE`; route historical read phải khai báo `@AllowInactiveBranchAccess()`.
 - `AuthorizationGuard` dùng context đã resolve và `userId` trong JWT để kiểm tra active assignment cùng permission. Target tồn tại nhưng user không có scope hoặc thiếu permission trả `403`.
 - Service vẫn chịu trách nhiệm kiểm tra ownership/case và chỉ truy vấn trong context đã xác thực. ID từ body chỉ là resource reference, không cấp quyền.
 

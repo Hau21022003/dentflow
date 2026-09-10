@@ -133,7 +133,7 @@ Tài liệu này chỉ mô tả route nội bộ của backend và không ghi c�
 - `GET /auth/me`: yêu cầu access-token cookie hợp lệ, lấy user ID từ JWT đã xác minh rồi đọc lại user đang `ACTIVE`; trả `id`, `email`, `fullName` và authorization snapshot, không nhận user hay tenant ID từ client.
 - `POST /auth/logout`: revoke session của refresh cookie hiện tại, xoá hai cookies và không làm logout các thiết bị khác. Auth endpoint không nhận `tenantId`; các guard nghiệp vụ sau này vẫn phải lấy tenant context từ xác thực đã kiểm chứng.
 - `GET/POST /platform/tenants`, `GET/PATCH /platform/tenants/:tenantId`: chỉ Platform Admin; lifecycle dùng các command riêng `/resend-owner-invite`, `/extend-trial`, `/suspend` và `/reactivate` với idempotency.
-- `GET/POST /branches`, `GET/POST /users`, `POST /role-assignments`: Tenant/Branch Admin theo phạm vi.
+- `GET/POST /tenants/:tenantSlug/branches`, `PATCH /tenants/:tenantSlug/branches/:branchSlug`, `POST /tenants/:tenantSlug/branches/:branchSlug/deactivate` và `/activate`: Tenant Admin theo tenant scope; command branch dùng idempotency và không nhận `tenantId` từ client. Branch inactive bị chặn khỏi route vận hành branch-scoped, trừ route read-only khai báo ngoại lệ rõ ràng. `GET/POST /users`, `POST /role-assignments`: Tenant/Branch Admin theo phạm vi khi module tương ứng được triển khai.
 - `GET/POST /patients`, `GET/POST /appointments`, `POST /appointments/:id/check-in`, `POST /appointments/:id/start`, `POST /appointments/:id/complete`.
 - `GET/POST /visits`, `GET/POST /treatment-plans`, `POST /treatment-items/:id/complete`.
 - `GET/POST /patient-invoices`, `POST /patient-invoices/:id/payments`.

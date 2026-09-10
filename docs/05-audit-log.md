@@ -21,6 +21,8 @@ Mỗi row có actor type/user/session, tenant/branch khi áp dụng, action, dom
 
 Các action là constants ở code, không phải database enum, gồm quyền/scope, tenant lifecycle, SaaS billing, tenant/branch/service/user, patient/appointment/treatment state, patient invoice/payment và security event. Tenant provisioning ghi `TENANT_CREATED`; owner invitation ghi `TENANT_OWNER_INVITATION_CREATED`, `TENANT_OWNER_INVITATION_RESENT` và `TENANT_OWNER_INVITATION_ACCEPTED`. Payload invitation chỉ có state, tuyệt đối không có email hoặc raw/hash token. Các command nghiệp vụ chưa được tạo phải tích hợp action phù hợp trước khi merge.
 
+Branch lifecycle dùng `BRANCH_CREATED`, `BRANCH_UPDATED`, `BRANCH_DEACTIVATED` và `BRANCH_ACTIVATED`. Snapshot chỉ có status và `changedFields`; deactivate/activate lưu free-text reason theo policy Tenant Admin, không ghi địa chỉ hoặc số điện thoại.
+
 Plan catalog dùng `PLAN_CREATED`, `PLAN_UPDATED`, `PLAN_DEACTIVATED` và `PLAN_ACTIVATED`. Snapshot của các action này chỉ chứa `changedFields`, `isActive`, `amount` và `currency`; thay đổi availability lưu thêm free-text `reason` theo policy Platform.
 
 Email template global dùng `EMAIL_TEMPLATE_DRAFT_SAVED` và `EMAIL_TEMPLATE_PUBLISHED`, resource type `EMAIL_TEMPLATE_REVISION`, domain `PLATFORM`. Snapshot chỉ có `templateKey`, `locale`, `version`, `status` và `changedFields`; tuyệt đối không ghi subject, text, HTML, recipient hoặc giá trị biến đã render.

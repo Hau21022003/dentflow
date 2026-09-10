@@ -1,5 +1,6 @@
 import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { PlatformScope } from '../../common/decorators/platform-scope.decorator';
+import { AllowInactiveBranchAccess } from '../../common/decorators/allow-inactive-branch-access.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
 import { TenantScope } from '../../common/decorators/tenant-scope.decorator';
@@ -57,6 +58,7 @@ export class BranchAuditLogsController {
   constructor(private readonly auditLogQueryService: AuditLogQueryService) {}
 
   @Get()
+  @AllowInactiveBranchAccess()
   @TenantScope('branch')
   @RequirePermissions(Permission.AUDIT_LOG_READ)
   list(
@@ -67,6 +69,7 @@ export class BranchAuditLogsController {
   }
 
   @Get(':id')
+  @AllowInactiveBranchAccess()
   @TenantScope('branch')
   @RequirePermissions(Permission.AUDIT_LOG_READ)
   getOne(

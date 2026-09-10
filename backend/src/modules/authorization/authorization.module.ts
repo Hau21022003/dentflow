@@ -8,6 +8,7 @@ import { AuthorizationService } from './authorization.service';
 import { PlatformRoleAssignment } from './entities/platform-role-assignment.entity';
 import { RoleAssignment } from './entities/role-assignment.entity';
 import { AuthorizationGuard } from './guards/authorization.guard';
+import { BranchActivityGuard } from './guards/branch-activity.guard';
 import { TenantContextGuard } from './guards/tenant-context.guard';
 import { SubscriptionGuard } from './guards/subscription.guard';
 import { TenantContextService } from './tenant-context.service';
@@ -26,6 +27,7 @@ import { TenantContextService } from './tenant-context.service';
     AuthorizationService,
     AuthorizationRepository,
     AuthorizationGuard,
+    BranchActivityGuard,
     TenantContextGuard,
     SubscriptionGuard,
     TenantContextService,
@@ -33,6 +35,7 @@ import { TenantContextService } from './tenant-context.service';
   exports: [
     AuthorizationService,
     AuthorizationGuard,
+    BranchActivityGuard,
     TenantContextGuard,
     SubscriptionGuard,
     TenantContextService,
