@@ -35,6 +35,7 @@ import {
   CircleUserRound,
   ClipboardList,
   LayoutDashboard,
+  Mail,
   Menu,
   ShieldCheck,
   Stethoscope,
@@ -272,6 +273,16 @@ export function AppLayout() {
         kind: "link",
         label: t("navigation.plans"),
         to: PATHS.platformPlans,
+      });
+    }
+
+    if (hasPlatformPermission(user, PERMISSIONS.platformEmailTemplateManage)) {
+      items.push({
+        end: false,
+        icon: Mail,
+        kind: "link",
+        label: t("navigation.emailTemplates"),
+        to: PATHS.platformEmailTemplates,
       });
     }
 

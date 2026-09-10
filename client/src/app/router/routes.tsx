@@ -4,6 +4,8 @@ import { LoginPage } from "../../pages/auth/LoginPage";
 import { AcceptTenantOwnerInvitationPage } from "../../pages/auth/AcceptTenantOwnerInvitationPage";
 import { PatientsListPage } from "../../pages/patients/PatientsListPage";
 import { PlatformHomePage } from "../../pages/platform/PlatformHomePage";
+import { EmailTemplateDetailPage } from "../../pages/platform/EmailTemplateDetailPage";
+import { EmailTemplateManagementPage } from "../../pages/platform/EmailTemplateManagementPage";
 import { SubscriptionPlanManagementPage } from "../../pages/platform/SubscriptionPlanManagementPage";
 import { TenantManagementPage } from "../../pages/platform/TenantManagementPage";
 import { TenantDetailPage } from "../../pages/platform/TenantDetailPage";
@@ -69,6 +71,18 @@ export const routes: RouteObject[] = [
                   { path: ":tenantId", element: <TenantDetailPage /> },
                 ],
               },
+            ],
+          },
+          {
+            path: PATHS.platformEmailTemplates,
+            element: (
+              <RequirePlatformPermission
+                permission={PERMISSIONS.platformEmailTemplateManage}
+              />
+            ),
+            children: [
+              { index: true, element: <EmailTemplateManagementPage /> },
+              { path: ":templateKey", element: <EmailTemplateDetailPage /> },
             ],
           },
           {

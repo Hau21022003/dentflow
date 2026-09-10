@@ -5,6 +5,7 @@ export const PATHS = {
   forbidden: "/forbidden",
   patients: "/patients",
   platform: "/platform",
+  platformEmailTemplates: "/platform/email-templates",
   platformTenants: "/platform/tenants",
   platformPlans: "/platform/plans",
   workspace: "/workspace",
@@ -24,6 +25,8 @@ function toPathSegment(value: string): string {
 }
 
 export const pathFor = {
+  platformEmailTemplateDetail: (templateKey: string) =>
+    `/platform/email-templates/${toPathSegment(templateKey)}`,
   platformTenantDetail: (tenantId: string) =>
     `/platform/tenants/${toPathSegment(tenantId)}`,
   workspace: (tenantSlug: string) =>
