@@ -124,7 +124,7 @@ function createInvitation(): TenantOwnerInvitation {
     ownerFullName: 'Synthetic Owner',
     tokenHash: 'a'.repeat(64),
     status: TenantOwnerInvitationStatus.PENDING,
-    expiresAt: new Date('2026-09-10T03:00:00.000Z'),
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     acceptedAt: null,
     acceptedByUserId: null,
     revokedAt: null,

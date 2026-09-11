@@ -37,6 +37,10 @@ import {
   SubscriptionStatus,
 } from '../subscriptions/entities/subscription.entity';
 import { User, UserStatus } from '../users/entities/user.entity';
+import {
+  TenantUserMembership,
+  TenantUserMembershipStatus,
+} from '../staff/entities/tenant-user-membership.entity';
 import { AcceptTenantOwnerInvitationDto } from './dto/accept-tenant-owner-invitation.dto';
 import { CreatePlatformTenantDto } from './dto/create-platform-tenant.dto';
 import {
@@ -277,7 +281,7 @@ export class TenantsService {
         });
         await manager.getRepository(Subscription).save(subscription);
 
-        const invitation = await this.createInvitation(
+        const invitation = this.createInvitation(
           manager,
           savedTenant.id,
           input,
@@ -404,7 +408,7 @@ export class TenantsService {
       current.status = TenantOwnerInvitationStatus.REVOKED;
       current.revokedAt = new Date();
       await invitations.save(current);
-      const replacement = await this.createInvitation(
+      const replacement = this.createInvitation(
         manager,
         tenant.id,
         {
@@ -492,6 +496,28 @@ export class TenantsService {
         input,
         currentUserId,
       );
+      const membership = await manager
+        .getRepository(TenantUserMembership)
+        .findOne({
+          where: { tenantId: tenant.id, userId: user.id },
+        });
+      await manager.getRepository(TenantUserMembership).save(
+        membership
+          ? Object.assign(membership, {
+              status: TenantUserMembershipStatus.ACTIVE,
+              disabledAt: null,
+              disabledByUserId: null,
+              disabledReason: null,
+            })
+          : manager.create(TenantUserMembership, {
+              tenantId: tenant.id,
+              userId: user.id,
+              status: TenantUserMembershipStatus.ACTIVE,
+              disabledAt: null,
+              disabledByUserId: null,
+              disabledReason: null,
+            }),
+      );
       const assignment = manager.create(RoleAssignment, {
         userId: user.id,
         tenantId: tenant.id,
@@ -569,13 +595,13 @@ export class TenantsService {
     return this.getPlatformDetail(tenantId);
   }
 
-  private async createInvitation(
+  private createInvitation(
     manager: EntityManager,
     tenantId: string,
     input: Pick<CreatePlatformTenantDto, 'ownerEmail' | 'ownerFullName'>,
     createdByUserId: string,
     now: Date,
-  ): Promise<TenantOwnerInvitation> {
+  ): TenantOwnerInvitation {
     const invitation = manager.create(TenantOwnerInvitation, {
       id: randomUUID(),
       tenantId,
@@ -667,6 +693,12 @@ export class TenantsService {
     const row = await this.dataSource
       .getRepository(RoleAssignment)
       .createQueryBuilder('assignment')
+      .innerJoin(
+        'tenant_user_memberships',
+        'membership',
+        'membership.user_id = assignment.user_id AND membership.tenant_id = assignment.tenant_id AND membership.status = :membershipStatus',
+        { membershipStatus: TenantUserMembershipStatus.ACTIVE },
+      )
       .select('COUNT(DISTINCT assignment.user_id)', 'count')
       .where('assignment.tenant_id = :tenantId', { tenantId })
       .andWhere('assignment.revoked_at IS NULL')

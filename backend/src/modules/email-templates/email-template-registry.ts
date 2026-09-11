@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 
 export enum EmailTemplateKey {
   TENANT_OWNER_INVITATION = 'tenant-owner-invitation',
+  STAFF_INVITATION = 'staff-invitation',
 }
 
 export enum EmailTemplateLocale {
@@ -23,6 +24,13 @@ export const EMAIL_TEMPLATE_CONTRACTS: Readonly<
   Record<EmailTemplateKey, EmailTemplateContract>
 > = {
   [EmailTemplateKey.TENANT_OWNER_INVITATION]: {
+    allowedVariables: ['tenantDisplayName', 'invitationUrl', 'expiresAt'],
+    requiredVariables: {
+      text: ['invitationUrl', 'expiresAt'],
+      html: ['invitationUrl', 'expiresAt'],
+    },
+  },
+  [EmailTemplateKey.STAFF_INVITATION]: {
     allowedVariables: ['tenantDisplayName', 'invitationUrl', 'expiresAt'],
     requiredVariables: {
       text: ['invitationUrl', 'expiresAt'],

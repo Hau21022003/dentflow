@@ -30,5 +30,27 @@ INSERT INTO "email_template_revisions" (
     'You were invited to administer {{tenantDisplayName}} on DentFlow.\n\nActivate your account: {{invitationUrl}}\n\nThis invitation expires at {{expiresAt}}.',
     '<p>You were invited to administer <strong>{{tenantDisplayName}}</strong> on DentFlow.</p><p><a href="{{invitationUrl}}">Activate your account</a></p><p>This invitation expires at {{expiresAt}}.</p>',
     now()
+  ),
+  (
+    '00000000-0000-4000-8000-000000000133',
+    'staff-invitation',
+    'vi',
+    1,
+    'PUBLISHED',
+    'Lời mời tham gia {{tenantDisplayName}} trên DentFlow',
+    'Bạn được mời tham gia {{tenantDisplayName}} trên DentFlow.\n\nChấp nhận lời mời: {{invitationUrl}}\n\nLời mời này hết hạn vào {{expiresAt}}.',
+    '<p>Bạn được mời tham gia <strong>{{tenantDisplayName}}</strong> trên DentFlow.</p><p><a href="{{invitationUrl}}">Chấp nhận lời mời</a></p><p>Lời mời này hết hạn vào {{expiresAt}}.</p>',
+    now()
+  ),
+  (
+    '00000000-0000-4000-8000-000000000134',
+    'staff-invitation',
+    'en',
+    1,
+    'PUBLISHED',
+    'Join {{tenantDisplayName}} on DentFlow',
+    'You were invited to join {{tenantDisplayName}} on DentFlow.\n\nAccept the invitation: {{invitationUrl}}\n\nThis invitation expires at {{expiresAt}}.',
+    '<p>You were invited to join <strong>{{tenantDisplayName}}</strong> on DentFlow.</p><p><a href="{{invitationUrl}}">Accept invitation</a></p><p>This invitation expires at {{expiresAt}}.</p>',
+    now()
   )
 ON CONFLICT ("template_key", "locale", "version") DO NOTHING;

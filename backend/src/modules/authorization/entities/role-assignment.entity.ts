@@ -12,6 +12,7 @@ import {
 import { Branch } from '../../branches/entities/branch.entity';
 import { Tenant } from '../../tenants/entities/tenant.entity';
 import { User } from '../../users/entities/user.entity';
+import { TenantUserMembership } from '../../staff/entities/tenant-user-membership.entity';
 
 export enum TenantRoleCode {
   TENANT_ADMIN = 'TENANT_ADMIN',
@@ -135,4 +136,15 @@ export class RoleAssignment {
   @ManyToOne(() => User, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'revoked_by_user_id', referencedColumnName: 'id' })
   revokedByUser: User | null;
+
+  /** The composite relation prevents grants without a tenant membership. */
+  @ManyToOne(() => TenantUserMembership, {
+    nullable: false,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn([
+    { name: 'user_id', referencedColumnName: 'userId' },
+    { name: 'tenant_id', referencedColumnName: 'tenantId' },
+  ])
+  membership: TenantUserMembership;
 }

@@ -9,10 +9,12 @@ import { TestingModule } from './testing/testing.module';
 import { SubscriptionPlansModule } from './subscription-plans/subscription-plans.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { UsersModule } from './users/users.module';
+import { StaffModule } from './staff/staff.module';
 
 @Module({
   imports: [
     UsersModule,
+    StaffModule,
     TenantsModule,
     SubscriptionPlansModule,
     BranchesModule,

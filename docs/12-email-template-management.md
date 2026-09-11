@@ -4,7 +4,7 @@
 
 Email template là nội dung email hệ thống toàn cục do Platform Admin quản lý. V1 không có template theo tenant, không có key do admin tự tạo, không có preview-send endpoint và không dùng template để thay thế trạng thái nghiệp vụ hay background job của domain sở hữu email.
 
-Key `tenant-owner-invitation` là key duy nhất trong V1. Mỗi key có locale `vi` và `en`; locale tenant khác `en` fallback `vi` khi hệ thống tạo owner invitation.
+Hai key system trong V1 là `tenant-owner-invitation` và `staff-invitation`. Mỗi key có locale `vi` và `en`; locale tenant khác `en` fallback `vi` khi hệ thống tạo invitation.
 
 ## 2. Revision và publish lifecycle
 
@@ -22,9 +22,9 @@ Seed development/test tạo bản published v1 synthetic cho cả `vi` và `en`.
 
 ## 3. Nội dung và an toàn
 
-Template bắt buộc có `subject`, `text` và `html`. Chỉ chấp nhận placeholder `{{variable}}`; không có raw HTML placeholder, loop hay condition. `tenant-owner-invitation` chỉ dùng `tenantDisplayName`, `invitationUrl` và `expiresAt`; `invitationUrl` và `expiresAt` bắt buộc xuất hiện trong text/HTML.
+Template bắt buộc có `subject`, `text` và `html`. Chỉ chấp nhận placeholder `{{variable}}`; không có raw HTML placeholder, loop hay condition. Cả `tenant-owner-invitation` và `staff-invitation` chỉ dùng `tenantDisplayName`, `invitationUrl` và `expiresAt`; `invitationUrl` và `expiresAt` bắt buộc xuất hiện trong text/HTML.
 
-Processor tạo link capability ở server, tải lại invitation từ database và resolve revision `PUBLISHED` theo key `tenant-owner-invitation` và locale đã normalize từ `Tenant.defaultLocale` ngay trước khi render. Giá trị biến được HTML-escape; HTML email sau render được sanitize theo allowlist. Payload BullMQ chỉ chứa invitation ID, không chứa template content, recipient, token hay data từ client. Vì vậy publish hoàn tất trước một lần xử lý hoặc retry sẽ áp dụng nội dung published mới cho lần gửi đó.
+Processor tạo link capability ở server, tải lại invitation từ database và resolve revision `PUBLISHED` theo key phù hợp cùng locale đã normalize từ `Tenant.defaultLocale` ngay trước khi render. Giá trị biến được HTML-escape; HTML email sau render được sanitize theo allowlist. Payload BullMQ chỉ chứa invitation ID, không chứa template content, recipient, token hay data từ client. Vì vậy publish hoàn tất trước một lần xử lý hoặc retry sẽ áp dụng nội dung published mới cho lần gửi đó.
 
 ## 4. API, quyền và audit
 

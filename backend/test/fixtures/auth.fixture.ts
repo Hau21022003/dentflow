@@ -16,6 +16,10 @@ import {
   TenantStatus,
 } from 'src/modules/tenants/entities/tenant.entity';
 import { User, UserStatus } from 'src/modules/users/entities/user.entity';
+import {
+  TenantUserMembership,
+  TenantUserMembershipStatus,
+} from 'src/modules/staff/entities/tenant-user-membership.entity';
 import { EntityManager } from 'typeorm';
 
 export interface AuthFixtureOptions {
@@ -157,6 +161,7 @@ export function createAuthFixtures({
     roleCode: TenantRoleCode.TENANT_ADMIN,
     metadata: RoleAssignmentMetadata = {},
   ): Promise<RoleAssignment> {
+    await ensureTenantMembership(user, tenant);
     return manager.save(
       manager.create(RoleAssignment, {
         userId: user.id,
@@ -178,6 +183,7 @@ export function createAuthFixtures({
     roleCode: Exclude<TenantRoleCode, TenantRoleCode.TENANT_ADMIN>,
     metadata: RoleAssignmentMetadata = {},
   ): Promise<RoleAssignment> {
+    await ensureTenantMembership(user, { id: branch.tenantId });
     return manager.save(
       manager.create(RoleAssignment, {
         userId: user.id,
@@ -206,6 +212,26 @@ export function createAuthFixtures({
     return { tenant, branch };
   }
 
+  async function ensureTenantMembership(
+    user: User,
+    tenant: Pick<Tenant, 'id'>,
+  ): Promise<TenantUserMembership> {
+    const existing = await manager.findOne(TenantUserMembership, {
+      where: { tenantId: tenant.id, userId: user.id },
+    });
+    if (existing) return existing;
+    return manager.save(
+      manager.create(TenantUserMembership, {
+        tenantId: tenant.id,
+        userId: user.id,
+        status: TenantUserMembershipStatus.ACTIVE,
+        disabledAt: null,
+        disabledByUserId: null,
+        disabledReason: null,
+      }),
+    );
+  }
+
   return {
     createUser,
     createTenant,
@@ -213,6 +239,7 @@ export function createAuthFixtures({
     grantPlatformRole,
     grantTenantRole,
     grantBranchRole,
+    ensureTenantMembership,
     createTenantWithBranch,
   };
 }
