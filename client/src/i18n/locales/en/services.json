@@ -1,7 +1,12 @@
 {
   "eyebrow": "Tenant Admin · {{tenantName}}",
   "title": "Service management",
-  "description": "Maintain the tenant-wide treatment service catalog and its availability.",
+  "description": "Maintain the tenant-wide treatment catalog, service groups, and availability.",
+  "tabs": {
+    "label": "Service catalog sections",
+    "services": "Services",
+    "groups": "Service groups"
+  },
   "loading": "Loading services…",
   "statuses": {
     "ACTIVE": "Active",

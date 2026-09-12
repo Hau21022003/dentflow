@@ -1,7 +1,12 @@
 {
   "eyebrow": "Quản trị tenant · {{tenantName}}",
   "title": "Quản lý dịch vụ",
-  "description": "Quản lý danh mục dịch vụ điều trị dùng chung và trạng thái sử dụng trong tenant.",
+  "description": "Quản lý danh mục dịch vụ điều trị, nhóm dịch vụ và trạng thái sử dụng trong tenant.",
+  "tabs": {
+    "label": "Các phần của danh mục dịch vụ",
+    "services": "Dịch vụ",
+    "groups": "Nhóm dịch vụ"
+  },
   "loading": "Đang tải dịch vụ…",
   "statuses": {
     "ACTIVE": "Đang hoạt động",

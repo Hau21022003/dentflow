@@ -1,0 +1,63 @@
+{
+  "loading": "Đang tải nhóm dịch vụ…",
+  "statuses": {
+    "ACTIVE": "Đang hoạt động",
+    "INACTIVE": "Ngừng hoạt động"
+  },
+  "actions": {
+    "create": "Tạo nhóm dịch vụ",
+    "save": "Lưu thay đổi",
+    "cancel": "Hủy",
+    "retry": "Thử lại",
+    "openActions": "Mở thao tác cho {{name}}",
+    "edit": "Chỉnh sửa",
+    "deactivate": "Ngừng hoạt động",
+    "activate": "Kích hoạt lại nhóm dịch vụ",
+    "saving": "Đang lưu"
+  },
+  "table": {
+    "title": "Nhóm dịch vụ",
+    "description": "Nhóm thuộc tenant hiện tại và bao gồm cả nhóm đã ngừng hoạt động.",
+    "searchPlaceholder": "Tìm theo tên nhóm dịch vụ…",
+    "name": "Nhóm dịch vụ",
+    "status": "Trạng thái",
+    "createdAt": "Ngày tạo",
+    "actions": "Thao tác"
+  },
+  "filters": {
+    "statusTitle": "Lọc trạng thái",
+    "statusDescription": "Chỉ hiển thị nhóm dịch vụ có trạng thái đã chọn."
+  },
+  "empty": {
+    "title": "Chưa có nhóm dịch vụ",
+    "description": "Tạo nhóm dịch vụ trước khi thêm dịch vụ cho tenant này."
+  },
+  "errors": {
+    "listTitle": "Không thể tải nhóm dịch vụ"
+  },
+  "form": {
+    "createTitle": "Tạo nhóm dịch vụ",
+    "createDescription": "Nhóm dịch vụ sẽ được tạo ở trạng thái hoạt động trong tenant hiện tại.",
+    "editTitle": "Chỉnh sửa nhóm dịch vụ",
+    "editDescription": "Cập nhật tên nhóm mà không làm thay đổi lịch sử."
+  },
+  "fields": {
+    "name": "Tên nhóm dịch vụ",
+    "reason": "Lý do"
+  },
+  "lifecycle": {
+    "reasonRequired": "Vui lòng nhập lý do cho thao tác này.",
+    "reasonTooLong": "Lý do không được vượt quá 500 ký tự.",
+    "deactivate": {
+      "title": "Ngừng hoạt động nhóm dịch vụ",
+      "description": "Bạn sắp ngừng hoạt động {{name}}.",
+      "notice": "Nhóm dịch vụ không bị xóa. Các dịch vụ hiện hữu vẫn hoạt động, nhưng không thể chọn nhóm này khi tạo dịch vụ mới hoặc đổi nhóm cho đến khi kích hoạt lại.",
+      "confirm": "Ngừng hoạt động nhóm dịch vụ"
+    },
+    "activate": {
+      "title": "Kích hoạt lại nhóm dịch vụ",
+      "description": "Bạn sắp kích hoạt lại {{name}}.",
+      "confirm": "Kích hoạt lại nhóm dịch vụ"
+    }
+  }
+}

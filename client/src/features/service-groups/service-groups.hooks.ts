@@ -4,6 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { serviceQueryKeys } from "../services/services.hooks";
 import { serviceGroupsService } from "./service-groups.service";
 import type { ServiceGroupListQuery } from "./service-groups.types";
 
@@ -35,9 +36,14 @@ function useServiceGroupMutation<
   return useMutation<TResult, Error, TVariables>({
     mutationFn,
     onSuccess: async (_result, command) => {
-      await queryClient.invalidateQueries({
-        queryKey: serviceGroupQueryKeys.tenant(command.tenantSlug),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: serviceGroupQueryKeys.tenant(command.tenantSlug),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: serviceQueryKeys.tenant(command.tenantSlug),
+        }),
+      ]);
     },
   });
 }
