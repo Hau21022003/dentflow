@@ -69,7 +69,7 @@ function toSortBy(sorting: SortingState): ServiceSortBy | undefined {
   const id = sorting[0]?.id;
   return id === "code" ||
     id === "name" ||
-    id === "groupName" ||
+    id === "serviceGroupName" ||
     id === "amount" ||
     id === "durationMinutes" ||
     id === "createdAt"
@@ -102,7 +102,8 @@ export function ServiceManagementPage() {
   }, [globalFilter]);
 
   const status = stringFilter(columnFilters, "isActive");
-  const isActive = status === "ACTIVE" ? true : status === "INACTIVE" ? false : undefined;
+  const isActive =
+    status === "ACTIVE" ? true : status === "INACTIVE" ? false : undefined;
   const sortBy = toSortBy(sorting);
   const query = useMemo<ServiceListQuery>(
     () => ({
@@ -150,11 +151,11 @@ export function ServiceManagementPage() {
         ),
       },
       {
-        accessorKey: "groupName",
+        accessorKey: "serviceGroupName",
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.groupName")} />
         ),
-        cell: ({ row }) => row.original.groupName,
+        cell: ({ row }) => row.original.serviceGroup.name,
       },
       {
         accessorKey: "amount",
@@ -162,7 +163,11 @@ export function ServiceManagementPage() {
           <DataTableColumnHeader column={column} title={t("table.price")} />
         ),
         cell: ({ row }) =>
-          formatServiceAmount(row.original.amount, row.original.currency, locale),
+          formatServiceAmount(
+            row.original.amount,
+            row.original.currency,
+            locale,
+          ),
       },
       {
         accessorKey: "durationMinutes",
@@ -171,8 +176,13 @@ export function ServiceManagementPage() {
         ),
         cell: ({ row }) => (
           <span className="flex items-center gap-2">
-            <Clock3 aria-hidden="true" className="size-4 text-muted-foreground" />
-            {t("table.durationValue", { minutes: row.original.durationMinutes })}
+            <Clock3
+              aria-hidden="true"
+              className="size-4 text-muted-foreground"
+            />
+            {t("table.durationValue", {
+              minutes: row.original.durationMinutes,
+            })}
           </span>
         ),
       },
@@ -181,7 +191,9 @@ export function ServiceManagementPage() {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.status")} />
         ),
-        cell: ({ row }) => <ServiceStatusBadge isActive={row.original.isActive} />,
+        cell: ({ row }) => (
+          <ServiceStatusBadge isActive={row.original.isActive} />
+        ),
         enableSorting: false,
         meta: {
           filterConfig: {
@@ -200,7 +212,8 @@ export function ServiceManagementPage() {
         header: ({ column }) => (
           <DataTableColumnHeader column={column} title={t("table.createdAt")} />
         ),
-        cell: ({ row }) => dateFormatter.format(new Date(row.original.createdAt)),
+        cell: ({ row }) =>
+          dateFormatter.format(new Date(row.original.createdAt)),
       },
       {
         id: "actions",
@@ -211,7 +224,9 @@ export function ServiceManagementPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                aria-label={t("actions.openActions", { name: row.original.name })}
+                aria-label={t("actions.openActions", {
+                  name: row.original.name,
+                })}
                 size="icon-sm"
                 type="button"
                 variant="ghost"
@@ -227,7 +242,10 @@ export function ServiceManagementPage() {
               {row.original.isActive ? (
                 <DropdownMenuItem
                   onClick={() =>
-                    setLifecycleSelection({ action: "deactivate", service: row.original })
+                    setLifecycleSelection({
+                      action: "deactivate",
+                      service: row.original,
+                    })
                   }
                   variant="destructive"
                 >
@@ -237,7 +255,10 @@ export function ServiceManagementPage() {
               ) : (
                 <DropdownMenuItem
                   onClick={() =>
-                    setLifecycleSelection({ action: "activate", service: row.original })
+                    setLifecycleSelection({
+                      action: "activate",
+                      service: row.original,
+                    })
                   }
                 >
                   <Power aria-hidden="true" />
@@ -270,7 +291,9 @@ export function ServiceManagementPage() {
           <p className="text-sm font-semibold text-primary">
             {t("eyebrow", { tenantName })}
           </p>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{t("title")}</h1>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            {t("title")}
+          </h1>
           <p className="text-sm leading-6 text-muted-foreground sm:text-base">
             {t("description")}
           </p>
@@ -290,7 +313,10 @@ export function ServiceManagementPage() {
             </p>
           </div>
           {servicesQuery.isFetching && !servicesQuery.isLoading && (
-            <RefreshCw aria-label={t("loading")} className="size-4 animate-spin text-muted-foreground" />
+            <RefreshCw
+              aria-label={t("loading")}
+              className="size-4 animate-spin text-muted-foreground"
+            />
           )}
         </CardHeader>
         <CardContent className="p-6">
@@ -301,10 +327,18 @@ export function ServiceManagementPage() {
               servicesQuery.isError ? (
                 <Empty className="border-0 py-10">
                   <EmptyHeader>
-                    <EmptyMedia variant="icon"><Tags aria-hidden="true" /></EmptyMedia>
+                    <EmptyMedia variant="icon">
+                      <Tags aria-hidden="true" />
+                    </EmptyMedia>
                     <EmptyTitle>{t("errors.listTitle")}</EmptyTitle>
-                    <EmptyDescription>{getErrorMessage(servicesQuery.error)}</EmptyDescription>
-                    <Button onClick={() => void servicesQuery.refetch()} size="sm" type="button">
+                    <EmptyDescription>
+                      {getErrorMessage(servicesQuery.error)}
+                    </EmptyDescription>
+                    <Button
+                      onClick={() => void servicesQuery.refetch()}
+                      size="sm"
+                      type="button"
+                    >
                       {t("actions.retry")}
                     </Button>
                   </EmptyHeader>
@@ -312,9 +346,13 @@ export function ServiceManagementPage() {
               ) : (
                 <Empty className="border-0 py-10">
                   <EmptyHeader>
-                    <EmptyMedia variant="icon"><Tags aria-hidden="true" /></EmptyMedia>
+                    <EmptyMedia variant="icon">
+                      <Tags aria-hidden="true" />
+                    </EmptyMedia>
                     <EmptyTitle>{t("empty.title")}</EmptyTitle>
-                    <EmptyDescription>{t("empty.description")}</EmptyDescription>
+                    <EmptyDescription>
+                      {t("empty.description")}
+                    </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
               )
@@ -330,7 +368,8 @@ export function ServiceManagementPage() {
               rowCount: servicesQuery.data?.meta.total ?? 0,
               onPaginationChange: (next) =>
                 setPagination((current) => ({
-                  pageIndex: next.pageSize === current.pageSize ? next.pageIndex : 0,
+                  pageIndex:
+                    next.pageSize === current.pageSize ? next.pageIndex : 0,
                   pageSize: next.pageSize,
                 })),
             }}

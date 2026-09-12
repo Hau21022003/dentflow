@@ -2,7 +2,11 @@ export type Service = {
   id: string;
   code: string;
   name: string;
-  groupName: string;
+  serviceGroup: {
+    id: string;
+    name: string;
+    isActive: boolean;
+  };
   amount: number;
   currency: string;
   durationMinutes: number;
@@ -14,7 +18,7 @@ export type Service = {
 export type ServiceSortBy =
   | "code"
   | "name"
-  | "groupName"
+  | "serviceGroupName"
   | "amount"
   | "durationMinutes"
   | "createdAt";
@@ -43,15 +47,13 @@ export type ServicePage = {
 export type CreateServiceInput = {
   code: string;
   name: string;
-  groupName: string;
+  serviceGroupId: string;
   amount: number;
   currency: string;
   durationMinutes: number;
 };
 
-export type UpdateServiceInput = Partial<
-  Omit<CreateServiceInput, "code">
-> & {
+export type UpdateServiceInput = Partial<Omit<CreateServiceInput, "code">> & {
   reason?: string;
 };
 

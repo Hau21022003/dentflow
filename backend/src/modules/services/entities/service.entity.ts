@@ -10,6 +10,7 @@ import {
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
+import { ServiceGroup } from '../../service-groups/entities/service-group.entity';
 import { Tenant } from '../../tenants/entities/tenant.entity';
 
 @Entity({ name: 'services' })
@@ -19,6 +20,10 @@ import { Tenant } from '../../tenants/entities/tenant.entity';
   'isActive',
   'name',
   'id',
+])
+@Index('idx_services_tenant_id_service_group_id', [
+  'tenantId',
+  'serviceGroupId',
 ])
 @Check('chk_services_code_format', `"code" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`)
 @Check('chk_services_amount_non_negative', `"amount" >= 0`)
@@ -37,8 +42,8 @@ export class Service {
   @Column({ type: 'varchar', length: 150 })
   name: string;
 
-  @Column({ name: 'group_name', type: 'varchar', length: 100 })
-  groupName: string;
+  @Column({ name: 'service_group_id', type: 'uuid' })
+  serviceGroupId: string;
 
   @Column({ type: 'integer' })
   amount: number;
@@ -61,4 +66,8 @@ export class Service {
   @ManyToOne(() => Tenant, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'tenant_id', referencedColumnName: 'id' })
   tenant: Tenant;
+
+  @ManyToOne(() => ServiceGroup, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'service_group_id', referencedColumnName: 'id' })
+  serviceGroup: ServiceGroup;
 }

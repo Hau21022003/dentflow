@@ -3,6 +3,7 @@ import {
   IsInt,
   IsNotEmpty,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
@@ -46,13 +47,10 @@ export class UpdateServiceDto {
   @MaxLength(150)
   name?: string;
 
-  @ApiPropertyOptional({ maxLength: 100 })
-  @NormalizeWhitespace()
+  @ApiPropertyOptional({ format: 'uuid' })
   @ValidateIf((_object, value: unknown) => value !== undefined)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
-  groupName?: string;
+  @IsUUID()
+  serviceGroupId?: string;
 
   @ApiPropertyOptional({ minimum: 0, maximum: MAX_SERVICE_AMOUNT })
   @ValidateIf((_object, value: unknown) => value !== undefined)

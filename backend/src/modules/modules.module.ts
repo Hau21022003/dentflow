@@ -11,6 +11,7 @@ import { TenantsModule } from './tenants/tenants.module';
 import { UsersModule } from './users/users.module';
 import { StaffModule } from './staff/staff.module';
 import { ServicesModule } from './services/services.module';
+import { ServiceGroupsModule } from './service-groups/service-groups.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ServicesModule } from './services/services.module';
     TenantsModule,
     SubscriptionPlansModule,
     BranchesModule,
+    ServiceGroupsModule,
     ServicesModule,
     IdempotencyModule,
     EmailTemplatesModule,

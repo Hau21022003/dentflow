@@ -17,6 +17,7 @@ import { AuditAction } from '../audit/audit-actions';
 import { AuditLogService } from '../audit/audit-log.service';
 import { AuditActorType } from '../audit/entities/audit-log.entity';
 import type { AuthorizationContext } from '../authorization/authorization-context';
+import { ServiceGroup } from '../service-groups/entities/service-group.entity';
 import { CreateServiceDto } from './dto/create-service.dto';
 import {
   ListServicesQueryDto,
@@ -28,7 +29,7 @@ import { ServicesRepository } from './services.repository';
 
 const SERVICE_EDITABLE_FIELDS = [
   'name',
-  'groupName',
+  'serviceGroupId',
   'amount',
   'currency',
   'durationMinutes',
@@ -48,7 +49,7 @@ type ServiceRequestedValues = Record<
 const SERVICE_SORT_FIELDS: Readonly<Record<ServiceSortBy, string>> = {
   [ServiceSortBy.CODE]: 'service.code',
   [ServiceSortBy.NAME]: 'service.name',
-  [ServiceSortBy.GROUP_NAME]: 'service.group_name',
+  [ServiceSortBy.SERVICE_GROUP_NAME]: 'serviceGroup.name',
   [ServiceSortBy.AMOUNT]: 'service.amount',
   [ServiceSortBy.DURATION_MINUTES]: 'service.duration_minutes',
   [ServiceSortBy.CREATED_AT]: 'service.created_at',
@@ -58,7 +59,11 @@ export interface ServiceResponse {
   id: string;
   code: string;
   name: string;
-  groupName: string;
+  serviceGroup: {
+    id: string;
+    name: string;
+    isActive: boolean;
+  };
   amount: number;
   currency: string;
   durationMinutes: number;
@@ -87,6 +92,7 @@ export class ServicesService {
     const limit = query.limit ?? 10;
     const queryBuilder = this.servicesRepository.ormRepository
       .createQueryBuilder('service')
+      .innerJoinAndSelect('service.serviceGroup', 'serviceGroup')
       .where('service.tenantId = :tenantId', {
         tenantId: context.tenant!.id,
       });
@@ -99,7 +105,7 @@ export class ServicesService {
     applyIlikeSearch(queryBuilder, query.search, [
       'service.code',
       'service.name',
-      'service.group_name',
+      'serviceGroup.name',
     ]);
     applySafeSort(queryBuilder, {
       sortBy: query.sortBy,
@@ -139,11 +145,16 @@ export class ServicesService {
   ): Promise<ServiceResponse> {
     try {
       return await this.dataSource.transaction(async (manager) => {
+        const serviceGroup = await this.findActiveServiceGroupOrFail(
+          manager,
+          context.tenant!.id,
+          input.serviceGroupId,
+        );
         const service = manager.create(Service, {
           tenantId: context.tenant!.id,
           code: input.code,
           name: input.name,
-          groupName: input.groupName,
+          serviceGroupId: serviceGroup.id,
           amount: input.amount,
           currency: input.currency,
           durationMinutes: input.durationMinutes,
@@ -155,7 +166,7 @@ export class ServicesService {
           after: this.toAuditSnapshot(savedService, SERVICE_CREATED_FIELDS),
         });
 
-        return this.toResponse(savedService);
+        return this.toResponse(savedService, serviceGroup);
       });
     } catch (error) {
       this.throwIfCodeAlreadyExists(error);
@@ -180,8 +191,22 @@ export class ServicesService {
           requestedValues[field] !== undefined &&
           service[field] !== requestedValues[field],
       );
+      let serviceGroup: ServiceGroup;
+      if (changedFields.includes('serviceGroupId')) {
+        serviceGroup = await this.findActiveServiceGroupOrFail(
+          manager,
+          context.tenant!.id,
+          input.serviceGroupId!,
+        );
+      } else {
+        serviceGroup = await this.findServiceGroupOrFail(
+          manager,
+          context.tenant!.id,
+          service.serviceGroupId,
+        );
+      }
       if (changedFields.length === 0) {
-        return this.toResponse(service);
+        return this.toResponse(service, serviceGroup);
       }
 
       const priceChanged =
@@ -206,7 +231,7 @@ export class ServicesService {
         after: this.toAuditSnapshot(savedService, changedFields),
       });
 
-      return this.toResponse(savedService);
+      return this.toResponse(savedService, serviceGroup);
     });
   }
 
@@ -251,8 +276,13 @@ export class ServicesService {
         context.tenant!.id,
         serviceId,
       );
+      const serviceGroup = await this.findServiceGroupOrFail(
+        manager,
+        context.tenant!.id,
+        service.serviceGroupId,
+      );
       if (service.isActive === isActive) {
-        return this.toResponse(service);
+        return this.toResponse(service, serviceGroup);
       }
 
       const before = this.toAuditSnapshot(service, ['isActive']);
@@ -265,7 +295,7 @@ export class ServicesService {
         after: this.toAuditSnapshot(savedService, ['isActive']),
       });
 
-      return this.toResponse(savedService);
+      return this.toResponse(savedService, serviceGroup);
     });
   }
 
@@ -285,10 +315,49 @@ export class ServicesService {
     return service;
   }
 
+  private async findServiceGroupOrFail(
+    manager: EntityManager,
+    tenantId: string,
+    serviceGroupId: string,
+  ): Promise<ServiceGroup> {
+    const serviceGroup = await manager
+      .getRepository(ServiceGroup)
+      .createQueryBuilder('serviceGroup')
+      .where('serviceGroup.tenantId = :tenantId', { tenantId })
+      .andWhere('serviceGroup.id = :serviceGroupId', { serviceGroupId })
+      .getOne();
+    if (!serviceGroup) {
+      throw new NotFoundException('Service group was not found.');
+    }
+    return serviceGroup;
+  }
+
+  private async findActiveServiceGroupOrFail(
+    manager: EntityManager,
+    tenantId: string,
+    serviceGroupId: string,
+  ): Promise<ServiceGroup> {
+    const serviceGroup = await manager
+      .getRepository(ServiceGroup)
+      .createQueryBuilder('serviceGroup')
+      .setLock('pessimistic_write')
+      .where('serviceGroup.tenantId = :tenantId', { tenantId })
+      .andWhere('serviceGroup.id = :serviceGroupId', { serviceGroupId })
+      .andWhere('serviceGroup.isActive = :isActive', { isActive: true })
+      .getOne();
+    if (!serviceGroup) {
+      throw new RequestFieldValidationException(
+        'serviceGroupId',
+        'serviceGroupId must reference an active service group in the tenant.',
+      );
+    }
+    return serviceGroup;
+  }
+
   private toRequestedValues(input: UpdateServiceDto): ServiceRequestedValues {
     return {
       name: input.name,
-      groupName: input.groupName,
+      serviceGroupId: input.serviceGroupId,
       amount: input.amount,
       currency: input.currency,
       durationMinutes: input.durationMinutes,
@@ -340,12 +409,19 @@ export class ServicesService {
     });
   }
 
-  private toResponse(service: Service): ServiceResponse {
+  private toResponse(
+    service: Service,
+    serviceGroup: ServiceGroup = service.serviceGroup,
+  ): ServiceResponse {
     return {
       id: service.id,
       code: service.code,
       name: service.name,
-      groupName: service.groupName,
+      serviceGroup: {
+        id: serviceGroup.id,
+        name: serviceGroup.name,
+        isActive: serviceGroup.isActive,
+      },
       amount: service.amount,
       currency: service.currency,
       durationMinutes: service.durationMinutes,

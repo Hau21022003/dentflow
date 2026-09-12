@@ -1,4 +1,9 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test";
 import { randomUUID } from "node:crypto";
 
 import { resetDatabase } from "./support/database";
@@ -7,6 +12,7 @@ import { E2E_USERS, login } from "./support/login";
 const API_URL = "http://127.0.0.1:3001";
 const TENANT_SLUG = "test-brightsmile";
 const SERVICES_ROUTE = `/tenants/${TENANT_SLUG}/services`;
+const SERVICE_GROUPS_ROUTE = `/tenants/${TENANT_SLUG}/service-groups`;
 
 type CreatedService = {
   id: string;
@@ -22,27 +28,46 @@ test("Tenant Admin lists services with server-side search, filter, sort, and pag
   request,
 }) => {
   await loginTenantAdminApi(request);
+  const serviceGroupId = await createServiceGroupViaApi(
+    request,
+    "Synthetic browser group",
+  );
   for (let index = 1; index <= 10; index += 1) {
-    await createServiceViaApi(request, {
-      code: `browser-list-${String(index).padStart(2, "0")}`,
-      name: `Synthetic Browser Service ${String(index).padStart(2, "0")}`,
-    });
+    await createServiceViaApi(
+      request,
+      {
+        code: `browser-list-${String(index).padStart(2, "0")}`,
+        name: `Synthetic Browser Service ${String(index).padStart(2, "0")}`,
+      },
+      serviceGroupId,
+    );
   }
-  const inactiveService = await createServiceViaApi(request, {
-    code: "browser-inactive",
-    name: "Synthetic Browser Inactive Service",
-  });
+  const inactiveService = await createServiceViaApi(
+    request,
+    {
+      code: "browser-inactive",
+      name: "Synthetic Browser Inactive Service",
+    },
+    serviceGroupId,
+  );
   await deactivateServiceViaApi(request, inactiveService.id);
 
   await login(page, E2E_USERS.tenantAdmin);
   await switchToEnglish(page);
-  const initialList = waitForServiceList(page, (url) =>
-    url.searchParams.get("page") === "1" && url.searchParams.get("limit") === "10",
+  const initialList = waitForServiceList(
+    page,
+    (url) =>
+      url.searchParams.get("page") === "1" &&
+      url.searchParams.get("limit") === "10",
   );
   await page.goto(`/workspace/${TENANT_SLUG}/tenant/services`);
-  await expect(page.getByRole("heading", { name: "Service management" })).toBeVisible();
   await expect(
-    page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Services" }),
+    page.getByRole("heading", { name: "Service management" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Primary navigation" })
+      .getByRole("link", { name: "Services" }),
   ).toBeVisible();
   await initialList;
 
@@ -58,7 +83,10 @@ test("Tenant Admin lists services with server-side search, filter, sort, and pag
   ).toBeVisible();
 
   await page.reload();
-  await page.getByRole("button", { name: "Toggle sort options" }).first().click();
+  await page
+    .getByRole("button", { name: "Toggle sort options" })
+    .first()
+    .click();
   const sortResponse = waitForServiceList(
     page,
     (url) =>
@@ -92,7 +120,13 @@ test("Tenant Admin lists services with server-side search, filter, sort, and pag
 
 test("Tenant Admin creates, edits, deactivates, and reactivates a service", async ({
   page,
+  request,
 }) => {
+  await loginTenantAdminApi(request);
+  const serviceGroupId = await createServiceGroupViaApi(
+    request,
+    "Synthetic Group",
+  );
   await login(page, E2E_USERS.tenantAdmin);
   await switchToEnglish(page);
   await page.goto(`/workspace/${TENANT_SLUG}/tenant/services`);
@@ -102,18 +136,21 @@ test("Tenant Admin creates, edits, deactivates, and reactivates a service", asyn
   await dialog.getByRole("button", { name: "Create service" }).click();
   await expect(dialog.getByText("Service code is required.")).toBeVisible();
 
-  await fillServiceForm(dialog, {
+  await fillServiceForm(page, dialog, {
     code: "synthetic-browser-service",
     name: "Synthetic Browser Service",
-    groupName: "Synthetic Group",
+    serviceGroupName: "Synthetic Group",
     price: "150000",
     durationMinutes: "60",
   });
   const createRequest = page.waitForRequest(
-    (request) => request.method() === "POST" && request.url().endsWith(SERVICES_ROUTE),
+    (request) =>
+      request.method() === "POST" && request.url().endsWith(SERVICES_ROUTE),
   );
   const createResponse = page.waitForResponse(
-    (response) => response.request().method() === "POST" && response.url().endsWith(SERVICES_ROUTE),
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().endsWith(SERVICES_ROUTE),
   );
   await dialog.getByRole("button", { name: "Create service" }).click();
   const create = await createRequest;
@@ -123,16 +160,28 @@ test("Tenant Admin creates, edits, deactivates, and reactivates a service", asyn
   expect(create.postDataJSON()).toEqual({
     code: "synthetic-browser-service",
     name: "Synthetic Browser Service",
-    groupName: "Synthetic Group",
+    serviceGroupId,
     amount: 150000,
     currency: "VND",
     durationMinutes: 60,
   });
-  const createdService = (await (await createResponse).json()) as CreatedService;
+  const createdService = (await (
+    await createResponse
+  ).json()) as CreatedService;
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByText("Synthetic Browser Service", { exact: true })).toBeVisible();
 
-  const createdRow = page.getByRole("row").filter({ hasText: "Synthetic Browser Service" });
+  const createdServiceSearch = waitForServiceList(
+    page,
+    (url) => url.searchParams.get("search") === "synthetic-browser-service",
+  );
+  await page
+    .getByPlaceholder("Search code, name, or group…")
+    .fill("synthetic-browser-service");
+  await createdServiceSearch;
+  const createdRow = page
+    .getByRole("row")
+    .filter({ hasText: "Synthetic Browser Service" });
+  await expect(createdRow).toBeVisible();
   await createdRow
     .getByRole("button", { name: "Open actions for Synthetic Browser Service" })
     .click();
@@ -146,7 +195,9 @@ test("Tenant Admin creates, edits, deactivates, and reactivates a service", asyn
   await expect(
     editDialog.getByText("Enter a reason for the price or currency change."),
   ).toBeVisible();
-  await editDialog.getByLabel("Reason").fill("Synthetic currency and price update");
+  await editDialog
+    .getByLabel("Reason")
+    .fill("Synthetic currency and price update");
   const updateRequest = page.waitForRequest(
     (request) =>
       request.method() === "PATCH" &&
@@ -163,21 +214,32 @@ test("Tenant Admin creates, edits, deactivates, and reactivates a service", asyn
     reason: "Synthetic currency and price update",
   });
   await expect(editDialog).toHaveCount(0);
+  await expect(createdRow).toContainText("$1,750.50");
 
   await createdRow
     .getByRole("button", { name: "Open actions for Synthetic Browser Service" })
     .click();
   await page.getByRole("menuitem", { name: "Deactivate" }).click();
-  const deactivateDialog = page.getByRole("alertdialog", { name: "Deactivate service" });
-  await deactivateDialog.getByRole("button", { name: "Deactivate service" }).click();
-  await expect(deactivateDialog.getByText("Enter a reason for this action.")).toBeVisible();
+  const deactivateDialog = page.getByRole("alertdialog", {
+    name: "Deactivate service",
+  });
+  await deactivateDialog
+    .getByRole("button", { name: "Deactivate service" })
+    .click();
+  await expect(
+    deactivateDialog.getByText("Enter a reason for this action."),
+  ).toBeVisible();
   await deactivateDialog.getByLabel("Reason").fill("Synthetic catalog pause");
   const deactivateRequest = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
-      request.url().endsWith(`${SERVICES_ROUTE}/${createdService.id}/deactivate`),
+      request
+        .url()
+        .endsWith(`${SERVICES_ROUTE}/${createdService.id}/deactivate`),
   );
-  await deactivateDialog.getByRole("button", { name: "Deactivate service" }).click();
+  await deactivateDialog
+    .getByRole("button", { name: "Deactivate service" })
+    .click();
   expect((await deactivateRequest).headers()["idempotency-key"]).toMatch(
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   );
@@ -188,14 +250,18 @@ test("Tenant Admin creates, edits, deactivates, and reactivates a service", asyn
     .getByRole("button", { name: "Open actions for Synthetic Browser Service" })
     .click();
   await page.getByRole("menuitem", { name: "Reactivate service" }).click();
-  const activateDialog = page.getByRole("alertdialog", { name: "Reactivate service" });
+  const activateDialog = page.getByRole("alertdialog", {
+    name: "Reactivate service",
+  });
   await activateDialog.getByLabel("Reason").fill("Synthetic catalog reopening");
   const activateRequest = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
       request.url().endsWith(`${SERVICES_ROUTE}/${createdService.id}/activate`),
   );
-  await activateDialog.getByRole("button", { name: "Reactivate service" }).click();
+  await activateDialog
+    .getByRole("button", { name: "Reactivate service" })
+    .click();
   expect((await activateRequest).headers()["idempotency-key"]).toMatch(
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   );
@@ -204,20 +270,24 @@ test("Tenant Admin creates, edits, deactivates, and reactivates a service", asyn
 
   await page.getByRole("button", { name: "Create service" }).click();
   const duplicateDialog = page.getByRole("dialog", { name: "Create service" });
-  await fillServiceForm(duplicateDialog, {
+  await fillServiceForm(page, duplicateDialog, {
     code: "synthetic-browser-service",
     name: "Duplicate Synthetic Browser Service",
-    groupName: "Synthetic Group",
+    serviceGroupName: "Synthetic Group",
     price: "1",
     durationMinutes: "30",
   });
   await duplicateDialog.getByRole("button", { name: "Create service" }).click();
   await expect(
-    duplicateDialog.getByText("A service with this code already exists in the tenant."),
+    duplicateDialog.getByText(
+      "A service with this code already exists in the tenant.",
+    ),
   ).toBeVisible();
 });
 
-test("A user without service-catalog.manage is denied the service route", async ({ page }) => {
+test("A user without service-catalog.manage is denied the service route", async ({
+  page,
+}) => {
   await login(page, E2E_USERS.branchAdminReceptionist);
   await page.goto(`/workspace/${TENANT_SLUG}/tenant/services`);
   await expect(page.getByText("403 · Không có quyền truy cập")).toBeVisible();
@@ -241,12 +311,13 @@ async function loginTenantAdminApi(request: APIRequestContext): Promise<void> {
 async function createServiceViaApi(
   request: APIRequestContext,
   input: { code: string; name: string },
+  serviceGroupId: string,
 ): Promise<CreatedService> {
   const response = await request.post(`${API_URL}${SERVICES_ROUTE}`, {
     headers: { "Idempotency-Key": randomUUID() },
     data: {
       ...input,
-      groupName: "Synthetic browser group",
+      serviceGroupId,
       amount: 150000,
       currency: "VND",
       durationMinutes: 60,
@@ -254,6 +325,18 @@ async function createServiceViaApi(
   });
   await expect(response).toBeOK();
   return response.json() as Promise<CreatedService>;
+}
+
+async function createServiceGroupViaApi(
+  request: APIRequestContext,
+  name: string,
+): Promise<string> {
+  const response = await request.post(`${API_URL}${SERVICE_GROUPS_ROUTE}`, {
+    headers: { "Idempotency-Key": randomUUID() },
+    data: { name },
+  });
+  await expect(response).toBeOK();
+  return ((await response.json()) as { id: string }).id;
 }
 
 async function deactivateServiceViaApi(
@@ -279,18 +362,22 @@ function waitForServiceList(page: Page, predicate: (url: URL) => boolean) {
 }
 
 async function fillServiceForm(
+  page: Page,
   dialog: ReturnType<Page["getByRole"]>,
   values: {
     code: string;
     name: string;
-    groupName: string;
+    serviceGroupName: string;
     price: string;
     durationMinutes: string;
   },
 ): Promise<void> {
   await dialog.getByLabel("Service code").fill(values.code);
   await dialog.getByLabel("Service name").fill(values.name);
-  await dialog.getByLabel("Service group").fill(values.groupName);
+  await dialog.getByLabel("Service group").click();
+  await page
+    .getByRole("option", { name: values.serviceGroupName, exact: true })
+    .click();
   await dialog.getByLabel("List price").fill(values.price);
   await dialog.getByLabel("Duration (minutes)").fill(values.durationMinutes);
 }

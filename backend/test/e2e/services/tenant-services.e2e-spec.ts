@@ -5,6 +5,7 @@ import { AppConfigService } from 'src/config/app-config.service';
 import { AuditAction } from 'src/modules/audit/audit-actions';
 import { AuditLog } from 'src/modules/audit/entities/audit-log.entity';
 import { TenantRoleCode } from 'src/modules/authorization/entities/role-assignment.entity';
+import { ServiceGroup } from 'src/modules/service-groups/entities/service-group.entity';
 import { Service } from 'src/modules/services/entities/service.entity';
 import {
   Tenant,
@@ -25,6 +26,7 @@ describe('Tenant Admin service catalog management (e2e)', () => {
   let dataSource: DataSource;
   let authFixtures: ReturnType<typeof createAuthFixtures>;
   let servicesRepository: Repository<Service>;
+  let serviceGroupsRepository: Repository<ServiceGroup>;
   let auditLogsRepository: Repository<AuditLog>;
 
   beforeAll(async () => {
@@ -37,6 +39,7 @@ describe('Tenant Admin service catalog management (e2e)', () => {
       bcryptSaltRounds: appConfig.securityConfig.bcryptSaltRounds,
     });
     servicesRepository = dataSource.getRepository(Service);
+    serviceGroupsRepository = dataSource.getRepository(ServiceGroup);
     auditLogsRepository = dataSource.getRepository(AuditLog);
     await dataSource.runMigrations();
   });
@@ -49,345 +52,93 @@ describe('Tenant Admin service catalog management (e2e)', () => {
     await closeApp();
   });
 
-  it('creates, lists, reads, and updates only the current tenant catalog', async () => {
-    const { tenant, agent, user } =
-      await createTenantAdmin('service-catalog-a');
-    const route = `/tenants/${tenant.slug}/services`;
-    const alpha = await createService(agent, route, {
-      code: 'exam-general',
-      name: '  General   Examination ',
-      groupName: '  Examination ',
-      amount: 150000,
-      currency: 'VND',
-      durationMinutes: 30,
-    });
-    const bravo = await createService(agent, route, {
-      code: 'cleaning-basic',
-      name: 'Basic Cleaning',
-      groupName: 'Hygiene',
-      amount: 4500,
-      currency: 'USD',
-      durationMinutes: 45,
-    });
-    const zulu = await createService(agent, route, {
-      code: 'xray-panoramic',
-      name: 'Panoramic X-Ray',
-      groupName: 'Imaging',
-      amount: 200000,
-      currency: 'VND',
-      durationMinutes: 15,
-    });
-    await servicesRepository.update(alpha.id, {
-      createdAt: new Date('2026-01-01T00:00:00.000Z'),
-    });
-    await servicesRepository.update(bravo.id, {
-      createdAt: new Date('2026-01-02T00:00:00.000Z'),
-    });
-    await servicesRepository.update(zulu.id, {
-      createdAt: new Date('2026-01-03T00:00:00.000Z'),
-    });
-
-    expect(alpha).toMatchObject({
-      code: 'exam-general',
-      name: 'General Examination',
-      groupName: 'Examination',
-      amount: 150000,
-      currency: 'VND',
-      durationMinutes: 30,
-      isActive: true,
-    });
-    expect(alpha).not.toHaveProperty('tenantId');
-
-    await agent
-      .get(`${route}?search=ing&page=1&limit=2`)
-      .expect(200)
-      .expect((response) => {
-        const body = response.body as {
-          items: Array<{ id: string }>;
-          meta: Record<string, number>;
-        };
-        expect(body.items.map((service) => service.id)).toEqual([
-          bravo.id,
-          zulu.id,
-        ]);
-        expect(body.meta).toEqual({
-          page: 1,
-          limit: 2,
-          total: 2,
-          totalPages: 1,
-        });
-      });
-    await agent
-      .get(`${route}?sortBy=createdAt&sortOrder=DESC`)
-      .expect(200)
-      .expect((response) => {
-        const body = response.body as { items: Array<{ id: string }> };
-        expect(body.items.map((service) => service.id)).toEqual([
-          zulu.id,
-          bravo.id,
-          alpha.id,
-        ]);
-      });
-    await agent.get(`${route}?sortBy=DROP_TABLE`).expect(422);
-    await agent
-      .get(`${route}/${alpha.id}`)
-      .expect(200)
-      .expect((response) => {
-        expect(response.body).toMatchObject({
-          id: alpha.id,
-          code: alpha.code,
-          name: alpha.name,
-          groupName: alpha.groupName,
-          amount: alpha.amount,
-          currency: alpha.currency,
-          durationMinutes: alpha.durationMinutes,
-          isActive: alpha.isActive,
-        });
-      });
-
-    const updateKey = randomUUID();
-    await agent
-      .patch(`${route}/${alpha.id}`)
-      .set('Idempotency-Key', updateKey)
-      .send({
-        groupName: 'Preventive Care',
-        amount: 175000,
-        currency: 'VND',
-        durationMinutes: 35,
-        reason: 'ANNUAL_CATALOG_REVIEW',
-      })
-      .expect(200)
-      .expect((response) => {
-        expect(response.body).toMatchObject({
-          id: alpha.id,
-          groupName: 'Preventive Care',
-          amount: 175000,
-          durationMinutes: 35,
-        });
-      });
-    await agent
-      .patch(`${route}/${alpha.id}`)
-      .set('Idempotency-Key', updateKey)
-      .send({
-        groupName: 'Preventive Care',
-        amount: 175000,
-        currency: 'VND',
-        durationMinutes: 35,
-        reason: 'ANNUAL_CATALOG_REVIEW',
-      })
-      .expect(200)
-      .expect('Idempotency-Replayed', 'true');
-    await agent
-      .patch(`${route}/${alpha.id}`)
-      .set('Idempotency-Key', updateKey)
-      .send({ name: 'Different intent' })
-      .expect(409);
-    await expect(
-      auditLogsRepository.findOneByOrFail({
-        action: AuditAction.SERVICE_UPDATED,
-        resourceId: alpha.id,
-      }),
-    ).resolves.toMatchObject({
-      actorUserId: user.id,
-      tenantId: tenant.id,
-      reason: 'ANNUAL_CATALOG_REVIEW',
-      before: {
-        changedFields: ['groupName', 'amount', 'durationMinutes'],
-        isActive: true,
-        amount: 150000,
-        currency: 'VND',
-        durationMinutes: 30,
-      },
-      after: {
-        changedFields: ['groupName', 'amount', 'durationMinutes'],
-        isActive: true,
-        amount: 175000,
-        currency: 'VND',
-        durationMinutes: 35,
-      },
-    });
-
-    await agent
-      .patch(`${route}/${alpha.id}`)
-      .set('Idempotency-Key', randomUUID())
-      .send({ amount: 180000 })
-      .expect(422);
-    await agent
-      .patch(`${route}/${alpha.id}`)
-      .set('Idempotency-Key', randomUUID())
-      .send({ code: 'renamed-service' })
-      .expect(422);
-    await agent
-      .patch(`${route}/${alpha.id}`)
-      .set('Idempotency-Key', randomUUID())
-      .send({ isActive: false })
-      .expect(422);
-  });
-
-  it('validates catalog data, database constraints, and tenant-local code uniqueness', async () => {
-    const { tenant, agent } = await createTenantAdmin('service-validation-a');
-    const otherTenant = await authFixtures.createTenant({
-      slug: 'service-validation-b',
-    });
-    const { agent: otherAgent } = await createTenantAdminFor(otherTenant);
-    const route = `/tenants/${tenant.slug}/services`;
-    const payload = {
-      code: 'consultation-new',
-      name: 'New Consultation',
-      groupName: 'Consultation',
-      amount: 0,
-      currency: 'VND',
-      durationMinutes: 20,
-    };
-
-    await createService(agent, route, payload);
-    await agent
-      .post(route)
-      .set('Idempotency-Key', randomUUID())
-      .send(payload)
-      .expect(409);
-    await createService(
-      otherAgent,
-      `/tenants/${otherTenant.slug}/services`,
-      payload,
+  it('manages service groups with normalized case-insensitive names and lifecycle audit', async () => {
+    const { tenant, agent } = await createTenantAdmin('service-groups-a');
+    const route = `/tenants/${tenant.slug}/service-groups`;
+    const group = await createServiceGroup(
+      agent,
+      route,
+      '  Preventive   Care ',
     );
-    await agent
-      .post(route)
-      .set('Idempotency-Key', randomUUID())
-      .send({ ...payload, code: 'Invalid Code' })
-      .expect(422);
-    await agent
-      .post(route)
-      .set('Idempotency-Key', randomUUID())
-      .send({ ...payload, code: 'invalid-currency', currency: 'vnd' })
-      .expect(422);
-    await agent
-      .post(route)
-      .set('Idempotency-Key', randomUUID())
-      .send({ ...payload, code: 'invalid-amount', amount: -1 })
-      .expect(422);
-    await agent
-      .post(route)
-      .set('Idempotency-Key', randomUUID())
-      .send({ ...payload, code: 'invalid-duration', durationMinutes: 0 })
-      .expect(422);
 
-    await expect(
-      dataSource.query(
-        `INSERT INTO "services" ("tenant_id", "code", "name", "group_name", "amount", "currency", "duration_minutes")
-         VALUES ($1, 'Invalid Code', 'Synthetic Invalid', 'Synthetic', 1000, 'VND', 30)`,
-        [tenant.id],
-      ),
-    ).rejects.toThrow();
-  });
-
-  it('deactivates and reactivates services with idempotency and a single audit per effective transition', async () => {
-    const { tenant, agent } = await createTenantAdmin('service-lifecycle-a');
-    const route = `/tenants/${tenant.slug}/services`;
-    const service = await createService(agent, route, {
-      code: 'orthodontic-consultation',
-      name: 'Orthodontic Consultation',
-      groupName: 'Orthodontics',
-      amount: 300000,
-      currency: 'VND',
-      durationMinutes: 45,
-    });
-
+    expect(group).toMatchObject({ name: 'Preventive Care', isActive: true });
     await agent
-      .post(`${route}/${service.id}/deactivate`)
+      .post(route)
       .set('Idempotency-Key', randomUUID())
-      .send({})
-      .expect(422);
+      .send({ name: 'preventive care' })
+      .expect(409);
+    await agent
+      .get(`${route}?search=preventive&isActive=true&sortBy=name&sortOrder=ASC`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.items).toEqual([
+          expect.objectContaining({ id: group.id, name: 'Preventive Care' }),
+        ]);
+      });
+
     const deactivateKey = randomUUID();
     await agent
-      .post(`${route}/${service.id}/deactivate`)
+      .post(`${route}/${group.id}/deactivate`)
       .set('Idempotency-Key', deactivateKey)
-      .send({ reason: 'NO_LONGER_OFFERED' })
-      .expect(200)
-      .expect((response) => {
-        expect(response.body).toMatchObject({
-          id: service.id,
-          isActive: false,
-        });
-      });
+      .send({ reason: 'RETIRED' })
+      .expect(200);
     await agent
-      .post(`${route}/${service.id}/deactivate`)
+      .post(`${route}/${group.id}/deactivate`)
       .set('Idempotency-Key', deactivateKey)
-      .send({ reason: 'NO_LONGER_OFFERED' })
+      .send({ reason: 'RETIRED' })
       .expect(200)
       .expect('Idempotency-Replayed', 'true');
     await agent
-      .post(`${route}/${service.id}/deactivate`)
+      .post(`${route}/${group.id}/deactivate`)
       .set('Idempotency-Key', randomUUID())
-      .send({ reason: 'NO_LONGER_OFFERED' })
+      .send({ reason: 'RETIRED' })
       .expect(200);
     await expect(
       auditLogsRepository.count({
         where: {
-          action: AuditAction.SERVICE_DEACTIVATED,
-          resourceId: service.id,
+          action: AuditAction.SERVICE_GROUP_DEACTIVATED,
+          resourceId: group.id,
         },
       }),
     ).resolves.toBe(1);
-
-    const activateKey = randomUUID();
-    await agent
-      .post(`${route}/${service.id}/activate`)
-      .set('Idempotency-Key', activateKey)
-      .send({ reason: 'SERVICE_REINTRODUCED' })
-      .expect(200)
-      .expect((response) => {
-        expect(response.body).toMatchObject({ id: service.id, isActive: true });
-      });
-    await agent
-      .post(`${route}/${service.id}/activate`)
-      .set('Idempotency-Key', activateKey)
-      .send({ reason: 'SERVICE_REINTRODUCED' })
-      .expect(200)
-      .expect('Idempotency-Replayed', 'true');
     await expect(
       auditLogsRepository.findOneByOrFail({
-        action: AuditAction.SERVICE_ACTIVATED,
-        resourceId: service.id,
+        action: AuditAction.SERVICE_GROUP_DEACTIVATED,
+        resourceId: group.id,
       }),
     ).resolves.toMatchObject({
-      reason: 'SERVICE_REINTRODUCED',
-      before: { isActive: false, changedFields: ['isActive'] },
-      after: { isActive: true, changedFields: ['isActive'] },
+      reason: 'RETIRED',
+      before: { changedFields: ['isActive'], isActive: true },
+      after: { changedFields: ['isActive'], isActive: false },
     });
+
     await agent
-      .get(`${route}?isActive=true`)
+      .patch(`${route}/${group.id}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ name: 'Preventive Services' })
       .expect(200)
-      .expect((response) => {
-        const body = response.body as { items: Array<{ id: string }> };
-        expect(body.items.map(({ id }) => id)).toEqual([service.id]);
-      });
+      .expect((response) =>
+        expect(response.body.name).toBe('Preventive Services'),
+      );
   });
 
-  it('enforces authentication, permission, tenant isolation, subscription state, and no deletion route', async () => {
+  it('enforces group tenant isolation, permission, subscription state, and no deletion route', async () => {
     const { tenant: tenantA, agent: tenantAdminAgent } =
-      await createTenantAdmin('service-security-a');
+      await createTenantAdmin('service-groups-security-a');
     const tenantB = await authFixtures.createTenant({
-      slug: 'service-security-b',
+      slug: 'service-groups-security-b',
     });
     const { agent: tenantBAdminAgent } = await createTenantAdminFor(tenantB);
-    const otherService = await createService(
+    const otherGroup = await createServiceGroup(
       tenantBAdminAgent,
-      `/tenants/${tenantB.slug}/services`,
-      {
-        code: 'other-tenant-service',
-        name: 'Other Tenant Service',
-        groupName: 'Synthetic',
-        amount: 1000,
-        currency: 'VND',
-        durationMinutes: 10,
-      },
+      `/tenants/${tenantB.slug}/service-groups`,
+      'Other tenant group',
     );
     const branchUser = await authFixtures.createUser({
-      email: 'branch-only@tenant-services.test',
+      email: 'branch-only-service-groups@tenant-services.test',
     });
     const branch = await authFixtures.createBranch(tenantA, {
-      slug: 'service-security-branch',
+      slug: 'service-groups-branch',
     });
     await authFixtures.grantBranchRole(
       branchUser,
@@ -398,99 +149,246 @@ describe('Tenant Admin service catalog management (e2e)', () => {
       email: branchUser.email,
       password: PASSWORD,
     });
-    const routeA = `/tenants/${tenantA.slug}/services`;
+    const route = `/tenants/${tenantA.slug}/service-groups`;
 
     await request(app.getHttpServer() as Server)
-      .get(routeA)
+      .get(route)
       .expect(401);
-    await branchUserSession.agent.get(routeA).expect(403);
-    await tenantBAdminAgent.get(routeA).expect(403);
-    await tenantAdminAgent.get(`${routeA}/${otherService.id}`).expect(404);
-    await tenantAdminAgent
-      .patch(`${routeA}/${otherService.id}`)
+    await branchUserSession.agent.get(route).expect(403);
+    await tenantBAdminAgent.get(route).expect(403);
+    await tenantAdminAgent.get(`${route}/${otherGroup.id}`).expect(404);
+    await tenantAdminAgent.delete(`${route}/${otherGroup.id}`).expect(404);
+    await dataSource
+      .getRepository(Tenant)
+      .update(tenantA.id, { status: TenantStatus.SUSPENDED });
+    await tenantAdminAgent.get(route).expect(403);
+  });
+
+  it('requires an active same-tenant group for Service create or reassignment while preserving existing services', async () => {
+    const { tenant, agent } = await createTenantAdmin('service-group-link-a');
+    const groupsRoute = `/tenants/${tenant.slug}/service-groups`;
+    const servicesRoute = `/tenants/${tenant.slug}/services`;
+    const activeGroup = await createServiceGroup(
+      agent,
+      groupsRoute,
+      'Examination',
+    );
+    const alternativeGroup = await createServiceGroup(
+      agent,
+      groupsRoute,
+      'Hygiene',
+    );
+    const service = await createService(agent, servicesRoute, {
+      code: 'general-exam',
+      name: 'General Examination',
+      serviceGroupId: activeGroup.id,
+      amount: 150000,
+      currency: 'VND',
+      durationMinutes: 30,
+    });
+
+    expect(service).toMatchObject({
+      code: 'general-exam',
+      serviceGroup: { id: activeGroup.id, name: 'Examination', isActive: true },
+    });
+    expect(service.groupName).toBeUndefined();
+    await agent
+      .post(servicesRoute)
       .set('Idempotency-Key', randomUUID())
-      .send({ name: 'Must not update another tenant' })
-      .expect(404);
-    await tenantAdminAgent
-      .post(routeA)
       .send({
-        code: 'missing-idempotency-key',
-        name: 'Synthetic Service',
-        groupName: 'Synthetic',
-        amount: 1000,
+        code: 'legacy-group-name',
+        name: 'Legacy payload',
+        groupName: 'Examination',
+        amount: 1,
         currency: 'VND',
         durationMinutes: 10,
       })
       .expect(422);
-    await tenantAdminAgent.delete(`${routeA}/${otherService.id}`).expect(404);
 
-    await dataSource.getRepository(Tenant).update(tenantA.id, {
-      status: TenantStatus.SUSPENDED,
-    });
-    await tenantAdminAgent.get(routeA).expect(403);
-  });
-
-  it('rolls back service creation when its required audit insert fails', async () => {
-    const { tenant, agent } = await createTenantAdmin('service-audit-failure');
-    const payload = {
-      code: 'audit-failure-service',
-      name: 'Synthetic Audit Failure Service',
-      groupName: 'Synthetic',
-      amount: 1000,
-      currency: 'VND',
-      durationMinutes: 10,
-    };
-    await dataSource.query(`
-      CREATE FUNCTION reject_service_created_audit()
-      RETURNS trigger
-      LANGUAGE plpgsql
-      AS $$
-      BEGIN
-        IF NEW.action = 'SERVICE_CREATED' THEN
-          RAISE EXCEPTION 'forced service audit failure';
-        END IF;
-        RETURN NEW;
-      END;
-      $$
-    `);
-    await dataSource.query(`
-      CREATE TRIGGER trg_reject_service_created_audit
-      BEFORE INSERT ON audit_logs
-      FOR EACH ROW EXECUTE FUNCTION reject_service_created_audit()
-    `);
-
-    try {
-      await agent
-        .post(`/tenants/${tenant.slug}/services`)
-        .set('Idempotency-Key', randomUUID())
-        .send(payload)
-        .expect(500);
-      await expect(
-        servicesRepository.count({
-          where: { tenantId: tenant.id, code: payload.code },
+    await agent
+      .post(`${groupsRoute}/${activeGroup.id}/deactivate`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reason: 'PAUSED' })
+      .expect(200);
+    await agent
+      .patch(`${servicesRoute}/${service.id}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ name: 'Renamed General Examination' })
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.isActive).toBe(true);
+        expect(response.body.serviceGroup).toMatchObject({
+          id: activeGroup.id,
+          isActive: false,
+        });
+      });
+    await agent
+      .post(servicesRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        code: 'blocked-group',
+        name: 'Blocked group service',
+        serviceGroupId: activeGroup.id,
+        amount: 1,
+        currency: 'VND',
+        durationMinutes: 10,
+      })
+      .expect(422);
+    await agent
+      .patch(`${servicesRoute}/${service.id}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ serviceGroupId: alternativeGroup.id })
+      .expect(200)
+      .expect((response) =>
+        expect(response.body.serviceGroup).toMatchObject({
+          id: alternativeGroup.id,
         }),
-      ).resolves.toBe(0);
-    } finally {
-      await dataSource.query(
-        'DROP TRIGGER IF EXISTS trg_reject_service_created_audit ON audit_logs',
       );
-      await dataSource.query(
-        'DROP FUNCTION IF EXISTS reject_service_created_audit()',
-      );
-    }
+    await agent
+      .get(
+        `${servicesRoute}?search=hygiene&sortBy=serviceGroupName&sortOrder=ASC`,
+      )
+      .expect(200)
+      .expect((response) => expect(response.body.items[0].id).toBe(service.id));
+    await expect(
+      auditLogsRepository.find({
+        where: { action: AuditAction.SERVICE_UPDATED, resourceId: service.id },
+      }),
+    ).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          before: expect.objectContaining({
+            changedFields: ['serviceGroupId'],
+          }),
+          after: expect.objectContaining({ changedFields: ['serviceGroupId'] }),
+        }),
+      ]),
+    );
   });
+
+  it('database FK rejects cross-tenant service-to-group links', async () => {
+    const tenantA = await authFixtures.createTenant({ slug: 'service-fk-a' });
+    const tenantB = await authFixtures.createTenant({ slug: 'service-fk-b' });
+    const groupA = await serviceGroupsRepository.save({
+      tenantId: tenantA.id,
+      name: 'Tenant A group',
+      isActive: true,
+    });
+    const groupB = await serviceGroupsRepository.save({
+      tenantId: tenantB.id,
+      name: 'Tenant B group',
+      isActive: true,
+    });
+
+    await expect(
+      dataSource.query(
+        `INSERT INTO "services" ("tenant_id", "code", "name", "service_group_id", "amount", "currency", "duration_minutes")
+         VALUES ($1, 'cross-tenant-group', 'Synthetic service', $2, 1000, 'VND', 30)`,
+        [tenantA.id, groupB.id],
+      ),
+    ).rejects.toThrow();
+    await expect(
+      servicesRepository.count({ where: { tenantId: tenantA.id } }),
+    ).resolves.toBe(0);
+    expect(groupA.tenantId).toBe(tenantA.id);
+  });
+
+  it('backfills normalized legacy group_name values and refuses blank legacy values', async () => {
+    const tenantA = await authFixtures.createTenant({
+      slug: 'service-migration-a',
+    });
+    const tenantB = await authFixtures.createTenant({
+      slug: 'service-migration-b',
+    });
+
+    await dataSource.undoLastMigration();
+    await dataSource.query(
+      `INSERT INTO "services" ("tenant_id", "code", "name", "group_name", "amount", "currency", "duration_minutes")
+       VALUES
+         ($1, 'legacy-imaging-one', 'Legacy Imaging One', '  Imaging  ', 1000, 'VND', 30),
+         ($1, 'legacy-imaging-two', 'Legacy Imaging Two', 'imaging', 1000, 'VND', 30),
+         ($2, 'legacy-imaging-other-tenant', 'Legacy Imaging Other Tenant', 'Imaging', 1000, 'VND', 30)`,
+      [tenantA.id, tenantB.id],
+    );
+    await dataSource.runMigrations();
+
+    const groups = (await dataSource.query(
+      `SELECT "tenant_id", "name"
+       FROM "service_groups"
+       WHERE "tenant_id" IN ($1, $2)
+       ORDER BY "tenant_id", "name"`,
+      [tenantA.id, tenantB.id],
+    )) as Array<{ tenant_id: string; name: string }>;
+    expect(groups).toHaveLength(2);
+    expect(groups.map((group) => group.tenant_id).sort()).toEqual(
+      [tenantA.id, tenantB.id].sort(),
+    );
+    expect(
+      groups.every((group) => group.name.toLocaleLowerCase() === 'imaging'),
+    ).toBe(true);
+    const links = (await dataSource.query(
+      `SELECT "tenant_id", "code", "service_group_id"
+       FROM "services"
+       WHERE "code" LIKE 'legacy-imaging-%'
+       ORDER BY "code"`,
+    )) as Array<{ tenant_id: string; code: string; service_group_id: string }>;
+    expect(links).toHaveLength(3);
+    const linksByCode = new Map(links.map((link) => [link.code, link]));
+    expect(linksByCode.get('legacy-imaging-one')?.service_group_id).toBe(
+      linksByCode.get('legacy-imaging-two')?.service_group_id,
+    );
+    expect(linksByCode.get('legacy-imaging-one')?.service_group_id).not.toBe(
+      linksByCode.get('legacy-imaging-other-tenant')?.service_group_id,
+    );
+
+    await dataSource.undoLastMigration();
+    await dataSource.query(
+      `INSERT INTO "services" ("tenant_id", "code", "name", "group_name", "amount", "currency", "duration_minutes")
+       VALUES ($1, 'legacy-blank-group', 'Legacy Blank Group', '   ', 1000, 'VND', 30)`,
+      [tenantA.id],
+    );
+    await expect(dataSource.runMigrations()).rejects.toThrow(
+      'Cannot migrate services with a blank group_name',
+    );
+    const remainingTable = (await dataSource.query(
+      `SELECT to_regclass('service_groups') AS "tableName"`,
+    )) as Array<{ tableName: string | null }>;
+    if (remainingTable[0]?.tableName) {
+      await dataSource.query('DROP TABLE "service_groups"');
+    }
+    await dataSource.query(
+      `UPDATE "services" SET "group_name" = 'Remediated' WHERE "code" = 'legacy-blank-group'`,
+    );
+    await dataSource.runMigrations();
+  });
+
+  async function createServiceGroup(
+    agent: ReturnType<typeof request.agent>,
+    route: string,
+    name: string,
+  ): Promise<{ id: string; name: string; isActive: boolean }> {
+    const response = await agent
+      .post(route)
+      .set('Idempotency-Key', randomUUID())
+      .send({ name })
+      .expect(201);
+    return response.body as { id: string; name: string; isActive: boolean };
+  }
 
   async function createService(
     agent: ReturnType<typeof request.agent>,
     route: string,
     payload: Record<string, unknown>,
-  ): Promise<Record<string, unknown> & { id: string }> {
+  ): Promise<Record<string, unknown> & { id: string; groupName?: unknown }> {
     const response = await agent
       .post(route)
       .set('Idempotency-Key', randomUUID())
       .send(payload)
       .expect(201);
-    return response.body as Record<string, unknown> & { id: string };
+    return response.body as Record<string, unknown> & {
+      id: string;
+      groupName?: unknown;
+    };
   }
 
   async function createTenantAdmin(slug: string): Promise<{

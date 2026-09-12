@@ -11,6 +11,7 @@ import {
   useCreateServiceMutation,
   useUpdateServiceMutation,
 } from "@/features/services/services.hooks";
+import { useTenantServiceGroupsQuery } from "@/features/service-groups/service-groups.hooks";
 import {
   formatCurrencyOption,
   formatMajorAmountForInput,
@@ -47,7 +48,7 @@ const MAX_DURATION_MINUTES = 32_767;
 type ServiceFormValues = {
   code: string;
   name: string;
-  groupName: string;
+  serviceGroupId: string;
   currency: string;
   price: string;
   durationMinutes: string;
@@ -87,18 +88,23 @@ function createServiceFormSchema({
         .trim()
         .min(1, validation.required(fields("name")))
         .max(150, validation.maxLength(fields("name"), 150)),
-      groupName: z
+      serviceGroupId: z
         .string()
         .trim()
-        .min(1, validation.required(fields("groupName")))
-        .max(100, validation.maxLength(fields("groupName"), 100)),
+        .uuid(validation.required(fields("groupName"))),
       currency: z
         .string()
         .trim()
         .regex(CURRENCY_PATTERN, validation.pattern(fields("currency"))),
-      price: z.string().trim().min(1, validation.required(fields("price"))),
+      price: z
+        .string()
+        .trim()
+        .min(1, validation.required(fields("price"))),
       durationMinutes: z.string().trim(),
-      reason: z.string().trim().max(500, validation.maxLength(fields("reason"), 500)),
+      reason: z
+        .string()
+        .trim()
+        .max(500, validation.maxLength(fields("reason"), 500)),
     })
     .superRefine((values, context) => {
       const amount = CURRENCY_PATTERN.test(values.currency)
@@ -124,7 +130,10 @@ function createServiceFormSchema({
       ) {
         context.addIssue({
           code: "custom",
-          message: validation.maxNumber(fields("durationMinutes"), MAX_DURATION_MINUTES),
+          message: validation.maxNumber(
+            fields("durationMinutes"),
+            MAX_DURATION_MINUTES,
+          ),
           path: ["durationMinutes"],
         });
       }
@@ -144,11 +153,14 @@ function createServiceFormSchema({
     });
 }
 
-function getInitialValues(service: Service | undefined, locale: string): ServiceFormValues {
+function getInitialValues(
+  service: Service | undefined,
+  locale: string,
+): ServiceFormValues {
   return {
     code: service?.code ?? "",
     name: service?.name ?? "",
-    groupName: service?.groupName ?? "",
+    serviceGroupId: service?.serviceGroup.id ?? "",
     currency: service?.currency ?? "VND",
     price: service
       ? formatMajorAmountForInput(service.amount, service.currency, locale)
@@ -171,16 +183,19 @@ function buildUpdateInput({
   const amount = parseServiceAmount(values.price, values.currency, locale)!;
   const normalized = {
     name: values.name.trim(),
-    groupName: values.groupName.trim(),
+    serviceGroupId: values.serviceGroupId,
     amount,
     currency: values.currency.trim(),
     durationMinutes: Number(values.durationMinutes),
   };
 
   if (normalized.name !== service.name) input.name = normalized.name;
-  if (normalized.groupName !== service.groupName) input.groupName = normalized.groupName;
+  if (normalized.serviceGroupId !== service.serviceGroup.id) {
+    input.serviceGroupId = normalized.serviceGroupId;
+  }
   if (normalized.amount !== service.amount) input.amount = normalized.amount;
-  if (normalized.currency !== service.currency) input.currency = normalized.currency;
+  if (normalized.currency !== service.currency)
+    input.currency = normalized.currency;
   if (normalized.durationMinutes !== service.durationMinutes) {
     input.durationMinutes = normalized.durationMinutes;
   }
@@ -202,15 +217,27 @@ export function ServiceFormDialog({
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "vi-VN";
   const reasonId = useId();
   const isCreate = service === undefined;
-  const validation = useMemo(() => createValidationMessages(tValidation), [tValidation]);
+  const validation = useMemo(
+    () => createValidationMessages(tValidation),
+    [tValidation],
+  );
   const schema = useMemo(
     () => createServiceFormSchema({ locale, service, tServices, validation }),
     [locale, service, tServices, validation],
   );
-  const defaultValues = useMemo(() => getInitialValues(service, locale), [locale, service]);
+  const defaultValues = useMemo(
+    () => getInitialValues(service, locale),
+    [locale, service],
+  );
   const createMutation = useCreateServiceMutation();
   const updateMutation = useUpdateServiceMutation();
   const mutation = isCreate ? createMutation : updateMutation;
+  const serviceGroupsQuery = useTenantServiceGroupsQuery(tenantSlug, {
+    page: 1,
+    limit: 100,
+    sortBy: "name",
+    sortOrder: "ASC",
+  });
   const [idempotencyIntent, setIdempotencyIntent] =
     useState<IdempotencyIntent | null>(null);
   const {
@@ -230,8 +257,8 @@ export function ServiceFormDialog({
     : null;
   const requiresPriceReason = Boolean(
     service &&
-      amount !== null &&
-      (amount !== service.amount || currency !== service.currency),
+    amount !== null &&
+    (amount !== service.amount || currency !== service.currency),
   );
 
   useEffect(() => {
@@ -240,13 +267,28 @@ export function ServiceFormDialog({
 
   const currencyOptions = useMemo(
     () =>
-      [...new Set([...SERVICE_CURRENCY_CODES, ...(service ? [service.currency] : [])])].map(
-        (currency) => ({
-          label: formatCurrencyOption(currency, locale),
-          value: currency,
-        }),
-      ) satisfies RHFSelectOption[],
+      [
+        ...new Set([
+          ...SERVICE_CURRENCY_CODES,
+          ...(service ? [service.currency] : []),
+        ]),
+      ].map((currency) => ({
+        label: formatCurrencyOption(currency, locale),
+        value: currency,
+      })) satisfies RHFSelectOption[],
     [locale, service],
+  );
+  const serviceGroupOptions = useMemo(
+    () =>
+      (serviceGroupsQuery.data?.items ?? [])
+        .filter(
+          (group) => group.isActive || group.id === service?.serviceGroup.id,
+        )
+        .map((group) => ({
+          label: group.name,
+          value: group.id,
+        })) satisfies RHFSelectOption[],
+    [service?.serviceGroup.id, serviceGroupsQuery.data?.items],
   );
 
   function handleOpenChange(nextOpen: boolean) {
@@ -280,7 +322,7 @@ export function ServiceFormDialog({
         const input: CreateServiceInput = {
           code: values.code.trim(),
           name: values.name.trim(),
-          groupName: values.groupName.trim(),
+          serviceGroupId: values.serviceGroupId,
           amount: parseServiceAmount(values.price, values.currency, locale)!,
           currency: values.currency.trim(),
           durationMinutes: Number(values.durationMinutes),
@@ -306,7 +348,9 @@ export function ServiceFormDialog({
   return (
     <FormDialog
       contentClassName="sm:max-w-xl"
-      description={tServices(isCreate ? "form.createDescription" : "form.editDescription")}
+      description={tServices(
+        isCreate ? "form.createDescription" : "form.editDescription",
+      )}
       isDirty={isDirty}
       isSubmitting={mutation.isPending}
       noValidate
@@ -317,13 +361,17 @@ export function ServiceFormDialog({
       title={tServices(isCreate ? "form.createTitle" : "form.editTitle")}
     >
       <div className="space-y-5">
-        {errors.root?.server?.message && <Alert variant="destructive">{errors.root.server.message}</Alert>}
+        {errors.root?.server?.message && (
+          <Alert variant="destructive">{errors.root.server.message}</Alert>
+        )}
         <div className="grid items-start gap-5 sm:grid-cols-2">
           <RHFTextField
             control={control}
             disabled={!isCreate}
             fullWidth
-            helperText={tServices(isCreate ? "form.codeHint" : "form.codeLocked")}
+            helperText={tServices(
+              isCreate ? "form.codeHint" : "form.codeLocked",
+            )}
             label={tServices("form.fields.code")}
             maxLength={100}
             name="code"
@@ -338,12 +386,15 @@ export function ServiceFormDialog({
             required
           />
           <div className="sm:col-span-2">
-            <RHFTextField
+            <RHFSelect
               control={control}
+              disabled={
+                serviceGroupsQuery.isLoading || serviceGroupOptions.length === 0
+              }
               fullWidth
               label={tServices("form.fields.groupName")}
-              maxLength={100}
-              name="groupName"
+              name="serviceGroupId"
+              options={serviceGroupOptions}
               required
             />
           </div>
@@ -388,10 +439,14 @@ export function ServiceFormDialog({
                 <div className="grid gap-2">
                   <Label htmlFor={reasonId}>
                     {tServices("form.fields.reason")}
-                    <span aria-hidden="true" className="text-destructive">*</span>
+                    <span aria-hidden="true" className="text-destructive">
+                      *
+                    </span>
                   </Label>
                   <Textarea
-                    aria-describedby={fieldState.error ? `${reasonId}-message` : undefined}
+                    aria-describedby={
+                      fieldState.error ? `${reasonId}-message` : undefined
+                    }
                     aria-invalid={Boolean(fieldState.error)}
                     id={reasonId}
                     maxLength={500}
@@ -402,7 +457,10 @@ export function ServiceFormDialog({
                     value={field.value}
                   />
                   {fieldState.error?.message && (
-                    <p className="text-xs text-destructive" id={`${reasonId}-message`}>
+                    <p
+                      className="text-xs text-destructive"
+                      id={`${reasonId}-message`}
+                    >
                       {fieldState.error.message}
                     </p>
                   )}

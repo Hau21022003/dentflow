@@ -39,6 +39,10 @@ export const AuditAction = {
   SERVICE_UPDATED: 'SERVICE_UPDATED',
   SERVICE_DEACTIVATED: 'SERVICE_DEACTIVATED',
   SERVICE_ACTIVATED: 'SERVICE_ACTIVATED',
+  SERVICE_GROUP_CREATED: 'SERVICE_GROUP_CREATED',
+  SERVICE_GROUP_UPDATED: 'SERVICE_GROUP_UPDATED',
+  SERVICE_GROUP_DEACTIVATED: 'SERVICE_GROUP_DEACTIVATED',
+  SERVICE_GROUP_ACTIVATED: 'SERVICE_GROUP_ACTIVATED',
   PATIENT_CREATED: 'PATIENT_CREATED',
   PATIENT_ADMINISTRATIVE_UPDATED: 'PATIENT_ADMINISTRATIVE_UPDATED',
   APPOINTMENT_CREATED: 'APPOINTMENT_CREATED',
@@ -68,6 +72,7 @@ export type AuditResourceType =
   | 'TENANT_SETTINGS'
   | 'BRANCH'
   | 'SERVICE'
+  | 'SERVICE_GROUP'
   | 'PATIENT'
   | 'APPOINTMENT'
   | 'TREATMENT_PLAN'
@@ -157,6 +162,11 @@ const SERVICE_PAYLOAD: AuditPayloadPolicy = {
     'durationMinutes',
   ],
   after: ['changedFields', 'isActive', 'amount', 'currency', 'durationMinutes'],
+  metadata: ['reasonCode'],
+};
+const SERVICE_GROUP_PAYLOAD: AuditPayloadPolicy = {
+  before: ['changedFields', 'isActive'],
+  after: ['changedFields', 'isActive'],
   metadata: ['reasonCode'],
 };
 const PATIENT_PAYLOAD: AuditPayloadPolicy = {
@@ -424,6 +434,30 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     'SERVICE',
     true,
     SERVICE_PAYLOAD,
+  ),
+  [AuditAction.SERVICE_GROUP_CREATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'SERVICE_GROUP',
+    false,
+    SERVICE_GROUP_PAYLOAD,
+  ),
+  [AuditAction.SERVICE_GROUP_UPDATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'SERVICE_GROUP',
+    false,
+    SERVICE_GROUP_PAYLOAD,
+  ),
+  [AuditAction.SERVICE_GROUP_DEACTIVATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'SERVICE_GROUP',
+    true,
+    SERVICE_GROUP_PAYLOAD,
+  ),
+  [AuditAction.SERVICE_GROUP_ACTIVATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'SERVICE_GROUP',
+    true,
+    SERVICE_GROUP_PAYLOAD,
   ),
   [AuditAction.PATIENT_CREATED]: definition(
     AuditDomain.CLINICAL,

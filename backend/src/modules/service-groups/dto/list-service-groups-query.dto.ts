@@ -3,12 +3,8 @@ import { Transform } from 'class-transformer';
 import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
 import { PageListQueryDto } from '../../../common/dto/page-list-query.dto';
 
-export enum ServiceSortBy {
-  CODE = 'code',
+export enum ServiceGroupSortBy {
   NAME = 'name',
-  SERVICE_GROUP_NAME = 'serviceGroupName',
-  AMOUNT = 'amount',
-  DURATION_MINUTES = 'durationMinutes',
   CREATED_AT = 'createdAt',
 }
 
@@ -18,11 +14,14 @@ function parseBooleanQuery(value: unknown): unknown {
   return value;
 }
 
-export class ListServicesQueryDto extends PageListQueryDto {
-  @ApiPropertyOptional({ enum: ServiceSortBy, default: ServiceSortBy.NAME })
+export class ListServiceGroupsQueryDto extends PageListQueryDto {
+  @ApiPropertyOptional({
+    enum: ServiceGroupSortBy,
+    default: ServiceGroupSortBy.NAME,
+  })
   @IsOptional()
-  @IsEnum(ServiceSortBy)
-  declare sortBy?: ServiceSortBy;
+  @IsEnum(ServiceGroupSortBy)
+  declare sortBy?: ServiceGroupSortBy;
 
   @ApiPropertyOptional({ type: Boolean })
   @Transform(({ value }: { value: unknown }) => parseBooleanQuery(value))

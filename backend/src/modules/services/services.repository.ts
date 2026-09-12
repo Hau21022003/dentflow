@@ -14,7 +14,10 @@ export class ServicesRepository {
     tenantId: string,
     serviceId: string,
   ): Promise<Service | null> {
-    return this.ormRepository.findOne({ where: { id: serviceId, tenantId } });
+    return this.ormRepository.findOne({
+      where: { id: serviceId, tenantId },
+      relations: { serviceGroup: true },
+    });
   }
 
   async findByTenantAndIdForUpdate(

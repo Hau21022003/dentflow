@@ -3,6 +3,7 @@ import {
   IsInt,
   IsNotEmpty,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
@@ -32,12 +33,9 @@ export class CreateServiceDto {
   @MaxLength(150)
   name: string;
 
-  @ApiProperty({ maxLength: 100 })
-  @NormalizeWhitespace()
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
-  groupName: string;
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  serviceGroupId: string;
 
   @ApiProperty({ minimum: 0, maximum: MAX_SERVICE_AMOUNT })
   @IsInt()
