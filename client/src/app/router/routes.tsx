@@ -14,6 +14,7 @@ import { BranchWorkspaceHomePage } from "../../pages/workspace/branch/BranchWork
 import { DoctorHomePage } from "../../pages/workspace/doctor/DoctorHomePage";
 import { AppointmentsPage } from "../../pages/workspace/reception/AppointmentsPage";
 import { BranchManagementPage } from "../../pages/workspace/tenant/BranchManagementPage";
+import { ServiceManagementPage } from "../../pages/workspace/tenant/ServiceManagementPage";
 import { TenantHomePage } from "../../pages/workspace/tenant/TenantHomePage";
 import { StaffManagementPage } from "../../pages/workspace/tenant/StaffManagementPage";
 import { AppLayout } from "../layouts/AppLayout";
@@ -128,6 +129,15 @@ export const routes: RouteObject[] = [
                         children: [
                           { index: true, element: <BranchManagementPage /> },
                         ],
+                      },
+                      {
+                        path: "services",
+                        element: (
+                          <RequireTenantPermission
+                            permission={PERMISSIONS.serviceCatalogManage}
+                          />
+                        ),
+                        children: [{ index: true, element: <ServiceManagementPage /> }],
                       },
                       {
                         path: "staff",

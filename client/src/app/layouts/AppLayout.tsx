@@ -325,6 +325,22 @@ export function AppLayout() {
         hasTenantPermission(
           user,
           { slug: tenantSlug },
+          PERMISSIONS.serviceCatalogManage,
+        )
+      ) {
+        tenantItems.push({
+          end: true,
+          icon: Tags,
+          kind: "link",
+          label: t("navigation.services"),
+          to: pathFor.workspaceTenantServices(tenantSlug),
+        });
+      }
+
+      if (
+        hasTenantPermission(
+          user,
+          { slug: tenantSlug },
           PERMISSIONS.staffManage,
         )
       ) {

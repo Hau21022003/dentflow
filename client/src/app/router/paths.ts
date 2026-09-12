@@ -13,6 +13,7 @@ export const PATHS = {
   workspaceTenant: "/workspace/:tenantSlug",
   workspaceTenantHome: "/workspace/:tenantSlug/tenant",
   workspaceTenantBranches: "/workspace/:tenantSlug/tenant/branches",
+  workspaceTenantServices: "/workspace/:tenantSlug/tenant/services",
   workspaceTenantStaff: "/workspace/:tenantSlug/tenant/staff",
   workspaceBranch: "/workspace/:tenantSlug/branches/:branchSlug",
   workspaceReceptionAppointments:
@@ -35,6 +36,8 @@ export const pathFor = {
     `/workspace/${toPathSegment(tenantSlug)}/tenant`,
   workspaceTenantBranches: (tenantSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/tenant/branches`,
+  workspaceTenantServices: (tenantSlug: string) =>
+    `/workspace/${toPathSegment(tenantSlug)}/tenant/services`,
   workspaceTenantStaff: (tenantSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/tenant/staff`,
   workspaceBranch: (tenantSlug: string, branchSlug: string) =>

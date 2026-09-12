@@ -1,0 +1,80 @@
+{
+  "eyebrow": "Quản trị tenant · {{tenantName}}",
+  "title": "Quản lý dịch vụ",
+  "description": "Quản lý danh mục dịch vụ điều trị dùng chung và trạng thái sử dụng trong tenant.",
+  "loading": "Đang tải dịch vụ…",
+  "statuses": {
+    "ACTIVE": "Đang hoạt động",
+    "INACTIVE": "Ngừng hoạt động"
+  },
+  "actions": {
+    "create": "Tạo dịch vụ",
+    "save": "Lưu thay đổi",
+    "cancel": "Hủy",
+    "retry": "Thử lại",
+    "openActions": "Mở thao tác cho {{name}}",
+    "edit": "Chỉnh sửa",
+    "deactivate": "Ngừng hoạt động",
+    "activate": "Kích hoạt lại dịch vụ",
+    "saving": "Đang lưu"
+  },
+  "table": {
+    "title": "Danh mục dịch vụ",
+    "description": "Danh mục thuộc tenant hiện tại và bao gồm cả dịch vụ đã ngừng hoạt động.",
+    "searchPlaceholder": "Tìm theo mã, tên hoặc nhóm…",
+    "name": "Dịch vụ",
+    "groupName": "Nhóm",
+    "price": "Giá niêm yết",
+    "duration": "Thời lượng",
+    "durationValue": "{{minutes}} phút",
+    "status": "Trạng thái",
+    "createdAt": "Ngày tạo",
+    "actions": "Thao tác"
+  },
+  "filters": {
+    "statusTitle": "Lọc trạng thái",
+    "statusDescription": "Chỉ hiển thị dịch vụ có trạng thái đã chọn."
+  },
+  "empty": {
+    "title": "Chưa có dịch vụ",
+    "description": "Tạo dịch vụ điều trị đầu tiên cho tenant này."
+  },
+  "errors": {
+    "listTitle": "Không thể tải danh mục dịch vụ"
+  },
+  "form": {
+    "createTitle": "Tạo dịch vụ",
+    "createDescription": "Dịch vụ sẽ được tạo ở trạng thái hoạt động trong tenant hiện tại.",
+    "editTitle": "Chỉnh sửa dịch vụ",
+    "editDescription": "Cập nhật thông tin danh mục mà không thay đổi mã dịch vụ.",
+    "codeHint": "Chỉ dùng chữ thường, số và dấu gạch nối.",
+    "codeLocked": "Mã dịch vụ là bất biến sau khi tạo.",
+    "priceChangeReasonHint": "Phải nêu lý do khi thay đổi giá niêm yết hoặc tiền tệ.",
+    "priceChangeReasonRequired": "Vui lòng nhập lý do thay đổi giá hoặc tiền tệ.",
+    "amountLimit": "Số tiền không được vượt quá {{max}} đơn vị tiền tệ nhỏ nhất.",
+    "fields": {
+      "code": "Mã dịch vụ",
+      "name": "Tên dịch vụ",
+      "groupName": "Nhóm dịch vụ",
+      "currency": "Tiền tệ",
+      "price": "Giá niêm yết",
+      "durationMinutes": "Thời lượng (phút)",
+      "reason": "Lý do"
+    }
+  },
+  "lifecycle": {
+    "reasonRequired": "Vui lòng nhập lý do cho thao tác này.",
+    "reasonTooLong": "Lý do không được vượt quá 500 ký tự.",
+    "deactivate": {
+      "title": "Ngừng hoạt động dịch vụ",
+      "description": "Bạn sắp ngừng hoạt động {{name}}.",
+      "notice": "Dịch vụ không bị xóa. Dịch vụ sẽ không thể dùng cho hồ sơ điều trị mới cho đến khi được kích hoạt lại.",
+      "confirm": "Ngừng hoạt động dịch vụ"
+    },
+    "activate": {
+      "title": "Kích hoạt lại dịch vụ",
+      "description": "Bạn sắp kích hoạt lại {{name}}.",
+      "confirm": "Kích hoạt lại dịch vụ"
+    }
+  }
+}

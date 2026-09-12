@@ -1,0 +1,80 @@
+{
+  "eyebrow": "Tenant Admin · {{tenantName}}",
+  "title": "Service management",
+  "description": "Maintain the tenant-wide treatment service catalog and its availability.",
+  "loading": "Loading services…",
+  "statuses": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive"
+  },
+  "actions": {
+    "create": "Create service",
+    "save": "Save changes",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "openActions": "Open actions for {{name}}",
+    "edit": "Edit",
+    "deactivate": "Deactivate",
+    "activate": "Reactivate service",
+    "saving": "Saving"
+  },
+  "table": {
+    "title": "Service catalog",
+    "description": "The catalog is scoped to the current tenant and includes inactive services.",
+    "searchPlaceholder": "Search code, name, or group…",
+    "name": "Service",
+    "groupName": "Group",
+    "price": "List price",
+    "duration": "Duration",
+    "durationValue": "{{minutes}} min",
+    "status": "Status",
+    "createdAt": "Created",
+    "actions": "Actions"
+  },
+  "filters": {
+    "statusTitle": "Filter status",
+    "statusDescription": "Show only services with the selected status."
+  },
+  "empty": {
+    "title": "No services yet",
+    "description": "Create the first treatment service for this tenant."
+  },
+  "errors": {
+    "listTitle": "We could not load the service catalog"
+  },
+  "form": {
+    "createTitle": "Create service",
+    "createDescription": "The service will be created as active in the current tenant.",
+    "editTitle": "Edit service",
+    "editDescription": "Update the catalog details without changing the service code.",
+    "codeHint": "Use lowercase letters, numbers, and hyphens only.",
+    "codeLocked": "The code is immutable after creation.",
+    "priceChangeReasonHint": "A reason is required when changing the listed price or currency.",
+    "priceChangeReasonRequired": "Enter a reason for the price or currency change.",
+    "amountLimit": "The amount must not exceed {{max}} minor currency units.",
+    "fields": {
+      "code": "Service code",
+      "name": "Service name",
+      "groupName": "Service group",
+      "currency": "Currency",
+      "price": "List price",
+      "durationMinutes": "Duration (minutes)",
+      "reason": "Reason"
+    }
+  },
+  "lifecycle": {
+    "reasonRequired": "Enter a reason for this action.",
+    "reasonTooLong": "Reason must not exceed 500 characters.",
+    "deactivate": {
+      "title": "Deactivate service",
+      "description": "You are about to deactivate {{name}}.",
+      "notice": "The service is not deleted. It will be unavailable for new treatment records until it is reactivated.",
+      "confirm": "Deactivate service"
+    },
+    "activate": {
+      "title": "Reactivate service",
+      "description": "You are about to reactivate {{name}}.",
+      "confirm": "Reactivate service"
+    }
+  }
+}

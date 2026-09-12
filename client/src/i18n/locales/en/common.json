@@ -9,8 +9,9 @@
     "tenantAdministration": "Tenant administration",
     "branchOperations": "Branch operations",
     "tenantOverview": "Tenant overview",
-    "branches": "Branch management",
-    "branchOverview": "Branch overview",
+      "branches": "Branch management",
+      "services": "Services",
+      "branchOverview": "Branch overview",
     "staff": "Staff",
     "appointments": "Appointments",
     "doctorWorkspace": "Doctor workspace"

@@ -9,8 +9,9 @@
     "tenantAdministration": "Quản trị tenant",
     "branchOperations": "Vận hành chi nhánh",
     "tenantOverview": "Tổng quan tenant",
-    "branches": "Quản lý chi nhánh",
-    "branchOverview": "Tổng quan chi nhánh",
+      "branches": "Quản lý chi nhánh",
+      "services": "Dịch vụ",
+      "branchOverview": "Tổng quan chi nhánh",
     "staff": "Nhân sự",
     "appointments": "Lịch hẹn",
     "doctorWorkspace": "Workspace bác sĩ"

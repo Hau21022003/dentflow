@@ -74,7 +74,8 @@ Kết nối domain gửi mail riêng của tenant là roadmap sau MVP. Chỉ tri
 
 - Tạo/cập nhật/ngừng hoạt động hoặc mở lại branch trong tenant; không xóa dữ liệu vận hành để tránh mất audit trail. Đóng/mở lại bắt buộc reason và audit; role assignment không bị thu hồi tự động.
 - Route vận hành branch-scoped mặc định bị chặn khi branch `INACTIVE`. Route đọc lịch sử phải khai báo ngoại lệ rõ ràng; audit log branch vẫn đọc được để phục vụ kiểm soát sau khi đóng.
-- Quản lý danh mục dịch vụ chung của tenant. Giá niêm yết mới chỉ áp dụng cho các hạng mục/lịch hẹn tạo sau theo policy; không làm thay đổi `PatientInvoice` hay `Payment` đã ghi nhận.
+- Quản lý danh mục dịch vụ chung của tenant: `code` slug bất biến và unique trong tenant, `name`, `groupName` text tự do, `amount` số nguyên theo đơn vị nhỏ nhất của `currency` ISO-4217, `durationMinutes` dương và `isActive`. Không có bảng nhóm riêng, version giá hoặc hard-delete trong MVP.
+- Giá niêm yết mới chỉ áp dụng cho các hạng mục/lịch hẹn tạo sau theo policy; appointment/treatment/invoice sẽ snapshot service price/currency khi được tạo. Sửa catalog không làm thay đổi `PatientInvoice` hay `Payment` đã ghi nhận. Đổi `amount` hoặc `currency`, deactivate và activate bắt buộc reason tối đa 500 ký tự cùng audit log.
 - Tenant Admin theo dõi cấu hình branch nhưng không thực hiện thay `BRANCH_ADMIN` các điều phối ca thường nhật trong MVP.
 
 ### User, role và branch scope
@@ -123,7 +124,11 @@ Các endpoint nội bộ trong tài liệu này yêu cầu tenant context đã x
 - `PATCH /tenants/:tenantSlug/branches/:branchSlug`: chỉ đổi name, address, phone và timezone. `branchSlug` và status không đổi qua endpoint này; branch luôn được tìm bằng `(tenantId đã resolve, branchSlug)`.
 - `POST /tenants/:tenantSlug/branches/:branchSlug/deactivate`: chuyển branch sang `INACTIVE`, bắt buộc reason; không hard-delete hoặc tự thu hồi role assignment đang active.
 - `POST /tenants/:tenantSlug/branches/:branchSlug/activate`: chuyển branch `INACTIVE` về `ACTIVE`, bắt buộc reason; role assignment được giữ nguyên nên lại có hiệu lực với các route branch-scoped khi branch mở lại.
-- `GET/POST/PATCH /services`
+- `GET /tenants/:tenantSlug/services`: list phân trang catalog của tenant đã resolve, mặc định gồm cả active và inactive; hỗ trợ `search` theo code/name/group, lọc `isActive`, `page`, `limit`, `sortBy` (`code`, `name`, `groupName`, `amount`, `durationMinutes`, `createdAt`) và `sortOrder`.
+- `GET /tenants/:tenantSlug/services/:serviceId`: đọc một service trong tenant đã resolve; service ID ngoài tenant trả `404`.
+- `POST /tenants/:tenantSlug/services`: tạo service active với `code`, `name`, `groupName`, `amount`, `currency`, `durationMinutes`. `code` chỉ gồm chữ thường, số, dấu gạch nối, unique trong tenant và không đổi sau khi tạo. `amount` là số nguyên không âm theo đơn vị nhỏ nhất của currency ISO-4217; request không nhận `tenantId` hoặc `isActive`.
+- `PATCH /tenants/:tenantSlug/services/:serviceId`: chỉ đổi `name`, `groupName`, `amount`, `currency`, `durationMinutes`; từ chối `code` và `isActive`. Payload có `amount` hoặc `currency` phải có `reason` tối đa 500 ký tự.
+- `POST /tenants/:tenantSlug/services/:serviceId/deactivate` và `/activate`: chuyển trạng thái với `{ reason }`; không hard-delete. Command không đổi trạng thái trả resource hiện tại và không ghi audit mới.
 - `GET /tenants/:tenantSlug/staff`: list phân trang roster `ACTIVE`/`DISABLED` và invitation `INVITED`; search chỉ trên tên/email nhân sự trong tenant.
 - `POST /tenants/:tenantSlug/staff/invitations`, `POST .../invitations/:invitationId/resend`, `POST .../invitations/:invitationId/revoke`
 - `POST /tenants/:tenantSlug/staff/:userId/disable`, `POST .../enable`
@@ -135,11 +140,13 @@ Các endpoint nội bộ trong tài liệu này yêu cầu tenant context đã x
 
 Settings API không nhận credential mail/provider hoặc `tenantId` để chọn tenant. Các command tạo, cập nhật, ngừng hoạt động hoặc mở lại branch bắt buộc `Idempotency-Key`, validation tenant scope và audit log cùng transaction. Audit branch chỉ ghi status/changed field an toàn, không ghi địa chỉ hay số điện thoại. `TenantScope('branch')` chặn branch `INACTIVE` trước authorization, trừ route read-only khai báo `@AllowInactiveBranchAccess()`; guard này không áp dụng lên command tenant-wide đóng/mở branch. Giờ hoạt động, slot duration và appointment rules chưa thuộc API branch V1 vì chưa có schema riêng.
 
-Các command staff trên (trừ accept capability) bắt buộc `Idempotency-Key`. Disable/enable/revoke role/revoke invitation bắt buộc `reason` tối đa 500 ký tự. Request role nhận fixed `roleCode` và `branchSlugs`: `TENANT_ADMIN` không có branch, còn role branch-scoped phải có một hay nhiều slug branch `ACTIVE` trong tenant đã resolve.
+Các command staff trên (trừ accept capability) và toàn bộ command service (`create`, `update`, `deactivate`, `activate`) bắt buộc `Idempotency-Key`. Disable/enable/revoke role/revoke invitation bắt buộc `reason` tối đa 500 ký tự. Request role nhận fixed `roleCode` và `branchSlugs`: `TENANT_ADMIN` không có branch, còn role branch-scoped phải có một hay nhiều slug branch `ACTIVE` trong tenant đã resolve.
 
 ## 9. Acceptance criteria và test
 
 - Tenant Admin cập nhật display name, locale, timezone và cấu hình lịch mặc định trong tenant của mình; thay đổi timezone tạo cảnh báo và audit log.
+- Tenant Admin tạo/list/update service, lọc trạng thái và deactivate/activate bằng idempotency; mã service unique theo tenant, bất biến, không hard-delete, còn giá/currency thay đổi phải có reason và audit.
+- Giá catalog mới không hồi tố dữ liệu điều trị/thanh toán; khi các module appointment/treatment/invoice được triển khai, chúng chỉ chọn service active và snapshot giá/currency tại thời điểm tạo.
 - Tenant Admin tạo branch/service, mời user và gán role/branch scope hợp lệ; không tạo được role/permission tuỳ ý hoặc assignment ở tenant khác.
 - Tenant Admin có thể deactivate rồi activate lại branch với idempotency và audit; branch inactive bị chặn khỏi route vận hành branch-scoped nhưng audit log lịch sử vẫn đọc được theo quyền.
 - Tenant Admin không có `DENTIST` nhận `403` khi tạo/sửa clinical note, diagnosis hoặc treatment plan; không gọi được endpoint sửa/xóa payment điều trị.

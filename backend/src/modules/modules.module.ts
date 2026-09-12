@@ -10,6 +10,7 @@ import { SubscriptionPlansModule } from './subscription-plans/subscription-plans
 import { TenantsModule } from './tenants/tenants.module';
 import { UsersModule } from './users/users.module';
 import { StaffModule } from './staff/staff.module';
+import { ServicesModule } from './services/services.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { StaffModule } from './staff/staff.module';
     TenantsModule,
     SubscriptionPlansModule,
     BranchesModule,
+    ServicesModule,
     IdempotencyModule,
     EmailTemplatesModule,
     AuditModule,
