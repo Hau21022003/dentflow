@@ -19,7 +19,7 @@ export class StaffInvitationProducer {
       StaffInvitationJobName.SEND_STAFF_INVITATION,
       { invitationId },
       {
-        jobId: `staff-invitation:${invitationId}`,
+        jobId: `staff-invitation-${invitationId}`,
         attempts: 5,
         backoff: { type: 'exponential', delay: 1_000 },
         removeOnComplete: 1_000,

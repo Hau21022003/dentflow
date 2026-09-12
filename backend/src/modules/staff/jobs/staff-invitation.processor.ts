@@ -3,17 +3,18 @@ import { Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import type { Job } from 'bullmq';
 import { DataSource } from 'typeorm';
+import { AppLogger } from '../../../common/logging/app-logger.service';
 import { AppConfigService } from '../../../config/app-config.service';
 import { EMAIL_SENDER, type EmailSender } from '../../../infrastructure/email';
-import {
-  EmailTemplateRenderError,
-  EmailTemplateRenderer,
-} from '../../email-templates/email-template-renderer.service';
 import {
   EmailTemplateKey,
   EmailTemplateLocale,
   normalizeEmailTemplateLocale,
 } from '../../email-templates/email-template-registry';
+import {
+  EmailTemplateRenderError,
+  EmailTemplateRenderer,
+} from '../../email-templates/email-template-renderer.service';
 import {
   StaffInvitation,
   StaffInvitationDeliveryStatus,
@@ -35,6 +36,7 @@ export class StaffInvitationProcessor extends WorkerHost {
     private readonly appConfig: AppConfigService,
     private readonly tokenService: StaffInvitationTokenService,
     private readonly emailTemplateRenderer: EmailTemplateRenderer,
+    private readonly logger: AppLogger,
   ) {
     super();
   }
@@ -98,6 +100,12 @@ export class StaffInvitationProcessor extends WorkerHost {
         return;
       }
       await this.markFailed(invitation.id, 'DELIVERY_FAILED');
+      this.logger.error(
+        'staff_invitation_delivery_failed',
+        error,
+        { invitationId: invitation.id, jobId: job.id },
+        StaffInvitationProcessor.name,
+      );
       throw error;
     }
   }

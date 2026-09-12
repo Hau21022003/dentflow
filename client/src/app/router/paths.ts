@@ -2,6 +2,7 @@ export const PATHS = {
   root: "/",
   login: "/login",
   acceptTenantOwnerInvitation: "/accept-tenant-owner-invitation",
+  acceptStaffInvitation: "/accept-staff-invitation",
   forbidden: "/forbidden",
   patients: "/patients",
   platform: "/platform",
@@ -12,9 +13,8 @@ export const PATHS = {
   workspaceTenant: "/workspace/:tenantSlug",
   workspaceTenantHome: "/workspace/:tenantSlug/tenant",
   workspaceTenantBranches: "/workspace/:tenantSlug/tenant/branches",
+  workspaceTenantStaff: "/workspace/:tenantSlug/tenant/staff",
   workspaceBranch: "/workspace/:tenantSlug/branches/:branchSlug",
-  workspaceBranchStaff:
-    "/workspace/:tenantSlug/branches/:branchSlug/branch/staff",
   workspaceReceptionAppointments:
     "/workspace/:tenantSlug/branches/:branchSlug/reception/appointments",
   workspaceDoctor: "/workspace/:tenantSlug/branches/:branchSlug/doctor",
@@ -35,10 +35,10 @@ export const pathFor = {
     `/workspace/${toPathSegment(tenantSlug)}/tenant`,
   workspaceTenantBranches: (tenantSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/tenant/branches`,
+  workspaceTenantStaff: (tenantSlug: string) =>
+    `/workspace/${toPathSegment(tenantSlug)}/tenant/staff`,
   workspaceBranch: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}`,
-  workspaceBranchStaff: (tenantSlug: string, branchSlug: string) =>
-    `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/branch/staff`,
   workspaceReceptionAppointments: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/reception/appointments`,
   workspaceDoctor: (tenantSlug: string, branchSlug: string) =>

@@ -32,8 +32,10 @@ export function TenantHomePage() {
             Quản lý branch
           </Link>
         </Button>
-        <Button disabled type="button" variant="outline">
-          Mời nhân sự
+        <Button asChild type="button" variant="outline">
+          <Link to={pathFor.workspaceTenantStaff(tenantSlug)}>
+            Mời nhân sự
+          </Link>
         </Button>
       </div>
       <StaticMetricGrid

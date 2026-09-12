@@ -9,6 +9,7 @@ import enPlans from "./locales/en/plans.json";
 import enValidation from "./locales/en/validation.json";
 import enTenants from "./locales/en/tenants.json";
 import enInvitations from "./locales/en/invitations.json";
+import enStaff from "./locales/en/staff.json";
 import viBranches from "./locales/vi/branches.json";
 import viCommon from "./locales/vi/common.json";
 import viEmailTemplates from "./locales/vi/email-templates.json";
@@ -17,6 +18,7 @@ import viPlans from "./locales/vi/plans.json";
 import viValidation from "./locales/vi/validation.json";
 import viTenants from "./locales/vi/tenants.json";
 import viInvitations from "./locales/vi/invitations.json";
+import viStaff from "./locales/vi/staff.json";
 
 export const supportedLanguages = ["vi", "en"] as const;
 
@@ -34,6 +36,7 @@ i18n
       "invitations",
       "patients",
       "plans",
+      "staff",
       "tenants",
       "validation",
     ],
@@ -46,6 +49,7 @@ i18n
         invitations: enInvitations,
         patients: enPatients,
         plans: enPlans,
+        staff: enStaff,
         tenants: enTenants,
         validation: enValidation,
       },
@@ -56,6 +60,7 @@ i18n
         invitations: viInvitations,
         patients: viPatients,
         plans: viPlans,
+        staff: viStaff,
         tenants: viTenants,
         validation: viValidation,
       },

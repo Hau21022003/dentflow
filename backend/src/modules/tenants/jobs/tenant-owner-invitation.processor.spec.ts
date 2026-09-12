@@ -1,4 +1,5 @@
 import type { Job } from 'bullmq';
+import { AppLogger } from 'src/common/logging/app-logger.service';
 import type { DataSource } from 'typeorm';
 import { AppConfigService } from '../../../config/app-config.service';
 import { type EmailSender } from '../../../infrastructure/email';
@@ -29,6 +30,7 @@ describe('TenantOwnerInvitationProcessor', () => {
   const renderPublished = jest.fn();
   const renderer = { renderPublished } as unknown as EmailTemplateRenderer;
   const createToken = jest.fn(() => 'synthetic-token');
+  const logger = { error: jest.fn() } as unknown as AppLogger;
   const tokenService = {
     createToken,
   } as unknown as TenantInvitationTokenService;
@@ -41,6 +43,7 @@ describe('TenantOwnerInvitationProcessor', () => {
     appConfig,
     tokenService,
     renderer,
+    logger,
   );
 
   beforeEach(() => {

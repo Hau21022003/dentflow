@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import type { Job } from 'bullmq';
 import { DataSource } from 'typeorm';
+import { AppLogger } from '../../../common/logging/app-logger.service';
 import { AppConfigService } from '../../../config/app-config.service';
 import { EMAIL_SENDER, type EmailSender } from '../../../infrastructure/email';
 import {
@@ -35,13 +36,23 @@ export class TenantOwnerInvitationProcessor extends WorkerHost {
     private readonly appConfig: AppConfigService,
     private readonly tokenService: TenantInvitationTokenService,
     private readonly emailTemplateRenderer: EmailTemplateRenderer,
+    private readonly logger: AppLogger,
   ) {
     super();
   }
 
   async process(job: Job<SendTenantOwnerInvitationJob>): Promise<void> {
     if (job.name !== TenantInvitationJobName.SEND_OWNER_INVITATION) {
-      throw new Error('Unsupported tenant invitation notification job.');
+      const error = new Error(
+        'Unsupported tenant invitation notification job.',
+      );
+      this.logger.error(
+        'tenant_owner_invitation_job_unsupported',
+        error,
+        { jobId: job.id, jobName: job.name },
+        TenantOwnerInvitationProcessor.name,
+      );
+      throw error;
     }
 
     const invitation = await this.dataSource
@@ -104,6 +115,12 @@ export class TenantOwnerInvitationProcessor extends WorkerHost {
         return;
       }
       await this.markFailed(invitation.id, 'DELIVERY_FAILED');
+      this.logger.error(
+        'tenant_owner_invitation_delivery_failed',
+        error,
+        { invitationId: invitation.id, jobId: job.id },
+        TenantOwnerInvitationProcessor.name,
+      );
       throw error;
     }
   }

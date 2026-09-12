@@ -6,8 +6,8 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { randomUUID } from 'node:crypto';
 import { hash } from 'bcrypt';
+import { randomUUID } from 'node:crypto';
 import {
   DataSource,
   EntityManager,
@@ -16,8 +16,6 @@ import {
   QueryFailedError,
 } from 'typeorm';
 import { AppConfigService } from '../../config/app-config.service';
-import { Branch, BranchStatus } from '../branches/entities/branch.entity';
-import { Tenant } from '../tenants/entities/tenant.entity';
 import { AuditAction } from '../audit/audit-actions';
 import { AuditLogService } from '../audit/audit-log.service';
 import { AuditActorType } from '../audit/entities/audit-log.entity';
@@ -26,18 +24,20 @@ import {
   RoleAssignment,
   TenantRoleCode,
 } from '../authorization/entities/role-assignment.entity';
+import { Branch, BranchStatus } from '../branches/entities/branch.entity';
+import { Tenant } from '../tenants/entities/tenant.entity';
 import { User, UserStatus } from '../users/entities/user.entity';
 import { AcceptStaffInvitationDto } from './dto/accept-staff-invitation.dto';
 import { CreateStaffInvitationDto } from './dto/create-staff-invitation.dto';
 import { GrantRoleAssignmentsDto } from './dto/grant-role-assignments.dto';
 import { ListStaffQueryDto, StaffListStatus } from './dto/list-staff-query.dto';
 import { ProposedRoleAssignmentDto } from './dto/proposed-role-assignment.dto';
+import { StaffInvitationAssignment } from './entities/staff-invitation-assignment.entity';
 import {
   StaffInvitation,
   StaffInvitationDeliveryStatus,
   StaffInvitationStatus,
 } from './entities/staff-invitation.entity';
-import { StaffInvitationAssignment } from './entities/staff-invitation-assignment.entity';
 import {
   TenantUserMembership,
   TenantUserMembershipStatus,

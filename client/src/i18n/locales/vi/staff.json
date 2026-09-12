@@ -1,0 +1,136 @@
+{
+  "eyebrow": "Workspace · Tenant Admin",
+  "title": "Quản lý nhân sự",
+  "description": "Mời nhân sự, quản lý membership tenant và cấp role cố định theo các chi nhánh đang hoạt động.",
+  "loading": "Đang tải nhân sự",
+  "roles": {
+    "TENANT_ADMIN": "Quản trị tenant",
+    "BRANCH_ADMIN": "Quản trị chi nhánh",
+    "RECEPTIONIST": "Lễ tân",
+    "DENTIST": "Bác sĩ"
+  },
+  "status": {
+    "ALL": "Tất cả trạng thái",
+    "ACTIVE": "Đang hoạt động",
+    "DISABLED": "Đã vô hiệu hóa",
+    "INVITED": "Đã mời"
+  },
+  "delivery": {
+    "PENDING": "Đang chờ gửi lời mời",
+    "SENT": "Đã gửi lời mời",
+    "FAILED": "Gửi lời mời thất bại"
+  },
+  "scope": {
+    "tenantWide": "Toàn tenant",
+    "inactive": "Chi nhánh đã đóng",
+    "unavailable": "Chi nhánh không còn khả dụng"
+  },
+  "table": {
+    "title": "Nhân sự và lời mời",
+    "description": "Quản lý quyền tại {{tenant}} mà không thay đổi trạng thái User toàn cục.",
+    "searchPlaceholder": "Tìm tên hoặc email nhân sự...",
+    "staff": "Nhân sự",
+    "access": "Role và phạm vi",
+    "status": "Trạng thái",
+    "statusFilter": "Lọc trạng thái nhân sự",
+    "actions": "Thao tác",
+    "expiresAt": "Hết hạn {{date}}"
+  },
+  "form": {
+    "email": "Email",
+    "fullName": "Họ và tên",
+    "reason": "Lý do",
+    "reasonOptional": "Không bắt buộc; được lưu trong audit log.",
+    "assignments": "Phân quyền",
+    "assignmentsHint": "Role là cố định. Role theo chi nhánh cần ít nhất một chi nhánh đang hoạt động.",
+    "role": "Vai trò",
+    "branches": "Chi nhánh đang hoạt động",
+    "tenantAdminScope": "Quản trị tenant luôn có quyền trên toàn tenant.",
+    "noActiveBranches": "Hãy tạo hoặc kích hoạt lại chi nhánh trước khi gán role theo chi nhánh."
+  },
+  "validation": {
+    "assignmentScope": "Hãy chọn ít nhất một chi nhánh đang hoạt động cho mọi role theo chi nhánh.",
+    "reasonRequired": "Hãy nhập lý do cho thao tác này.",
+    "reasonLength": "Lý do tối đa 500 ký tự."
+  },
+  "invite": {
+    "title": "Mời nhân sự",
+    "description": "Người nhận chưa có bất kỳ quyền tenant nào cho đến khi chấp nhận lời mời qua email."
+  },
+  "grant": {
+    "title": "Cấp role",
+    "description": "Thêm role cố định mới cho {{name}}. Phạm vi hiện có không bị thay đổi."
+  },
+  "actions": {
+    "invite": "Mời nhân sự",
+    "sendInvitation": "Gửi lời mời",
+    "grantRoles": "Cấp role",
+    "addRole": "Thêm role",
+    "removeRole": "Xóa {{role}}",
+    "cancel": "Hủy",
+    "saving": "Đang lưu",
+    "retry": "Thử lại",
+    "openMenu": "Mở thao tác cho {{name}}",
+    "disable": {
+      "label": "Vô hiệu hóa truy cập",
+      "title": "Vô hiệu hóa truy cập nhân sự",
+      "description": "{{name}} sẽ mất quyền tenant ngay lập tức. Lịch sử role vẫn được giữ để có thể kích hoạt lại.",
+      "confirm": "Vô hiệu hóa truy cập"
+    },
+    "enable": {
+      "label": "Kích hoạt truy cập",
+      "title": "Kích hoạt truy cập nhân sự",
+      "description": "{{name}} sẽ có lại quyền từ các role assignment còn hiệu lực.",
+      "confirm": "Kích hoạt truy cập"
+    },
+    "resend": {
+      "label": "Gửi lại lời mời",
+      "title": "Gửi lại lời mời",
+      "description": "Một link lời mời mới sẽ được gửi cho {{name}}. Link trước đó sẽ không còn hiệu lực.",
+      "confirm": "Gửi lại lời mời"
+    },
+    "revokeInvitation": {
+      "label": "Thu hồi lời mời",
+      "title": "Thu hồi lời mời",
+      "description": "{{name}} sẽ không thể tiếp tục dùng link lời mời này.",
+      "confirm": "Thu hồi lời mời"
+    },
+    "revokeRole": {
+      "label": "Thu hồi {{role}}",
+      "title": "Thu hồi role",
+      "description": "Thu hồi {{role}} của {{name}}. Quyền truy cập có thể giảm ngay lập tức.",
+      "confirm": "Thu hồi role"
+    }
+  },
+  "errors": {
+    "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "listTitle": "Không thể tải danh sách nhân sự"
+  },
+  "empty": {
+    "title": "Không tìm thấy nhân sự",
+    "description": "Hãy mời nhân sự hoặc điều chỉnh tìm kiếm và bộ lọc trạng thái."
+  },
+  "accept": {
+    "title": "Chấp nhận lời mời nhân sự",
+    "description": "Hoàn tất lời mời để nhận quyền truy cập tenant DentFlow.",
+    "invalidTitle": "Link lời mời không hợp lệ",
+    "invalidDescription": "Link không có invitation token. Hãy mở lại link trong email lời mời.",
+    "signedInTitle": "Xác nhận bằng tài khoản hiện tại",
+    "signedInDescription": "Bạn đang đăng nhập bằng {{email}}. Tài khoản này phải trùng email được mời.",
+    "newUserTitle": "Tạo mật khẩu",
+    "newUserDescription": "Membership và role tenant chỉ được tạo sau khi bạn chấp nhận lời mời này.",
+    "fields": {
+      "password": "Mật khẩu"
+    },
+    "passwordHint": "Tối thiểu 12 ký tự.",
+    "actions": {
+      "accept": "Chấp nhận lời mời",
+      "accepting": "Đang xác nhận...",
+      "switchAccount": "Dùng tài khoản khác"
+    },
+    "success": {
+      "newUser": "Tài khoản đã sẵn sàng. Hãy đăng nhập để tiếp tục.",
+      "existingUser": "Đã chấp nhận lời mời. Đang mở workspace tenant..."
+    }
+  }
+}

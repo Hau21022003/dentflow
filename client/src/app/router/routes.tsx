@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from "react-router-dom";
 import { PERMISSIONS } from "@/features/auth/auth.types";
 import { LoginPage } from "../../pages/auth/LoginPage";
 import { AcceptTenantOwnerInvitationPage } from "../../pages/auth/AcceptTenantOwnerInvitationPage";
+import { AcceptStaffInvitationPage } from "../../pages/auth/AcceptStaffInvitationPage";
 import { PatientsListPage } from "../../pages/patients/PatientsListPage";
 import { PlatformHomePage } from "../../pages/platform/PlatformHomePage";
 import { EmailTemplateDetailPage } from "../../pages/platform/EmailTemplateDetailPage";
@@ -10,11 +11,11 @@ import { SubscriptionPlanManagementPage } from "../../pages/platform/Subscriptio
 import { TenantManagementPage } from "../../pages/platform/TenantManagementPage";
 import { TenantDetailPage } from "../../pages/platform/TenantDetailPage";
 import { BranchWorkspaceHomePage } from "../../pages/workspace/branch/BranchWorkspaceHomePage";
-import { StaffManagementPage } from "../../pages/workspace/branch/StaffManagementPage";
 import { DoctorHomePage } from "../../pages/workspace/doctor/DoctorHomePage";
 import { AppointmentsPage } from "../../pages/workspace/reception/AppointmentsPage";
 import { BranchManagementPage } from "../../pages/workspace/tenant/BranchManagementPage";
 import { TenantHomePage } from "../../pages/workspace/tenant/TenantHomePage";
+import { StaffManagementPage } from "../../pages/workspace/tenant/StaffManagementPage";
 import { AppLayout } from "../layouts/AppLayout";
 import { RoleHomeRedirect } from "./RoleHomeRedirect";
 import {
@@ -30,11 +31,16 @@ import { RequirePlatformPermission } from "./guards/RequirePlatformPermission";
 import { RequireTenantAccess } from "./guards/RequireTenantAccess";
 import { RequireTenantPermission } from "./guards/RequireTenantPermission";
 import { PATHS } from "./paths";
+import { LegacyBranchStaffRedirect } from "./LegacyBranchStaffRedirect";
 
 export const routes: RouteObject[] = [
   {
     path: PATHS.acceptTenantOwnerInvitation,
     element: <AcceptTenantOwnerInvitationPage />,
+  },
+  {
+    path: PATHS.acceptStaffInvitation,
+    element: <AcceptStaffInvitationPage />,
   },
   {
     path: PATHS.login,
@@ -123,24 +129,26 @@ export const routes: RouteObject[] = [
                           { index: true, element: <BranchManagementPage /> },
                         ],
                       },
+                      {
+                        path: "staff",
+                        element: (
+                          <RequireTenantPermission
+                            permission={PERMISSIONS.staffManage}
+                          />
+                        ),
+                        children: [{ index: true, element: <StaffManagementPage /> }],
+                      },
                     ],
+                  },
+                  {
+                    path: "branches/:branchSlug/branch/staff",
+                    element: <LegacyBranchStaffRedirect />,
                   },
                   {
                     path: "branches/:branchSlug",
                     element: <RequireBranchAccess />,
                     children: [
                       { index: true, element: <BranchWorkspaceHomePage /> },
-                      {
-                        path: "branch/staff",
-                        element: (
-                          <RequireBranchPermission
-                            permission={PERMISSIONS.staffManage}
-                          />
-                        ),
-                        children: [
-                          { index: true, element: <StaffManagementPage /> },
-                        ],
-                      },
                       {
                         path: "reception/appointments",
                         element: (

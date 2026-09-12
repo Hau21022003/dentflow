@@ -19,7 +19,7 @@ export class TenantOwnerInvitationProducer {
       TenantInvitationJobName.SEND_OWNER_INVITATION,
       { invitationId },
       {
-        jobId: `tenant-owner-invitation:${invitationId}`,
+        jobId: `tenant-owner-invitation-${invitationId}`,
         attempts: 5,
         backoff: { type: 'exponential', delay: 1_000 },
         removeOnComplete: 1_000,

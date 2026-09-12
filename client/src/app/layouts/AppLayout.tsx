@@ -321,6 +321,22 @@ export function AppLayout() {
         });
       }
 
+      if (
+        hasTenantPermission(
+          user,
+          { slug: tenantSlug },
+          PERMISSIONS.staffManage,
+        )
+      ) {
+        tenantItems.push({
+          end: true,
+          icon: UsersRound,
+          kind: "link",
+          label: t("navigation.staff"),
+          to: pathFor.workspaceTenantStaff(tenantSlug),
+        });
+      }
+
       if (tenantItems.length > 0) {
         items.push({
           icon: Building2,
@@ -342,23 +358,6 @@ export function AppLayout() {
           to: pathFor.workspaceBranch(tenantSlug, branchSlug),
         },
       ];
-
-      if (
-        hasBranchPermission(
-          user,
-          { slug: tenantSlug },
-          branchSlug,
-          PERMISSIONS.staffManage,
-        )
-      ) {
-        branchItems.push({
-          end: true,
-          icon: UsersRound,
-          kind: "link",
-          label: t("navigation.staff"),
-          to: pathFor.workspaceBranchStaff(tenantSlug, branchSlug),
-        });
-      }
 
       if (
         hasBranchPermission(
