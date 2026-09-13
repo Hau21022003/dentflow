@@ -56,6 +56,7 @@
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sanitize-html": "2.16.0",
     "typeorm": "^1.1.0",
     "zod": "^4.4.3"
   },
@@ -73,6 +74,7 @@
     "@types/node": "^24.0.0",
     "@types/nodemailer": "^8.0.1",
     "@types/passport-jwt": "^4.0.1",
+    "@types/sanitize-html": "2.16.0",
     "@types/supertest": "^7.0.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",

@@ -1,0 +1,126 @@
+{
+  "title": "Email template",
+  "description": "Quản lý nội dung email hệ thống toàn cục. Template theo tenant và gửi thử chưa được hỗ trợ.",
+  "catalogTitle": "Template email hệ thống",
+  "catalogDescription": "Mỗi template được nhóm theo key; trạng thái của từng ngôn ngữ được hiển thị trong cùng một dòng.",
+  "loading": "Đang tải email template...",
+  "actions": {
+    "viewDetail": "Xem chi tiết",
+    "backToList": "Quay lại danh sách",
+    "retry": "Thử lại",
+    "cancel": "Hủy"
+  },
+  "table": {
+    "searchPlaceholder": "Tìm email template...",
+    "columns": {
+      "template": "Template",
+      "localeStatus": "Trạng thái theo ngôn ngữ",
+      "lastUpdatedAt": "Cập nhật gần nhất",
+      "actions": "Thao tác"
+    }
+  },
+  "templateKeys": {
+    "tenant-owner-invitation": "Thư mời chủ sở hữu tenant"
+  },
+  "locales": {
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "status": {
+    "publishedVersion": "Đã xuất bản v{{version}}",
+    "noPublished": "Chưa có bản xuất bản",
+    "draftVersion": "Có bản nháp v{{version}}",
+    "noDraft": "Chưa có bản nháp",
+    "draft": "Có nháp",
+    "notAvailable": "Chưa có dữ liệu"
+  },
+  "empty": {
+    "title": "Chưa có email template",
+    "description": "Chưa có email template hệ thống nào được đăng ký."
+  },
+  "detail": {
+    "localeTabsLabel": "Chọn ngôn ngữ của template",
+    "publishedTitle": "Bản đang xuất bản",
+    "draftTitle": "Bản nháp",
+    "version": "Phiên bản v{{version}}",
+    "publishedAt": "Xuất bản {{date}}",
+    "updatedAt": "Cập nhật {{date}}"
+  },
+  "editor": {
+    "description": "Chỉnh sửa source email hệ thống toàn cục. HTML chỉ hiển thị dạng source; không có preview hoặc gửi thử.",
+    "fields": {
+      "subject": "Tiêu đề",
+      "text": "Nội dung văn bản thuần",
+      "html": "Nội dung HTML"
+    },
+    "insertVariable": "Chèn biến",
+    "insertVariableFor": "Chèn biến vào {{field}}",
+    "variablesTitle": "Biến có thể dùng",
+    "variablesDescription": "Chọn biến để chèn template token vào vị trí con trỏ.",
+    "definitionUnavailable": "Template này chưa có định nghĩa biến ở frontend. Bạn vẫn có thể sửa source; server sẽ xác thực khi lưu.",
+    "concurrentDraft": "Một quản trị viên khác vừa thay đổi bản nháp. Nội dung chưa lưu của bạn vẫn được giữ.",
+    "loadLatestDraft": "Nạp bản nháp mới nhất",
+    "saveBeforePublish": "Hãy lưu bản nháp trước khi xuất bản.",
+    "actions": {
+      "saveDraft": "Lưu bản nháp",
+      "savingDraft": "Đang lưu bản nháp",
+      "publishDraft": "Xuất bản bản nháp",
+      "publishDirect": "Xuất bản ngay",
+      "publishing": "Đang xuất bản email template",
+      "confirmPublish": "Xuất bản revision",
+      "cancel": "Hủy"
+    },
+    "publishDialog": {
+      "title": "Xuất bản email template?",
+      "description": "Thao tác tạo revision xuất bản mới và archive revision đang xuất bản. Không thể hoàn tác."
+    },
+    "success": {
+      "draftSaved": "Đã lưu bản nháp.",
+      "published": "Đã xuất bản email template."
+    },
+    "conflict": "Template đã thay đổi trên server. Hãy xem bản nháp mới nhất trước khi xuất bản.",
+    "validation": {
+      "required": "{{field}} là bắt buộc.",
+      "maxLength": "{{field}} không được dài quá {{max}} ký tự.",
+      "subjectLineBreak": "Tiêu đề không được chứa xuống dòng.",
+      "unsupportedSyntax": "{{field}} chứa cú pháp template không được hỗ trợ.",
+      "invalidPlaceholder": "{{field}} chứa placeholder không hợp lệ.",
+      "unsupportedVariable": "{{field}} dùng biến không có trong template này.",
+      "requiredVariable": "{{field}} phải có {{variable}}."
+    }
+  },
+  "variables": {
+    "tenant-owner-invitation": {
+      "tenantDisplayName": {
+        "label": "Tên hiển thị tenant",
+        "description": "Tên hiển thị của tenant được mời."
+      },
+      "invitationUrl": {
+        "label": "Liên kết kích hoạt",
+        "description": "Bắt buộc trong cả nội dung văn bản thuần và HTML."
+      },
+      "expiresAt": {
+        "label": "Thời hạn lời mời",
+        "description": "Bắt buộc trong cả nội dung văn bản thuần và HTML."
+      }
+    }
+  },
+  "history": {
+    "title": "Lịch sử revision",
+    "description": "Revision đã archive chỉ có thể xem source.",
+    "status": {
+      "ARCHIVED": "Đã archive",
+      "DRAFT": "Bản nháp",
+      "PUBLISHED": "Đã xuất bản"
+    }
+  },
+  "discardDialog": {
+    "title": "Bỏ thay đổi chưa lưu?",
+    "description": "Các chỉnh sửa chưa lưu sẽ bị mất.",
+    "keepEditing": "Tiếp tục chỉnh sửa",
+    "discard": "Bỏ thay đổi"
+  },
+  "errors": {
+    "notFound": "Không tìm thấy email template này."
+  }
+}

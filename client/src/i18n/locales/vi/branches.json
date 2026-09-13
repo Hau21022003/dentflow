@@ -1,0 +1,77 @@
+{
+  "eyebrow": "Tenant Admin · {{tenantName}}",
+  "title": "Quản lý branch",
+  "description": "Tạo, cập nhật và theo dõi trạng thái hoạt động của các chi nhánh trong tenant.",
+  "loading": "Đang tải chi nhánh...",
+  "statuses": {
+    "ACTIVE": "Đang hoạt động",
+    "INACTIVE": "Ngừng hoạt động"
+  },
+  "actions": {
+    "create": "Tạo chi nhánh",
+    "save": "Lưu thay đổi",
+    "cancel": "Hủy",
+    "retry": "Thử lại",
+    "openActions": "Mở thao tác cho {{name}}",
+    "edit": "Chỉnh sửa",
+    "deactivate": "Ngừng hoạt động",
+    "activate": "Mở lại chi nhánh",
+    "saving": "Đang lưu"
+  },
+  "table": {
+    "title": "Danh sách chi nhánh",
+    "description": "Danh sách được giới hạn trong tenant hiện tại và bao gồm cả chi nhánh đã ngừng hoạt động.",
+    "searchPlaceholder": "Tìm theo tên, slug, địa chỉ hoặc số điện thoại...",
+    "name": "Chi nhánh",
+    "address": "Địa chỉ",
+    "phone": "Số điện thoại",
+    "timezone": "Múi giờ",
+    "inheritsTenantTimezone": "Theo múi giờ tenant",
+    "status": "Trạng thái",
+    "createdAt": "Ngày tạo",
+    "actions": "Thao tác"
+  },
+  "filters": {
+    "statusTitle": "Lọc trạng thái",
+    "statusDescription": "Chỉ hiển thị các chi nhánh có trạng thái đã chọn."
+  },
+  "empty": {
+    "title": "Chưa có chi nhánh",
+    "description": "Tạo chi nhánh đầu tiên để bắt đầu cấu hình vận hành."
+  },
+  "errors": {
+    "listTitle": "Không thể tải danh sách chi nhánh"
+  },
+  "fields": {
+    "slug": "Branch slug",
+    "name": "Tên chi nhánh",
+    "address": "Địa chỉ",
+    "phone": "Số điện thoại",
+    "timezone": "Múi giờ",
+    "reason": "Lý do"
+  },
+  "form": {
+    "createTitle": "Tạo chi nhánh",
+    "createDescription": "Thông tin được tạo trong tenant hiện tại.",
+    "editTitle": "Chỉnh sửa chi nhánh",
+    "editDescription": "Cập nhật thông tin vận hành của chi nhánh.",
+    "slugHint": "Chỉ dùng chữ thường, số và dấu gạch nối.",
+    "slugLocked": "Slug là định danh URL bất biến sau khi tạo.",
+    "timezoneHint": "Để trống để dùng múi giờ mặc định của tenant."
+  },
+  "lifecycle": {
+    "reasonRequired": "Vui lòng nhập lý do cho thao tác này.",
+    "reasonTooLong": "Lý do không được vượt quá 500 ký tự.",
+    "deactivate": {
+      "title": "Ngừng hoạt động chi nhánh",
+      "description": "Bạn sắp ngừng hoạt động {{name}}.",
+      "notice": "Chi nhánh không bị xóa và các phân quyền hiện tại được giữ lại; route vận hành theo chi nhánh sẽ bị chặn.",
+      "confirm": "Ngừng hoạt động"
+    },
+    "activate": {
+      "title": "Mở lại chi nhánh",
+      "description": "Bạn sắp mở lại {{name}}.",
+      "confirm": "Mở lại chi nhánh"
+    }
+  }
+}

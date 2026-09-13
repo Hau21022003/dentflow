@@ -19,19 +19,25 @@ Mỗi row có actor type/user/session, tenant/branch khi áp dụng, action, dom
 - Patient audit chỉ lưu tên các field đã đổi. Treatment audit chỉ lưu state/ID. Financial audit chỉ lưu amount, currency, method, reference an toàn và reason code.
 - Free-text reason chỉ dùng cho action Platform/Tenant Admin có policy cho phép. Clinical và financial dùng `metadata.reasonCode`.
 
-Các action là constants ở code, không phải database enum, gồm quyền/scope, tenant lifecycle, SaaS billing, tenant/branch/service/user, patient/appointment/treatment state, patient invoice/payment và security event. Tenant provisioning ghi `TENANT_CREATED`; owner invitation ghi `TENANT_OWNER_INVITATION_CREATED`, `TENANT_OWNER_INVITATION_RESENT` và `TENANT_OWNER_INVITATION_ACCEPTED`. Payload invitation chỉ có state, tuyệt đối không có email hoặc raw/hash token. Các command nghiệp vụ chưa được tạo phải tích hợp action phù hợp trước khi merge.
+Các action là constants ở code, không phải database enum, gồm quyền/scope, tenant lifecycle, SaaS billing, tenant/branch/service/user, patient/appointment/treatment state, patient invoice/payment và security event. Tenant provisioning ghi `TENANT_CREATED`; owner invitation ghi `TENANT_OWNER_INVITATION_CREATED`, `TENANT_OWNER_INVITATION_RESENT` và `TENANT_OWNER_INVITATION_ACCEPTED`. Staff invitation ghi `STAFF_INVITATION_CREATED`, `STAFF_INVITATION_RESENT`, `STAFF_INVITATION_REVOKED`, `STAFF_INVITATION_ACCEPTED`; membership dùng `USER_DISABLED`/`USER_ENABLED` và grant dùng `ROLE_GRANTED`/`ROLE_REVOKED`. Payload invitation chỉ có state; tuyệt đối không có email, tên, raw/hash token hoặc password. Các command nghiệp vụ chưa được tạo phải tích hợp action phù hợp trước khi merge.
+
+Branch lifecycle dùng `BRANCH_CREATED`, `BRANCH_UPDATED`, `BRANCH_DEACTIVATED` và `BRANCH_ACTIVATED`. Snapshot chỉ có status và `changedFields`; deactivate/activate lưu free-text reason theo policy Tenant Admin, không ghi địa chỉ hoặc số điện thoại.
 
 Plan catalog dùng `PLAN_CREATED`, `PLAN_UPDATED`, `PLAN_DEACTIVATED` và `PLAN_ACTIVATED`. Snapshot của các action này chỉ chứa `changedFields`, `isActive`, `amount` và `currency`; thay đổi availability lưu thêm free-text `reason` theo policy Platform.
+
+Service catalog tenant dùng `SERVICE_CREATED`, `SERVICE_UPDATED`, `SERVICE_DEACTIVATED`, `SERVICE_ACTIVATED`, `SERVICE_GROUP_CREATED`, `SERVICE_GROUP_UPDATED`, `SERVICE_GROUP_DEACTIVATED` và `SERVICE_GROUP_ACTIVATED`. Snapshot Service chỉ chứa `changedFields`, `isActive`, `amount`, `currency` và `durationMinutes`; thay đổi nhóm chỉ ghi tên field `serviceGroupId`. Snapshot ServiceGroup chỉ chứa `changedFields` và `isActive`. Đổi `amount`/`currency`, hoặc deactivate/activate Service/ServiceGroup lưu free-text `reason` theo policy Tenant Admin. Không ghi code, tên hoặc nhóm dịch vụ trực tiếp trong payload audit.
+
+Email template global dùng `EMAIL_TEMPLATE_DRAFT_SAVED` và `EMAIL_TEMPLATE_PUBLISHED`, resource type `EMAIL_TEMPLATE_REVISION`, domain `PLATFORM`. Snapshot chỉ có `templateKey`, `locale`, `version`, `status` và `changedFields`; tuyệt đối không ghi subject, text, HTML, recipient hoặc giá trị biến đã render.
 
 ## 3. API đọc
 
 Các API dưới đây là route nội bộ của backend và chỉ trả audit data đã redacted. URL công khai, API prefix/version và việc rewrite/strip prefix do Nginx/gateway quản lý khi deploy, nên không được ghi cứng ở đây. List không trả payload; endpoint detail mới trả `before`, `after`, `metadata` an toàn. Tất cả list dùng cursor `(occurredAt,id)`, mặc định 50 và tối đa 100.
 
-| Endpoint                                                                  | Quyền và phạm vi                           | Dữ liệu trả về                                                                 |
-| ------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
-| `GET /platform/audit-logs`, `/:id`                                        | `PLATFORM_AUDIT_LOG_READ` + Platform scope | Chỉ domain `PLATFORM` và `SECURITY`; không có clinical/patient financial audit |
-| `GET /tenants/:tenantSlug/audit-logs`, `/:id`                             | `AUDIT_LOG_READ` + tenant scope            | Audit record của tenant đã resolve                                             |
-| `GET /tenants/:tenantSlug/branches/:branchSlug/audit-logs`, `/:id`        | `AUDIT_LOG_READ` + branch scope            | Chỉ record của branch đã resolve                                               |
+| Endpoint                                                           | Quyền và phạm vi                           | Dữ liệu trả về                                                                 |
+| ------------------------------------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| `GET /platform/audit-logs`, `/:id`                                 | `PLATFORM_AUDIT_LOG_READ` + Platform scope | Chỉ domain `PLATFORM` và `SECURITY`; không có clinical/patient financial audit |
+| `GET /tenants/:tenantSlug/audit-logs`, `/:id`                      | `AUDIT_LOG_READ` + tenant scope            | Audit record của tenant đã resolve                                             |
+| `GET /tenants/:tenantSlug/branches/:branchSlug/audit-logs`, `/:id` | `AUDIT_LOG_READ` + branch scope            | Chỉ record của branch đã resolve                                               |
 
 List hỗ trợ `from`, `to`, `action`, `resourceType`, `resourceId`, `actorUserId`, `cursor`, `limit`; tenant list nhận thêm `branchSlug`, được resolve trong tenant. Record ngoài scope trả `404`; thiếu JWT là `401` và thiếu grant/permission là `403`.
 

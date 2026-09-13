@@ -1,0 +1,126 @@
+{
+  "title": "Email templates",
+  "description": "Manage global system email content. Tenant-specific templates and test sends are not supported.",
+  "catalogTitle": "System email templates",
+  "catalogDescription": "Each template is grouped by key, with every language status shown in the same row.",
+  "loading": "Loading email templates...",
+  "actions": {
+    "viewDetail": "View details",
+    "backToList": "Back to list",
+    "retry": "Retry",
+    "cancel": "Cancel"
+  },
+  "table": {
+    "searchPlaceholder": "Search email templates...",
+    "columns": {
+      "template": "Template",
+      "localeStatus": "Language status",
+      "lastUpdatedAt": "Last updated",
+      "actions": "Actions"
+    }
+  },
+  "templateKeys": {
+    "tenant-owner-invitation": "Tenant owner invitation"
+  },
+  "locales": {
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "status": {
+    "publishedVersion": "Published v{{version}}",
+    "noPublished": "Not published",
+    "draftVersion": "Draft v{{version}} available",
+    "noDraft": "No draft",
+    "draft": "Draft",
+    "notAvailable": "No data"
+  },
+  "empty": {
+    "title": "No email templates",
+    "description": "No system email template has been registered yet."
+  },
+  "detail": {
+    "localeTabsLabel": "Select template language",
+    "publishedTitle": "Published revision",
+    "draftTitle": "Draft revision",
+    "version": "Version v{{version}}",
+    "publishedAt": "Published {{date}}",
+    "updatedAt": "Updated {{date}}"
+  },
+  "editor": {
+    "description": "Edit the global system email source. HTML is stored as source only; previews and test sends are not available.",
+    "fields": {
+      "subject": "Subject",
+      "text": "Plain-text body",
+      "html": "HTML body"
+    },
+    "insertVariable": "Insert variable",
+    "insertVariableFor": "Insert a variable into {{field}}",
+    "variablesTitle": "Available variables",
+    "variablesDescription": "Selecting a variable inserts its template token at the cursor.",
+    "definitionUnavailable": "This template has no client variable definition. You can still edit its source; the server will validate it when saving.",
+    "concurrentDraft": "A draft was changed by another administrator. Your unsaved content is preserved.",
+    "loadLatestDraft": "Load latest draft",
+    "saveBeforePublish": "Save the draft before publishing it.",
+    "actions": {
+      "saveDraft": "Save draft",
+      "savingDraft": "Saving draft",
+      "publishDraft": "Publish draft",
+      "publishDirect": "Publish now",
+      "publishing": "Publishing email template",
+      "confirmPublish": "Publish revision",
+      "cancel": "Cancel"
+    },
+    "publishDialog": {
+      "title": "Publish email template?",
+      "description": "This publishes a new revision and archives the currently published revision. This cannot be undone."
+    },
+    "success": {
+      "draftSaved": "Draft saved.",
+      "published": "Email template published."
+    },
+    "conflict": "The template changed on the server. Review the latest draft before publishing.",
+    "validation": {
+      "required": "{{field}} is required.",
+      "maxLength": "{{field}} must be at most {{max}} characters.",
+      "subjectLineBreak": "Subject cannot contain line breaks.",
+      "unsupportedSyntax": "{{field}} contains unsupported template syntax.",
+      "invalidPlaceholder": "{{field}} contains an invalid template placeholder.",
+      "unsupportedVariable": "{{field}} uses a variable that is not available for this template.",
+      "requiredVariable": "{{field}} must include {{variable}}."
+    }
+  },
+  "variables": {
+    "tenant-owner-invitation": {
+      "tenantDisplayName": {
+        "label": "Tenant display name",
+        "description": "The invited tenant's display name."
+      },
+      "invitationUrl": {
+        "label": "Activation link",
+        "description": "Required in both plain-text and HTML bodies."
+      },
+      "expiresAt": {
+        "label": "Invitation expiry",
+        "description": "Required in both plain-text and HTML bodies."
+      }
+    }
+  },
+  "history": {
+    "title": "Revision history",
+    "description": "Archived revisions are read-only source records.",
+    "status": {
+      "ARCHIVED": "Archived",
+      "DRAFT": "Draft",
+      "PUBLISHED": "Published"
+    }
+  },
+  "discardDialog": {
+    "title": "Discard unsaved changes?",
+    "description": "Your edits have not been saved and will be lost.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard changes"
+  },
+  "errors": {
+    "notFound": "This email template was not found."
+  }
+}

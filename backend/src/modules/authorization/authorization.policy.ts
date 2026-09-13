@@ -8,6 +8,7 @@ export enum Permission {
   PLATFORM_SUPPORT_MANAGE = 'platform.support.manage',
   PLATFORM_SYSTEM_READ = 'platform.system.read',
   PLATFORM_AUDIT_LOG_READ = 'platform.audit-log.read',
+  PLATFORM_EMAIL_TEMPLATE_MANAGE = 'platform.email-template.manage',
   TENANT_SETTINGS_MANAGE = 'tenant.settings.manage',
   BRANCH_MANAGE = 'branch.manage',
   SERVICE_CATALOG_MANAGE = 'service-catalog.manage',
@@ -34,6 +35,7 @@ const platformPermissions = [
   Permission.PLATFORM_SUPPORT_MANAGE,
   Permission.PLATFORM_SYSTEM_READ,
   Permission.PLATFORM_AUDIT_LOG_READ,
+  Permission.PLATFORM_EMAIL_TEMPLATE_MANAGE,
 ] as const;
 
 const tenantAdminPermissions = [
@@ -58,7 +60,6 @@ export const tenantRolePermissions: Readonly<
 > = {
   [TenantRoleCode.TENANT_ADMIN]: tenantAdminPermissions,
   [TenantRoleCode.BRANCH_ADMIN]: [
-    Permission.STAFF_MANAGE,
     Permission.APPOINTMENT_MANAGE,
     Permission.REPORT_READ,
     Permission.AUDIT_LOG_READ,

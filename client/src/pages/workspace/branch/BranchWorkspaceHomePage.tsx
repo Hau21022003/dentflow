@@ -13,7 +13,6 @@ import {
   CalendarDays,
   ClipboardList,
   Stethoscope,
-  UsersRound,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useWorkspaceContext } from "../use-workspace-context";
@@ -31,14 +30,6 @@ export function BranchWorkspaceHomePage() {
   const tenantName = tenant?.tenant.displayName ?? tenantSlug;
   const branchName = branch?.branch.name ?? branchSlug;
   const rolePanels: Partial<Record<TenantRoleCode, RolePanel>> = {
-    BRANCH_ADMIN: {
-      title: "Quản trị chi nhánh",
-      description:
-        "Điều phối nhân sự và theo dõi vận hành trong branch được gán.",
-      action: "Mở quản lý nhân sự",
-      icon: UsersRound,
-      to: pathFor.workspaceBranchStaff(tenantSlug, branchSlug),
-    },
     RECEPTIONIST: {
       title: "Tiếp nhận",
       description: "Quản lý lịch hẹn, check-in và handoff tại quầy.",
@@ -70,7 +61,7 @@ export function BranchWorkspaceHomePage() {
         <CardContent className="flex flex-col gap-2 p-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-semibold">
-              {visiblePanels.length} role tại branch hiện tại
+              {branch?.roles.length ?? 0} role tại branch hiện tại
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               Các card bên dưới thay đổi theo authorization snapshot của user

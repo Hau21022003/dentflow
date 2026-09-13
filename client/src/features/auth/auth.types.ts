@@ -1,6 +1,7 @@
 export type AuthStatus = "unknown" | "authenticated" | "unauthenticated";
 
 export const PERMISSIONS = {
+  platformEmailTemplateManage: "platform.email-template.manage",
   platformTenantManage: "platform.tenant.manage",
   platformPlanManage: "platform.plan.manage",
   platformSaasBillingRead: "platform.saas-billing.read",

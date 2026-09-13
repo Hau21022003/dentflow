@@ -37,6 +37,10 @@ import {
   SubscriptionStatus,
 } from '../subscriptions/entities/subscription.entity';
 import { User, UserStatus } from '../users/entities/user.entity';
+import {
+  TenantUserMembership,
+  TenantUserMembershipStatus,
+} from '../staff/entities/tenant-user-membership.entity';
 import { AcceptTenantOwnerInvitationDto } from './dto/accept-tenant-owner-invitation.dto';
 import { CreatePlatformTenantDto } from './dto/create-platform-tenant.dto';
 import {
@@ -492,6 +496,28 @@ export class TenantsService {
         input,
         currentUserId,
       );
+      const membership = await manager
+        .getRepository(TenantUserMembership)
+        .findOne({
+          where: { tenantId: tenant.id, userId: user.id },
+        });
+      await manager.getRepository(TenantUserMembership).save(
+        membership
+          ? Object.assign(membership, {
+              status: TenantUserMembershipStatus.ACTIVE,
+              disabledAt: null,
+              disabledByUserId: null,
+              disabledReason: null,
+            })
+          : manager.create(TenantUserMembership, {
+              tenantId: tenant.id,
+              userId: user.id,
+              status: TenantUserMembershipStatus.ACTIVE,
+              disabledAt: null,
+              disabledByUserId: null,
+              disabledReason: null,
+            }),
+      );
       const assignment = manager.create(RoleAssignment, {
         userId: user.id,
         tenantId: tenant.id,
@@ -667,6 +693,12 @@ export class TenantsService {
     const row = await this.dataSource
       .getRepository(RoleAssignment)
       .createQueryBuilder('assignment')
+      .innerJoin(
+        'tenant_user_memberships',
+        'membership',
+        'membership.user_id = assignment.user_id AND membership.tenant_id = assignment.tenant_id AND membership.status = :membershipStatus',
+        { membershipStatus: TenantUserMembershipStatus.ACTIVE },
+      )
       .select('COUNT(DISTINCT assignment.user_id)', 'count')
       .where('assignment.tenant_id = :tenantId', { tenantId })
       .andWhere('assignment.revoked_at IS NULL')

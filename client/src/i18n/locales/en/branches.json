@@ -1,0 +1,77 @@
+{
+  "eyebrow": "Tenant Admin · {{tenantName}}",
+  "title": "Branch management",
+  "description": "Create, update, and track the operating status of branches in this tenant.",
+  "loading": "Loading branches...",
+  "statuses": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive"
+  },
+  "actions": {
+    "create": "Create branch",
+    "save": "Save changes",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "openActions": "Open actions for {{name}}",
+    "edit": "Edit",
+    "deactivate": "Deactivate",
+    "activate": "Reactivate branch",
+    "saving": "Saving"
+  },
+  "table": {
+    "title": "Branch directory",
+    "description": "The directory is scoped to the current tenant and includes inactive branches.",
+    "searchPlaceholder": "Search name, slug, address, or phone...",
+    "name": "Branch",
+    "address": "Address",
+    "phone": "Phone",
+    "timezone": "Time zone",
+    "inheritsTenantTimezone": "Uses tenant time zone",
+    "status": "Status",
+    "createdAt": "Created",
+    "actions": "Actions"
+  },
+  "filters": {
+    "statusTitle": "Filter status",
+    "statusDescription": "Show only branches with the selected status."
+  },
+  "empty": {
+    "title": "No branches yet",
+    "description": "Create the first branch to start configuring operations."
+  },
+  "errors": {
+    "listTitle": "We could not load the branch directory"
+  },
+  "fields": {
+    "slug": "Branch slug",
+    "name": "Branch name",
+    "address": "Address",
+    "phone": "Phone",
+    "timezone": "Time zone",
+    "reason": "Reason"
+  },
+  "form": {
+    "createTitle": "Create branch",
+    "createDescription": "The branch will be created in the current tenant.",
+    "editTitle": "Edit branch",
+    "editDescription": "Update the branch operating details.",
+    "slugHint": "Use lowercase letters, numbers, and hyphens only.",
+    "slugLocked": "The slug is an immutable URL identifier after creation.",
+    "timezoneHint": "Leave blank to use the tenant default time zone."
+  },
+  "lifecycle": {
+    "reasonRequired": "Enter a reason for this action.",
+    "reasonTooLong": "Reason must not exceed 500 characters.",
+    "deactivate": {
+      "title": "Deactivate branch",
+      "description": "You are about to deactivate {{name}}.",
+      "notice": "The branch is not deleted and current role assignments are retained; branch-scoped operating routes will be blocked.",
+      "confirm": "Deactivate branch"
+    },
+    "activate": {
+      "title": "Reactivate branch",
+      "description": "You are about to reactivate {{name}}.",
+      "confirm": "Reactivate branch"
+    }
+  }
+}

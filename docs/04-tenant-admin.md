@@ -12,10 +12,10 @@ Mọi dữ liệu và thao tác của Tenant Admin phải lấy tenant context t
 
 Migration nền tảng lưu dữ liệu tổ chức trước khi có API quản trị:
 
-| Entity | Field cốt lõi đã có | Lifecycle / ràng buộc |
-| --- | --- | --- |
-| `Tenant` | UUID, legal/display name, `slug`, billing/contact information, logo URL, default locale/timezone, status, timestamps | `slug` duy nhất và chỉ gồm chữ thường, số, dấu gạch nối; status khởi tạo là `PROVISIONING` rồi chỉ service lifecycle sau này mới chuyển trạng thái |
-| `Branch` | UUID, `tenantId`, `slug`, name, address, phone, timezone override, status, timestamps | Thuộc đúng một tenant qua FK `RESTRICT`; `slug` là URL key ổn định, unique theo `(tenantId, slug)` và không thay `id` trong FK; `ACTIVE`/`INACTIVE`, không soft-delete; composite unique `(id, tenantId)` chuẩn bị cho FK tenant-scoped của role và dữ liệu nghiệp vụ |
+| Entity   | Field cốt lõi đã có                                                                                                  | Lifecycle / ràng buộc                                                                                                                                                                                                                                                 |
+| -------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Tenant` | UUID, legal/display name, `slug`, billing/contact information, logo URL, default locale/timezone, status, timestamps | `slug` duy nhất và chỉ gồm chữ thường, số, dấu gạch nối; status khởi tạo là `PROVISIONING` rồi chỉ service lifecycle sau này mới chuyển trạng thái                                                                                                                    |
+| `Branch` | UUID, `tenantId`, `slug`, name, address, phone, timezone override, status, timestamps                                | Thuộc đúng một tenant qua FK `RESTRICT`; `slug` là URL key ổn định, unique theo `(tenantId, slug)` và không thay `id` trong FK; `ACTIVE`/`INACTIVE`, không soft-delete; composite unique `(id, tenantId)` chuẩn bị cho FK tenant-scoped của role và dữ liệu nghiệp vụ |
 
 Branch kế thừa locale/timezone vận hành của tenant khi không có override phù hợp. Giờ mở cửa, slot duration, appointment rules và các cấu hình vận hành khác chưa được lưu ở migration này; chúng sẽ có schema/migration riêng trước khi có endpoint quản trị tương ứng.
 
@@ -23,15 +23,15 @@ Branch kế thừa locale/timezone vận hành của tenant khi không có overr
 
 MVP dùng role cố định `TENANT_ADMIN`. Tenant Admin có phạm vi toàn tenant nhưng chỉ được hợp quyền với các role khác trong cùng tenant; không được hợp quyền hoặc branch scope qua tenant khác.
 
-| Năng lực | Được phép | Bị cấm / giới hạn |
-| --- | --- | --- |
-| Tenant settings | Cập nhật display name, logo, thông tin liên hệ, locale, timezone mặc định và quy ước hiển thị | Không đổi `tenantSlug`, trạng thái tenant hay cấu hình hạ tầng Platform |
-| Branch | Tạo, cập nhật, ngừng hoạt động branch; đặt giờ làm việc và cấu hình lịch hẹn cơ bản | Không truy cập hoặc quản lý branch của tenant khác |
-| Service catalog | Quản lý mã, tên, nhóm, giá niêm yết, thời lượng và trạng thái hoạt động của `Service` | Không thay đổi hồi tố khoản đã invoiced/paid chỉ bằng việc sửa giá dịch vụ |
-| Nhân sự và quyền | Mời, vô hiệu hóa user; gán/thu hồi role cố định và branch scope trong tenant | Không tạo role/permission tuỳ ý, không tự mở rộng quyền ngoài policy |
-| Báo cáo và audit | Xem số liệu tổng hợp toàn tenant và audit log nghiệp vụ | Không tự có quyền đọc/ghi clinical detail chỉ vì role quản trị |
-| SaaS billing | Chọn plan, mở Stripe Checkout/Customer Portal, xem subscription và `SaaSInvoice` | Không tự đánh dấu Stripe payment là paid/active; webhook là nguồn trạng thái đáng tin cậy |
-| Thông báo | Cấu hình branding, sender display name, reply-to, template và loại thông báo được bật | Không truy cập SMTP/API key, DNS, provider configuration hoặc technical delivery log nhạy cảm |
+| Năng lực         | Được phép                                                                                       | Bị cấm / giới hạn                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Tenant settings  | Cập nhật display name, logo, thông tin liên hệ, locale, timezone mặc định và quy ước hiển thị   | Không đổi `tenantSlug`, trạng thái tenant hay cấu hình hạ tầng Platform                       |
+| Branch           | Tạo, cập nhật, ngừng hoạt động branch; đặt giờ làm việc và cấu hình lịch hẹn cơ bản             | Không truy cập hoặc quản lý branch của tenant khác                                            |
+| Service catalog  | Quản lý `ServiceGroup`, mã, tên, giá niêm yết, thời lượng và trạng thái hoạt động của `Service` | Không thay đổi hồi tố khoản đã invoiced/paid chỉ bằng việc sửa giá dịch vụ                    |
+| Nhân sự và quyền | Mời, vô hiệu hóa user; gán/thu hồi role cố định và branch scope trong tenant                    | Không tạo role/permission tuỳ ý, không tự mở rộng quyền ngoài policy                          |
+| Báo cáo và audit | Xem số liệu tổng hợp toàn tenant và audit log nghiệp vụ                                         | Không tự có quyền đọc/ghi clinical detail chỉ vì role quản trị                                |
+| SaaS billing     | Chọn plan, mở Stripe Checkout/Customer Portal, xem subscription và `SaaSInvoice`                | Không tự đánh dấu Stripe payment là paid/active; webhook là nguồn trạng thái đáng tin cậy     |
+| Thông báo        | Cấu hình branding, sender display name, reply-to, template và loại thông báo được bật           | Không truy cập SMTP/API key, DNS, provider configuration hoặc technical delivery log nhạy cảm |
 
 Mọi thay đổi quyền, branch, cấu hình tenant, danh mục dịch vụ và thao tác billing phải tạo `AuditLog` với actor, action, resource, timestamp, request ID và giá trị trước/sau phù hợp. Các thao tác có rủi ro cần lưu thêm lý do.
 
@@ -72,13 +72,19 @@ Kết nối domain gửi mail riêng của tenant là roadmap sau MVP. Chỉ tri
 
 ### Chi nhánh và dịch vụ
 
-- Tạo/cập nhật/ngừng hoạt động branch trong tenant; không xóa dữ liệu vận hành để tránh mất audit trail.
-- Quản lý danh mục dịch vụ chung của tenant. Giá niêm yết mới chỉ áp dụng cho các hạng mục/lịch hẹn tạo sau theo policy; không làm thay đổi `PatientInvoice` hay `Payment` đã ghi nhận.
+- Tạo/cập nhật/ngừng hoạt động hoặc mở lại branch trong tenant; không xóa dữ liệu vận hành để tránh mất audit trail. Đóng/mở lại bắt buộc reason và audit; role assignment không bị thu hồi tự động.
+- Route vận hành branch-scoped mặc định bị chặn khi branch `INACTIVE`. Route đọc lịch sử phải khai báo ngoại lệ rõ ràng; audit log branch vẫn đọc được để phục vụ kiểm soát sau khi đóng.
+- Quản lý danh mục dịch vụ chung của tenant: `ServiceGroup` có UUID, tên chuẩn hóa khoảng trắng, unique không phân biệt hoa/thường trong tenant và lifecycle `isActive`; không hard-delete. `Service` có `code` slug bất biến/unique trong tenant, `name`, `serviceGroupId`, `amount` số nguyên theo đơn vị nhỏ nhất của `currency` ISO-4217, `durationMinutes` dương và `isActive`. Create hoặc đổi nhóm chỉ nhận nhóm active trong tenant đã resolve; nhóm inactive không tự deactivate Service hiện hữu.
+- Giá niêm yết mới chỉ áp dụng cho các hạng mục/lịch hẹn tạo sau theo policy; appointment/treatment/invoice sẽ snapshot service price/currency khi được tạo. Sửa catalog không làm thay đổi `PatientInvoice` hay `Payment` đã ghi nhận. Đổi `amount` hoặc `currency`, deactivate và activate bắt buộc reason tối đa 500 ký tự cùng audit log.
 - Tenant Admin theo dõi cấu hình branch nhưng không thực hiện thay `BRANCH_ADMIN` các điều phối ca thường nhật trong MVP.
 
 ### User, role và branch scope
 
-- Tenant Admin mời user, vô hiệu hóa user và gán/thu hồi `TENANT_ADMIN`, `BRANCH_ADMIN`, `RECEPTIONIST` hoặc `DENTIST` cùng branch scope phù hợp.
+- Chỉ `TENANT_ADMIN` dùng API quản lý nhân sự trong MVP. `BRANCH_ADMIN` chưa có API mời, vô hiệu hóa hoặc thay quyền nhân sự; capability giới hạn theo branch là milestone sau.
+- Lời mời nhân sự chỉ lưu email, tên hiển thị và proposed grants. Không tạo `TenantUserMembership`, `RoleAssignment` hoặc quyền tenant nào trước khi người nhận accept; quy tắc này áp dụng cả khi email đã có User global.
+- Khi accept, User hiện hữu phải đăng nhập bằng đúng email; User mới tạo password. Transaction accept mới tạo/kích hoạt membership rồi materialize proposed grants. Token một lần, có hạn, resend sẽ revoke token cũ; token/payload không xuất hiện trong audit.
+- Tenant Admin vô hiệu hóa User bằng `TenantUserMembership` trong tenant, không đổi `User.status` toàn cục hay quyền ở tenant khác. Kích hoạt lại phục hồi grant chưa thu hồi. Không được thu hồi/disable làm tenant mất Tenant Admin active cuối cùng.
+- Tenant Admin gán/thu hồi `TENANT_ADMIN`, `BRANCH_ADMIN`, `RECEPTIONIST` hoặc `DENTIST` cùng branch scope phù hợp. Grant mới chỉ dùng branch `ACTIVE`; grant ở branch inactive được giữ lịch sử.
 - Role/permission là danh mục tĩnh trong MVP; database lưu assignment và phạm vi, không có màn hình tạo role hoặc sửa permission tuỳ ý.
 - Một user có thể có nhiều role, ví dụ Tenant Admin đồng thời là Dentist. API luôn kiểm tra role cần cho hành động, tenant context và branch/case scope; không suy luận quyền clinical từ role quản trị.
 - Cấp hoặc thu hồi role, thay đổi branch scope và vô hiệu hóa user phải lưu actor, thời điểm, giá trị trước/sau và lý do khi policy yêu cầu.
@@ -113,20 +119,40 @@ Tenant Admin không được tự chuyển subscription sang `ACTIVE` hoặc đ�
 Các endpoint nội bộ trong tài liệu này yêu cầu tenant context đã xác minh và `TENANT_ADMIN` cho năng lực quản trị tương ứng. API prefix/version công khai do Nginx/gateway quản lý khi deploy nên không được ghi cứng ở backend. Mỗi endpoint vẫn áp dụng Subscription Guard, kiểm tra role và truy vấn có điều kiện `tenantId`/`branchId`.
 
 - `GET/PATCH /tenant/settings`
-- `GET/POST/PATCH /branches`
-- `GET/POST/PATCH /services`
-- `GET/POST/PATCH /users`
-- `POST /role-assignments`, `PATCH /role-assignments/:assignmentId`, `DELETE /role-assignments/:assignmentId`
+- `GET /tenants/:tenantSlug/branches`: Tenant Admin list branch trong tenant đã resolve; hỗ trợ `page`, `limit`, `search`, `status`, `sortBy` (`name`, `status`, `createdAt`) và `sortOrder`, trả `{ items, meta }` gồm cả `ACTIVE` lẫn `INACTIVE`.
+- `POST /tenants/:tenantSlug/branches`: tạo branch `ACTIVE` với `slug`, name, address, phone và timezone tuỳ chọn. `slug` chỉ gồm chữ thường, số, dấu gạch nối và unique trong tenant; request không nhận `tenantId` hoặc status.
+- `PATCH /tenants/:tenantSlug/branches/:branchSlug`: chỉ đổi name, address, phone và timezone. `branchSlug` và status không đổi qua endpoint này; branch luôn được tìm bằng `(tenantId đã resolve, branchSlug)`.
+- `POST /tenants/:tenantSlug/branches/:branchSlug/deactivate`: chuyển branch sang `INACTIVE`, bắt buộc reason; không hard-delete hoặc tự thu hồi role assignment đang active.
+- `POST /tenants/:tenantSlug/branches/:branchSlug/activate`: chuyển branch `INACTIVE` về `ACTIVE`, bắt buộc reason; role assignment được giữ nguyên nên lại có hiệu lực với các route branch-scoped khi branch mở lại.
+- `GET /tenants/:tenantSlug/service-groups`: list phân trang nhóm của tenant đã resolve, mặc định gồm cả active và inactive; hỗ trợ `search` theo name, lọc `isActive`, `page`, `limit`, `sortBy` (`name`, `createdAt`) và `sortOrder`.
+- `GET /tenants/:tenantSlug/service-groups/:serviceGroupId`: đọc nhóm trong tenant đã resolve; ID ngoài tenant trả `404`.
+- `POST /tenants/:tenantSlug/service-groups` và `PATCH /tenants/:tenantSlug/service-groups/:serviceGroupId`: tạo nhóm active hoặc đổi `name`; request không nhận `tenantId`/`isActive`.
+- `POST /tenants/:tenantSlug/service-groups/:serviceGroupId/deactivate` và `/activate`: chuyển trạng thái với `{ reason }`; không hard-delete. Command không đổi trạng thái trả resource hiện tại và không ghi audit mới.
+- `GET /tenants/:tenantSlug/services`: list phân trang catalog của tenant đã resolve, mặc định gồm cả active và inactive; hỗ trợ `search` theo code/name/tên nhóm, lọc `isActive`, `page`, `limit`, `sortBy` (`code`, `name`, `serviceGroupName`, `amount`, `durationMinutes`, `createdAt`) và `sortOrder`.
+- `GET /tenants/:tenantSlug/services/:serviceId`: đọc một service trong tenant đã resolve; service ID ngoài tenant trả `404`.
+- `POST /tenants/:tenantSlug/services`: tạo service active với `code`, `name`, `serviceGroupId`, `amount`, `currency`, `durationMinutes`. `serviceGroupId` phải là nhóm active trong tenant đã resolve; `code` chỉ gồm chữ thường, số, dấu gạch nối, unique trong tenant và không đổi sau khi tạo. `amount` là số nguyên không âm theo đơn vị nhỏ nhất của currency ISO-4217; request không nhận `tenantId` hoặc `isActive`.
+- `PATCH /tenants/:tenantSlug/services/:serviceId`: chỉ đổi `name`, `serviceGroupId`, `amount`, `currency`, `durationMinutes`; từ chối `code` và `isActive`. Chỉ kiểm tra active khi `serviceGroupId` thực sự đổi; payload có `amount` hoặc `currency` phải có `reason` tối đa 500 ký tự.
+- `POST /tenants/:tenantSlug/services/:serviceId/deactivate` và `/activate`: chuyển trạng thái với `{ reason }`; không hard-delete. Command không đổi trạng thái trả resource hiện tại và không ghi audit mới.
+- `GET /tenants/:tenantSlug/staff`: list phân trang roster `ACTIVE`/`DISABLED` và invitation `INVITED`; search chỉ trên tên/email nhân sự trong tenant.
+- `POST /tenants/:tenantSlug/staff/invitations`, `POST .../invitations/:invitationId/resend`, `POST .../invitations/:invitationId/revoke`
+- `POST /tenants/:tenantSlug/staff/:userId/disable`, `POST .../enable`
+- `POST /tenants/:tenantSlug/staff/:userId/role-assignments`, `DELETE .../role-assignments/:assignmentId`
+- `POST /auth/staff-invitations/accept`: public capability endpoint; User đã có identity phải xác thực bằng đúng email invitation, endpoint không tạo session.
 - `GET /dashboard`, `GET /reports/*`
 - `GET /tenants/:tenantSlug/audit-logs` và `/:id`; Branch Admin dùng route branch-scoped tương ứng. List chỉ trả summary, còn detail trả payload đã redacted theo [audit log](./05-audit-log.md).
 - `GET /billing/subscription`, `GET /billing/invoices`, `POST /billing/checkout-session`, `POST /billing/customer-portal`
 
-Settings API không nhận credential mail/provider hoặc `tenantId` để chọn tenant. Các command nhạy cảm cần idempotency key khi phù hợp, validation tenant/branch scope và audit log.
+Settings API không nhận credential mail/provider hoặc `tenantId` để chọn tenant. Các command tạo, cập nhật, ngừng hoạt động hoặc mở lại branch bắt buộc `Idempotency-Key`, validation tenant scope và audit log cùng transaction. Audit branch chỉ ghi status/changed field an toàn, không ghi địa chỉ hay số điện thoại. `TenantScope('branch')` chặn branch `INACTIVE` trước authorization, trừ route read-only khai báo `@AllowInactiveBranchAccess()`; guard này không áp dụng lên command tenant-wide đóng/mở branch. Giờ hoạt động, slot duration và appointment rules chưa thuộc API branch V1 vì chưa có schema riêng.
+
+Các command staff trên (trừ accept capability) và toàn bộ command Service/ServiceGroup (`create`, `update`, `deactivate`, `activate`) bắt buộc `Idempotency-Key`. Disable/enable/revoke role/revoke invitation bắt buộc `reason` tối đa 500 ký tự. Request role nhận fixed `roleCode` và `branchSlugs`: `TENANT_ADMIN` không có branch, còn role branch-scoped phải có một hay nhiều slug branch `ACTIVE` trong tenant đã resolve.
 
 ## 9. Acceptance criteria và test
 
 - Tenant Admin cập nhật display name, locale, timezone và cấu hình lịch mặc định trong tenant của mình; thay đổi timezone tạo cảnh báo và audit log.
+- Tenant Admin tạo/list/update `ServiceGroup` và Service, lọc trạng thái và deactivate/activate bằng idempotency; tên nhóm unique không phân biệt hoa/thường trong tenant, Service chỉ gán nhóm active, mã service unique theo tenant, bất biến, không hard-delete, còn giá/currency thay đổi phải có reason và audit.
+- Giá catalog mới không hồi tố dữ liệu điều trị/thanh toán; khi các module appointment/treatment/invoice được triển khai, chúng chỉ chọn service active và snapshot giá/currency tại thời điểm tạo.
 - Tenant Admin tạo branch/service, mời user và gán role/branch scope hợp lệ; không tạo được role/permission tuỳ ý hoặc assignment ở tenant khác.
+- Tenant Admin có thể deactivate rồi activate lại branch với idempotency và audit; branch inactive bị chặn khỏi route vận hành branch-scoped nhưng audit log lịch sử vẫn đọc được theo quyền.
 - Tenant Admin không có `DENTIST` nhận `403` khi tạo/sửa clinical note, diagnosis hoặc treatment plan; không gọi được endpoint sửa/xóa payment điều trị.
 - Tenant Admin xem dashboard/báo cáo tenant và audit log, nhưng payload không tự tiết lộ clinical detail ngoài quyền được cấp.
 - Tenant Admin chỉ xem/chọn luồng SaaS billing; Stripe webhook mới cập nhật trạng thái thanh toán. Billing SaaS không thay đổi patient payment.

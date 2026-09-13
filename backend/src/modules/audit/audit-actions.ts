@@ -17,10 +17,16 @@ export const AuditAction = {
   TENANT_OWNER_INVITATION_CREATED: 'TENANT_OWNER_INVITATION_CREATED',
   TENANT_OWNER_INVITATION_RESENT: 'TENANT_OWNER_INVITATION_RESENT',
   TENANT_OWNER_INVITATION_ACCEPTED: 'TENANT_OWNER_INVITATION_ACCEPTED',
+  STAFF_INVITATION_CREATED: 'STAFF_INVITATION_CREATED',
+  STAFF_INVITATION_RESENT: 'STAFF_INVITATION_RESENT',
+  STAFF_INVITATION_REVOKED: 'STAFF_INVITATION_REVOKED',
+  STAFF_INVITATION_ACCEPTED: 'STAFF_INVITATION_ACCEPTED',
   PLAN_CREATED: 'PLAN_CREATED',
   PLAN_UPDATED: 'PLAN_UPDATED',
   PLAN_DEACTIVATED: 'PLAN_DEACTIVATED',
   PLAN_ACTIVATED: 'PLAN_ACTIVATED',
+  EMAIL_TEMPLATE_DRAFT_SAVED: 'EMAIL_TEMPLATE_DRAFT_SAVED',
+  EMAIL_TEMPLATE_PUBLISHED: 'EMAIL_TEMPLATE_PUBLISHED',
   SAAS_SUBSCRIPTION_UPDATED: 'SAAS_SUBSCRIPTION_UPDATED',
   SAAS_INVOICE_UPDATED: 'SAAS_INVOICE_UPDATED',
   SAAS_WEBHOOK_RETRIED: 'SAAS_WEBHOOK_RETRIED',
@@ -28,9 +34,15 @@ export const AuditAction = {
   BRANCH_CREATED: 'BRANCH_CREATED',
   BRANCH_UPDATED: 'BRANCH_UPDATED',
   BRANCH_DEACTIVATED: 'BRANCH_DEACTIVATED',
+  BRANCH_ACTIVATED: 'BRANCH_ACTIVATED',
   SERVICE_CREATED: 'SERVICE_CREATED',
   SERVICE_UPDATED: 'SERVICE_UPDATED',
   SERVICE_DEACTIVATED: 'SERVICE_DEACTIVATED',
+  SERVICE_ACTIVATED: 'SERVICE_ACTIVATED',
+  SERVICE_GROUP_CREATED: 'SERVICE_GROUP_CREATED',
+  SERVICE_GROUP_UPDATED: 'SERVICE_GROUP_UPDATED',
+  SERVICE_GROUP_DEACTIVATED: 'SERVICE_GROUP_DEACTIVATED',
+  SERVICE_GROUP_ACTIVATED: 'SERVICE_GROUP_ACTIVATED',
   PATIENT_CREATED: 'PATIENT_CREATED',
   PATIENT_ADMINISTRATIVE_UPDATED: 'PATIENT_ADMINISTRATIVE_UPDATED',
   APPOINTMENT_CREATED: 'APPOINTMENT_CREATED',
@@ -51,13 +63,16 @@ export type AuditResourceType =
   | 'ROLE_ASSIGNMENT'
   | 'TENANT'
   | 'TENANT_OWNER_INVITATION'
+  | 'STAFF_INVITATION'
   | 'PLAN'
+  | 'EMAIL_TEMPLATE_REVISION'
   | 'SAAS_SUBSCRIPTION'
   | 'SAAS_INVOICE'
   | 'SAAS_WEBHOOK_EVENT'
   | 'TENANT_SETTINGS'
   | 'BRANCH'
   | 'SERVICE'
+  | 'SERVICE_GROUP'
   | 'PATIENT'
   | 'APPOINTMENT'
   | 'TREATMENT_PLAN'
@@ -108,10 +123,20 @@ const TENANT_OWNER_INVITATION_PAYLOAD: AuditPayloadPolicy = {
   after: ['status'],
   metadata: ['reasonCode'],
 };
+const STAFF_INVITATION_PAYLOAD: AuditPayloadPolicy = {
+  before: ['status'],
+  after: ['status'],
+  metadata: ['reasonCode'],
+};
 const PLAN_CHANGE_PAYLOAD: AuditPayloadPolicy = {
   before: ['changedFields', 'isActive', 'amount', 'currency'],
   after: ['changedFields', 'isActive', 'amount', 'currency'],
   metadata: ['reasonCode'],
+};
+const EMAIL_TEMPLATE_CHANGE_PAYLOAD: AuditPayloadPolicy = {
+  before: ['templateKey', 'locale', 'version', 'status', 'changedFields'],
+  after: ['templateKey', 'locale', 'version', 'status', 'changedFields'],
+  metadata: [],
 };
 const SAAS_PAYLOAD: AuditPayloadPolicy = {
   before: ['status', 'amount', 'currency', 'currentPeriodEnd'],
@@ -137,6 +162,11 @@ const SERVICE_PAYLOAD: AuditPayloadPolicy = {
     'durationMinutes',
   ],
   after: ['changedFields', 'isActive', 'amount', 'currency', 'durationMinutes'],
+  metadata: ['reasonCode'],
+};
+const SERVICE_GROUP_PAYLOAD: AuditPayloadPolicy = {
+  before: ['changedFields', 'isActive'],
+  after: ['changedFields', 'isActive'],
   metadata: ['reasonCode'],
 };
 const PATIENT_PAYLOAD: AuditPayloadPolicy = {
@@ -273,6 +303,30 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     false,
     TENANT_OWNER_INVITATION_PAYLOAD,
   ),
+  [AuditAction.STAFF_INVITATION_CREATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'STAFF_INVITATION',
+    true,
+    STAFF_INVITATION_PAYLOAD,
+  ),
+  [AuditAction.STAFF_INVITATION_RESENT]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'STAFF_INVITATION',
+    false,
+    STAFF_INVITATION_PAYLOAD,
+  ),
+  [AuditAction.STAFF_INVITATION_REVOKED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'STAFF_INVITATION',
+    true,
+    STAFF_INVITATION_PAYLOAD,
+  ),
+  [AuditAction.STAFF_INVITATION_ACCEPTED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'STAFF_INVITATION',
+    false,
+    STAFF_INVITATION_PAYLOAD,
+  ),
   [AuditAction.PLAN_CREATED]: definition(
     AuditDomain.PLATFORM,
     'PLAN',
@@ -296,6 +350,18 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     'PLAN',
     true,
     PLAN_CHANGE_PAYLOAD,
+  ),
+  [AuditAction.EMAIL_TEMPLATE_DRAFT_SAVED]: definition(
+    AuditDomain.PLATFORM,
+    'EMAIL_TEMPLATE_REVISION',
+    false,
+    EMAIL_TEMPLATE_CHANGE_PAYLOAD,
+  ),
+  [AuditAction.EMAIL_TEMPLATE_PUBLISHED]: definition(
+    AuditDomain.PLATFORM,
+    'EMAIL_TEMPLATE_REVISION',
+    false,
+    EMAIL_TEMPLATE_CHANGE_PAYLOAD,
   ),
   [AuditAction.SAAS_SUBSCRIPTION_UPDATED]: definition(
     AuditDomain.PLATFORM,
@@ -339,6 +405,12 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     true,
     BRANCH_PAYLOAD,
   ),
+  [AuditAction.BRANCH_ACTIVATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'BRANCH',
+    true,
+    BRANCH_PAYLOAD,
+  ),
   [AuditAction.SERVICE_CREATED]: definition(
     AuditDomain.TENANT_ADMIN,
     'SERVICE',
@@ -356,6 +428,36 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     'SERVICE',
     true,
     SERVICE_PAYLOAD,
+  ),
+  [AuditAction.SERVICE_ACTIVATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'SERVICE',
+    true,
+    SERVICE_PAYLOAD,
+  ),
+  [AuditAction.SERVICE_GROUP_CREATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'SERVICE_GROUP',
+    false,
+    SERVICE_GROUP_PAYLOAD,
+  ),
+  [AuditAction.SERVICE_GROUP_UPDATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'SERVICE_GROUP',
+    false,
+    SERVICE_GROUP_PAYLOAD,
+  ),
+  [AuditAction.SERVICE_GROUP_DEACTIVATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'SERVICE_GROUP',
+    true,
+    SERVICE_GROUP_PAYLOAD,
+  ),
+  [AuditAction.SERVICE_GROUP_ACTIVATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'SERVICE_GROUP',
+    true,
+    SERVICE_GROUP_PAYLOAD,
   ),
   [AuditAction.PATIENT_CREATED]: definition(
     AuditDomain.CLINICAL,

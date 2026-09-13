@@ -42,7 +42,7 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 ### Trong ngày
 
 - Hỗ trợ Receptionist xử lý lịch hủy, no-show, walk-in và chuyển ca.
-- Mời/điều chỉnh nhân sự chỉ trong branch scope; không cấp Tenant Admin hoặc mở rộng scope của chính mình.
+- Không có API mời/điều chỉnh nhân sự cho Branch Admin trong MVP; capability giới hạn theo branch là milestone sau. Branch Admin không cấp Tenant Admin hoặc mở rộng scope của chính mình.
 - Theo dõi dashboard branch: lịch theo trạng thái, ca đang diễn ra, doanh thu đã thu trong ngày và treatment plan cần follow-up.
 
 ### Cuối ngày
@@ -127,14 +127,15 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 
 MVP dùng **fixed-role scoped RBAC**: role là danh mục do hệ thống định nghĩa trong code/migration, còn database chỉ lưu việc một identity được cấp role nào ở tenant và branch nào. Không tạo entity `Permission`, `Role`, `RolePermission` hoặc permission override cho tenant trong MVP. Điều này ngăn Tenant Admin tự mở rộng quyền ngoài policy đã được duyệt.
 
-`User` là identity toàn hệ thống đang có sẵn. User không mang `tenantId`, `branchId` hay cờ boolean như `isAdmin`; các thuộc tính đó sẽ sai khi một người làm việc tại nhiều tenant hoặc có nhiều vai trò.
+`User` là identity toàn hệ thống đang có sẵn. User không mang `tenantId`, `branchId` hay cờ boolean như `isAdmin`; các thuộc tính đó sẽ sai khi một người làm việc tại nhiều tenant hoặc có nhiều vai trò. `TenantUserMembership` là lifecycle truy cập của một User trong đúng một tenant; `DISABLED` chặn grant tại tenant đó nhưng không tác động User hay tenant khác.
 
 ```text
                                  ┌── PlatformRoleAssignment ── PLATFORM_ADMIN
 User (global identity) ──────────┤
-                                 └── RoleAssignment ── TenantRoleCode
-                                        ├── tenantId ─── Tenant
-                                        └── branchId? ── Branch (cùng tenant)
+                                 └── TenantUserMembership ── Tenant
+                                        └── RoleAssignment ── TenantRoleCode
+                                             ├── tenantId ─── Tenant
+                                             └── branchId? ── Branch (cùng tenant)
 
 RoleAssignment có branchId = null  → TENANT_ADMIN, scope toàn tenant
 RoleAssignment có branchId          → BRANCH_ADMIN | RECEPTIONIST | DENTIST,
@@ -255,7 +256,7 @@ Migration `1786060800005-CreateAuthorizationRoleAssignments` và module `authori
 
 Permission đã được định nghĩa bằng policy map bất biến tại `modules/authorization/authorization.policy.ts`; không lưu thành entity/database enum và không có endpoint CRUD. Snapshot auth trả platform permission và effective permission theo tenant/branch để client ẩn/hiện UI, nhưng policy backend vẫn là nguồn quyết định quyền.
 
-Policy hiện có capability Platform (`platform.*`), quản trị tenant (`tenant.settings.manage`, `branch.manage`, `service-catalog.manage`, `staff.manage`, reports/audit/billing/notification), Receptionist và Dentist theo ma trận role ở đầu tài liệu. Mỗi action mới phải được thêm có chủ đích vào policy, guard và test; mặc định không khớp permission là `403`. Không thêm direct user permission, tenant-custom role, wildcard (`*`) hay super-admin bypass cho dữ liệu tenant.
+Policy hiện có capability Platform (`platform.*`, gồm `platform.email-template.manage`), quản trị tenant (`tenant.settings.manage`, `branch.manage`, `service-catalog.manage`, `staff.manage`, reports/audit/billing/notification), Receptionist và Dentist theo ma trận role ở đầu tài liệu. Mỗi action mới phải được thêm có chủ đích vào policy, guard và test; mặc định không khớp permission là `403`. Không thêm direct user permission, tenant-custom role, wildcard (`*`) hay super-admin bypass cho dữ liệu tenant.
 
 ### 10.5 Entity nghiệp vụ dùng làm điều kiện quyền
 
@@ -273,10 +274,10 @@ Nếu sau này cần nhiều dentist/assistant trong một appointment hoặc c�
 ### 10.6 Audit, lifecycle và thứ tự migration
 
 - Mọi `INSERT`/thu hồi `PlatformRoleAssignment` hoặc `RoleAssignment` tạo `AuditLog` với action (`ROLE_GRANTED`, `ROLE_REVOKED`, `BRANCH_SCOPE_GRANTED`, `BRANCH_SCOPE_REVOKED`), actor, tenant/branch khi có, resource ID, request ID, reason và before/after an toàn. Không ghi password, token hoặc clinical detail vào audit payload.
-- Authorization guard chỉ xem active role assignment (`revoked_at IS NULL`) trong từng request scoped; thu hồi role vì vậy có hiệu lực ngay mà không cần user đăng nhập lại. User bị `DISABLED` hoặc logout không bị tra cứu lại ở generic protected route: access JWT đã phát hành vẫn dùng đến khi hết hạn, còn login/refresh và `GET /auth/me` vẫn từ chối user không active. `SubscriptionGuard` hiện chạy sau tenant-context resolution và trước authorization: `PROVISIONING`, `SUSPENDED` và `CANCELED` bị chặn khỏi route vận hành, còn billing/read-only phải opt-in rõ ràng.
+- Authorization guard chỉ xem role assignment chưa thu hồi của `TenantUserMembership.ACTIVE` trong từng request scoped; thu hồi role hoặc disable membership vì vậy có hiệu lực ngay mà không cần user đăng nhập lại. `User.status` toàn cục không do Tenant Admin thay đổi. `SubscriptionGuard` hiện chạy sau tenant-context resolution và trước authorization: `PROVISIONING`, `SUSPENDED` và `CANCELED` bị chặn khỏi route vận hành, còn billing/read-only phải opt-in rõ ràng.
 - Không cascade delete từ `users`, `tenants` hoặc `branches` sang assignment/audit. Tenant và branch được ngừng hoạt động theo lifecycle; lịch sử quyền phải còn nguyên.
 - Thứ tự triển khai schema: `Tenant` → `Branch` (bao gồm `UNIQUE (id, tenant_id)`) → enum/tables assignment → fixture seed assignment synthetic → `AuditLog` → authorization guard/service.
-- `AuditLog` đã có module/schema append-only, request ID và API đọc theo Platform/Tenant/Branch scope; xem [05-audit-log.md](./05-audit-log.md). `TenantScope()` kết hợp `TenantContextGuard` → `SubscriptionGuard` → `AuthorizationGuard`; route gắn `@PlatformScope()` không có tenant context. Route không gắn scope decorator hiện chỉ yêu cầu JWT; snapshot auth vẫn chỉ dành cho UI, không thay enforcement ở API. Khi thêm command cấp/thu hồi role, các command đó phải ghi audit trong cùng transaction và không được sửa trực tiếp các field scope bất biến.
+- `AuditLog` đã có module/schema append-only, request ID và API đọc theo Platform/Tenant/Branch scope; xem [05-audit-log.md](./05-audit-log.md). `TenantScope()` kết hợp `TenantContextGuard` → `SubscriptionGuard` → `BranchActivityGuard` → `AuthorizationGuard`; `BranchActivityGuard` chỉ chặn route branch-scoped vận hành khi branch `INACTIVE`. Route đọc lịch sử phải khai báo `@AllowInactiveBranchAccess()`; route gắn `@PlatformScope()` không có tenant context. Route không gắn scope decorator hiện chỉ yêu cầu JWT; snapshot auth vẫn chỉ dành cho UI, không thay enforcement ở API. Khi thêm command cấp/thu hồi role, các command đó phải ghi audit trong cùng transaction và không được sửa trực tiếp các field scope bất biến.
 
 ### 10.7 Thuật toán guard cho service scoped
 
@@ -284,9 +285,10 @@ Nếu sau này cần nhiều dentist/assistant trong một appointment hoặc c�
 Authenticate access JWT (chữ ký, hết hạn, typ=access)
   → resolve tenant từ tenantSlug đã xác minh, không từ client tenantId
   → nếu route có branchSlug, resolve branch trong tenant đó để lấy target branchId
+  → Subscription Guard
+  → nếu route branch-scoped vận hành, chặn branch INACTIVE
   → tải active RoleAssignment theo (userId, resolved tenantId, target branchId)
   → đối chiếu fixed policy map
-  → Subscription Guard (khi module billing đã có policy thực thi)
   → kiểm tra ownership/assignment và trạng thái resource trong service
   → query/update luôn kèm tenantId; nếu branch-owned thì kèm branchId
 ```
@@ -304,14 +306,15 @@ Mục này là quy ước bắt buộc khi thêm endpoint nghiệp vụ, đặc 
 - Global `JwtAuthGuard` xác minh access JWT và đặt `request.user`. Không có scope decorator, route protected chỉ dừng ở lớp JWT.
 - `@TenantScope('tenant')` hoặc `@TenantScope('branch')` chạy `TenantContextGuard` trước. Guard này chỉ resolve target context từ route params: `:tenantSlug`, và với branch scope là cặp `:tenantSlug` + `:branchSlug`. Nó tìm branch bằng `(resolvedTenantId, branchSlug)`, nên branch thuộc tenant khác không thể tạo context hợp lệ.
 - `TenantContextGuard` không quyết định user có quyền hay không. Tenant/branch không tồn tại, thiếu route param, hoặc branch không thuộc tenant trong URL trả `404`.
-- `AuthorizationGuard` chạy sau context guard. Nó lấy `userId` từ JWT và tenant/branch ID đã resolve để tải active role assignment (`revoked_at IS NULL`), sau đó đối chiếu permission policy.
+- `SubscriptionGuard` chạy sau context guard. `BranchActivityGuard` chạy tiếp theo và chặn branch `INACTIVE` ở route branch-scoped, trừ route read-only khai báo `@AllowInactiveBranchAccess()`.
+- `AuthorizationGuard` chạy sau các lifecycle guard. Nó lấy `userId` từ JWT và tenant/branch ID đã resolve để tải active role assignment (`revoked_at IS NULL`), sau đó đối chiếu permission policy.
 - Target context tồn tại nhưng user không có assignment cho tenant/branch, hoặc thiếu permission, trả `403`. Platform assignment chỉ có hiệu lực với `@PlatformScope()`; nó không cấp quyền tenant/clinical.
 
 #### Quy ước controller
 
 - Endpoint Platform dùng `@PlatformScope()` và `@RequirePermissions(...)`. Không dùng tenant context hoặc `platform_role_assignments` để truy vấn dữ liệu clinical.
 - Endpoint tenant-wide dùng URL có `:tenantSlug`, `@TenantScope('tenant')`, và `@RequirePermissions(...)`.
-- Endpoint branch-owned dùng URL có cả `:tenantSlug` và `:branchSlug`, `@TenantScope('branch')`, và `@RequirePermissions(...)`.
+- Endpoint branch-owned dùng URL có cả `:tenantSlug` và `:branchSlug`, `@TenantScope('branch')`, và `@RequirePermissions(...)`; mặc định là route vận hành nên branch `INACTIVE` nhận `403`. Chỉ route read-only lịch sử mới dùng thêm `@AllowInactiveBranchAccess()`.
 - Không để route nghiệp vụ thiếu scope decorator hoặc `@RequirePermissions(...)` chỉ vì client đã ẩn nút UI. Permission policy backend là nguồn quyết định duy nhất.
 
 ```ts
@@ -340,3 +343,4 @@ create(
 - Branch slug thuộc tenant khác trong URL nhận `404`.
 - Body/resource ID của tenant hoặc branch khác không thể đọc hoặc ghi dữ liệu ngoài context.
 - User thiếu một trong các permission yêu cầu nhận `403`; thu hồi assignment có hiệu lực ở request scoped kế tiếp.
+- Branch `INACTIVE` nhận `403` ở route branch-scoped vận hành; route read-only đã opt-in vẫn chỉ đọc trong đúng tenant/branch scope.

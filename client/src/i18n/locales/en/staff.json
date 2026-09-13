@@ -1,0 +1,136 @@
+{
+  "eyebrow": "Workspace · Tenant Admin",
+  "title": "Staff management",
+  "description": "Invite staff, manage tenant membership, and assign fixed roles across active branches.",
+  "loading": "Loading staff",
+  "roles": {
+    "TENANT_ADMIN": "Tenant Admin",
+    "BRANCH_ADMIN": "Branch Admin",
+    "RECEPTIONIST": "Receptionist",
+    "DENTIST": "Dentist"
+  },
+  "status": {
+    "ALL": "All statuses",
+    "ACTIVE": "Active",
+    "DISABLED": "Disabled",
+    "INVITED": "Invited"
+  },
+  "delivery": {
+    "PENDING": "Invitation pending delivery",
+    "SENT": "Invitation sent",
+    "FAILED": "Invitation delivery failed"
+  },
+  "scope": {
+    "tenantWide": "Entire tenant",
+    "inactive": "Inactive branch",
+    "unavailable": "Unavailable branch"
+  },
+  "table": {
+    "title": "People and invitations",
+    "description": "Manage access for {{tenant}} without changing global user status.",
+    "searchPlaceholder": "Search staff name or email...",
+    "staff": "Staff",
+    "access": "Roles and scope",
+    "status": "Status",
+    "statusFilter": "Filter staff status",
+    "actions": "Actions",
+    "expiresAt": "Expires {{date}}"
+  },
+  "form": {
+    "email": "Email",
+    "fullName": "Full name",
+    "reason": "Reason",
+    "reasonOptional": "Optional; kept in the audit log.",
+    "assignments": "Role assignments",
+    "assignmentsHint": "Roles are fixed. Branch-scoped roles require at least one active branch.",
+    "role": "Role",
+    "branches": "Active branches",
+    "tenantAdminScope": "Tenant Admin always has access across the whole tenant.",
+    "noActiveBranches": "Create or reactivate a branch before assigning a branch-scoped role."
+  },
+  "validation": {
+    "assignmentScope": "Choose at least one active branch for every branch-scoped role.",
+    "reasonRequired": "Enter a reason for this action.",
+    "reasonLength": "Reason must be at most 500 characters."
+  },
+  "invite": {
+    "title": "Invite staff member",
+    "description": "The recipient has no tenant access until they accept the email invitation."
+  },
+  "grant": {
+    "title": "Grant roles",
+    "description": "Add new fixed-role assignments for {{name}}. Existing scopes are not changed."
+  },
+  "actions": {
+    "invite": "Invite staff",
+    "sendInvitation": "Send invitation",
+    "grantRoles": "Grant roles",
+    "addRole": "Add role",
+    "removeRole": "Remove {{role}}",
+    "cancel": "Cancel",
+    "saving": "Saving",
+    "retry": "Try again",
+    "openMenu": "Open actions for {{name}}",
+    "disable": {
+      "label": "Disable access",
+      "title": "Disable staff access",
+      "description": "{{name}} will immediately lose tenant access. Their role history remains available if access is enabled again.",
+      "confirm": "Disable access"
+    },
+    "enable": {
+      "label": "Enable access",
+      "title": "Enable staff access",
+      "description": "{{name}} will regain access from their remaining active role assignments.",
+      "confirm": "Enable access"
+    },
+    "resend": {
+      "label": "Resend invitation",
+      "title": "Resend invitation",
+      "description": "A new invitation link will be sent to {{name}}. The previous link will stop working.",
+      "confirm": "Resend invitation"
+    },
+    "revokeInvitation": {
+      "label": "Revoke invitation",
+      "title": "Revoke invitation",
+      "description": "{{name}} will no longer be able to use this invitation link.",
+      "confirm": "Revoke invitation"
+    },
+    "revokeRole": {
+      "label": "Revoke {{role}}",
+      "title": "Revoke role",
+      "description": "Revoke {{role}} from {{name}}. This can reduce their access immediately.",
+      "confirm": "Revoke role"
+    }
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "listTitle": "Could not load staff"
+  },
+  "empty": {
+    "title": "No staff found",
+    "description": "Invite a staff member or adjust the current search and status filter."
+  },
+  "accept": {
+    "title": "Accept staff invitation",
+    "description": "Complete this invitation to receive access to the DentFlow tenant.",
+    "invalidTitle": "Invalid invitation link",
+    "invalidDescription": "This link does not contain an invitation token. Open the link from your invitation email.",
+    "signedInTitle": "Accept with your current account",
+    "signedInDescription": "You are signed in as {{email}}. This account must match the invited email.",
+    "newUserTitle": "Set your password",
+    "newUserDescription": "Your tenant membership and roles are created only after you accept this invitation.",
+    "fields": {
+      "password": "Password"
+    },
+    "passwordHint": "At least 12 characters.",
+    "actions": {
+      "accept": "Accept invitation",
+      "accepting": "Accepting...",
+      "switchAccount": "Use another account"
+    },
+    "success": {
+      "newUser": "Your account is ready. Sign in to continue.",
+      "existingUser": "Invitation accepted. Opening your tenant workspace..."
+    }
+  }
+}

@@ -13,6 +13,7 @@ Thư mục này là nguồn thông tin sản phẩm và kỹ thuật chính củ
 | [08-demo-and-testing.md](./08-demo-and-testing.md) | Tài khoản dữ liệu mẫu, browser E2E và môi trường test tách biệt                        |
 | [09-idempotency-implementation-plan.md](./09-idempotency-implementation-plan.md) | Quyết định kỹ thuật và lộ trình triển khai idempotency cho command backend |
 | [10-background-jobs-architecture.md](./10-background-jobs-architecture.md) | Kiến trúc BullMQ, worker và quy ước background job backend |
+| [12-email-template-management.md](./12-email-template-management.md) | Template email hệ thống, publish revision và tích hợp delivery |
 | [flows/README.md](./flows/README.md)               | Sơ đồ Mermaid đọc nhanh cho developer; không thay thế tài liệu domain chuẩn            |
 
 ## Quy ước làm việc với Codex

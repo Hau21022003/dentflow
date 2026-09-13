@@ -35,6 +35,7 @@ import {
   CircleUserRound,
   ClipboardList,
   LayoutDashboard,
+  Mail,
   Menu,
   ShieldCheck,
   Stethoscope,
@@ -275,6 +276,16 @@ export function AppLayout() {
       });
     }
 
+    if (hasPlatformPermission(user, PERMISSIONS.platformEmailTemplateManage)) {
+      items.push({
+        end: false,
+        icon: Mail,
+        kind: "link",
+        label: t("navigation.emailTemplates"),
+        to: PATHS.platformEmailTemplates,
+      });
+    }
+
     if (tenantSlug && tenant) {
       const tenantItems: NavigationLink[] = [];
 
@@ -310,6 +321,38 @@ export function AppLayout() {
         });
       }
 
+      if (
+        hasTenantPermission(
+          user,
+          { slug: tenantSlug },
+          PERMISSIONS.serviceCatalogManage,
+        )
+      ) {
+        tenantItems.push({
+          end: true,
+          icon: Tags,
+          kind: "link",
+          label: t("navigation.services"),
+          to: pathFor.workspaceTenantServices(tenantSlug),
+        });
+      }
+
+      if (
+        hasTenantPermission(
+          user,
+          { slug: tenantSlug },
+          PERMISSIONS.staffManage,
+        )
+      ) {
+        tenantItems.push({
+          end: true,
+          icon: UsersRound,
+          kind: "link",
+          label: t("navigation.staff"),
+          to: pathFor.workspaceTenantStaff(tenantSlug),
+        });
+      }
+
       if (tenantItems.length > 0) {
         items.push({
           icon: Building2,
@@ -331,23 +374,6 @@ export function AppLayout() {
           to: pathFor.workspaceBranch(tenantSlug, branchSlug),
         },
       ];
-
-      if (
-        hasBranchPermission(
-          user,
-          { slug: tenantSlug },
-          branchSlug,
-          PERMISSIONS.staffManage,
-        )
-      ) {
-        branchItems.push({
-          end: true,
-          icon: UsersRound,
-          kind: "link",
-          label: t("navigation.staff"),
-          to: pathFor.workspaceBranchStaff(tenantSlug, branchSlug),
-        });
-      }
 
       if (
         hasBranchPermission(

@@ -50,6 +50,16 @@ VALUES
     '$2b$12$OFMsdYjCNgdKETLPShvBzunCfOVlqDxCpQp2Rw0J4YTTjb3RHFu3K',
     NOW(),
     NOW()
+  ),
+  (
+    '31000000-0000-4000-8000-000000000005',
+    'harmony.admin@dentflow.test',
+    'harmony.admin@dentflow.test',
+    'Synthetic Harmony Test Tenant Admin',
+    'ACTIVE',
+    '$2b$12$OFMsdYjCNgdKETLPShvBzunCfOVlqDxCpQp2Rw0J4YTTjb3RHFu3K',
+    NOW(),
+    NOW()
   )
 ON CONFLICT ("email_normalized") DO UPDATE
 SET

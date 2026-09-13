@@ -25,30 +25,34 @@ test("platform admin reaches Platform routes and is denied a workspace route", a
   await expect(page.getByText("403 · Không có quyền truy cập")).toBeVisible();
 });
 
-test("tenant admin reaches tenant and branch-management pages but not Platform", async ({ page }) => {
+test("tenant admin reaches tenant, branch, and staff-management pages but not Platform", async ({ page }) => {
   await login(page, E2E_USERS.tenantAdmin);
 
   await page.goto(`/workspace/${brightSmileSlug}/tenant/branches`);
-  await expect(page.getByRole("heading", { name: "Quản lý branch" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Quản lý branch|Branch management/ })).toBeVisible();
+
+  await page.goto(`/workspace/${brightSmileSlug}/tenant/staff`);
+  await expect(page.getByRole("heading", { name: /Quản lý nhân sự|Staff management/ })).toBeVisible();
 
   await page.goto("/platform");
   await expect(page.getByText("403 · Không có quyền truy cập")).toBeVisible();
 });
 
-test("combined branch-admin and receptionist roles expose both branch cards and pages", async ({ page }) => {
+test("combined branch-admin and receptionist roles do not receive staff management", async ({ page }) => {
   await login(page, E2E_USERS.branchAdminReceptionist);
 
   await expect(page).toHaveURL(
     new RegExp(`/workspace/${brightSmileSlug}/branches/${brightSmileCentralSlug}$`),
   );
   await expect(page.getByText("2 role tại branch hiện tại")).toBeVisible();
-  await expect(page.getByText("Quản trị chi nhánh")).toBeVisible();
+  await expect(page.getByText("Quản trị chi nhánh")).toHaveCount(0);
   await expect(page.getByText("Tiếp nhận")).toBeVisible();
 
   await page.goto(
     `/workspace/${brightSmileSlug}/branches/${brightSmileCentralSlug}/branch/staff`,
   );
-  await expect(page.getByRole("heading", { name: "Quản lý nhân sự" })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/workspace/${brightSmileSlug}/tenant/staff$`));
+  await expect(page.getByText(/403/)).toBeVisible();
 
   await page.goto(
     `/workspace/${brightSmileSlug}/branches/${brightSmileCentralSlug}/reception/appointments`,

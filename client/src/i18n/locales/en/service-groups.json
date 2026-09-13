@@ -1,0 +1,63 @@
+{
+  "loading": "Loading service groups…",
+  "statuses": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive"
+  },
+  "actions": {
+    "create": "Create service group",
+    "save": "Save changes",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "openActions": "Open actions for {{name}}",
+    "edit": "Edit",
+    "deactivate": "Deactivate",
+    "activate": "Reactivate service group",
+    "saving": "Saving"
+  },
+  "table": {
+    "title": "Service groups",
+    "description": "Groups are scoped to the current tenant and include inactive groups.",
+    "searchPlaceholder": "Search service group name…",
+    "name": "Service group",
+    "status": "Status",
+    "createdAt": "Created",
+    "actions": "Actions"
+  },
+  "filters": {
+    "statusTitle": "Filter status",
+    "statusDescription": "Show only service groups with the selected status."
+  },
+  "empty": {
+    "title": "No service groups yet",
+    "description": "Create a service group before adding services to this tenant."
+  },
+  "errors": {
+    "listTitle": "We could not load service groups"
+  },
+  "form": {
+    "createTitle": "Create service group",
+    "createDescription": "The service group will be created as active in the current tenant.",
+    "editTitle": "Edit service group",
+    "editDescription": "Update the group name without changing its history."
+  },
+  "fields": {
+    "name": "Service group name",
+    "reason": "Reason"
+  },
+  "lifecycle": {
+    "reasonRequired": "Enter a reason for this action.",
+    "reasonTooLong": "Reason must not exceed 500 characters.",
+    "deactivate": {
+      "title": "Deactivate service group",
+      "description": "You are about to deactivate {{name}}.",
+      "notice": "The service group is not deleted. Existing services remain active, but this group cannot be selected for new services or group changes until it is reactivated.",
+      "confirm": "Deactivate service group"
+    },
+    "activate": {
+      "title": "Reactivate service group",
+      "description": "You are about to reactivate {{name}}.",
+      "confirm": "Reactivate service group"
+    }
+  }
+}

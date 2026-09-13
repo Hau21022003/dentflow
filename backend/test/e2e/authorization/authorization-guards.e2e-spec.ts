@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import type { Server } from 'node:http';
 import { AppConfigService } from 'src/config/app-config.service';
 import { ACCESS_TOKEN_COOKIE } from 'src/modules/auth/auth.constants';
 import { PlatformRoleCode } from 'src/modules/authorization/entities/platform-role-assignment.entity';
@@ -7,6 +8,10 @@ import {
   RoleAssignment,
   TenantRoleCode,
 } from 'src/modules/authorization/entities/role-assignment.entity';
+import {
+  Branch,
+  BranchStatus,
+} from 'src/modules/branches/entities/branch.entity';
 import { User, UserStatus } from 'src/modules/users/entities/user.entity';
 import request from 'supertest';
 import { createAuthFixtures } from 'test/fixtures/auth.fixture';
@@ -65,10 +70,10 @@ describe('Authorization guards (e2e)', () => {
       email: 'token-user@authorization.test',
     });
 
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as Server)
       .get('/testing/authorization/platform')
       .expect(401);
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as Server)
       .get('/testing/authorization/platform')
       .set('Cookie', `${ACCESS_TOKEN_COOKIE}=not-a-jwt`)
       .expect(401);
@@ -80,7 +85,7 @@ describe('Authorization guards (e2e)', () => {
         expiresIn: 60,
       },
     );
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as Server)
       .get('/testing/authorization/platform')
       .set('Cookie', `${ACCESS_TOKEN_COOKIE}=${wrongTypeToken}`)
       .expect(401);
@@ -92,7 +97,7 @@ describe('Authorization guards (e2e)', () => {
         expiresIn: -1,
       },
     );
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as Server)
       .get('/testing/authorization/platform')
       .set('Cookie', `${ACCESS_TOKEN_COOKIE}=${expiredToken}`)
       .expect(401);
@@ -278,6 +283,39 @@ describe('Authorization guards (e2e)', () => {
     await session.agent.get(route).expect(403);
   });
 
+  it('blocks branch-scoped operations while allowing explicit historical audit reads on inactive branches', async () => {
+    const tenant = await authFixtures.createTenant({
+      slug: 'inactive-branch-tenant',
+    });
+    const branch = await authFixtures.createBranch(tenant, {
+      slug: 'inactive-branch',
+      status: BranchStatus.INACTIVE,
+    });
+    const user = await authFixtures.createUser({
+      email: 'inactive-branch-user@authorization.test',
+    });
+    await authFixtures.grantBranchRole(
+      user,
+      branch,
+      TenantRoleCode.BRANCH_ADMIN,
+    );
+    await authFixtures.grantBranchRole(user, branch, TenantRoleCode.DENTIST);
+    const session = await loginAs(app, {
+      email: user.email,
+      password: PASSWORD,
+    });
+    const operationalRoute = `/testing/authorization/tenants/${tenant.slug}/branches/${branch.slug}`;
+    const auditRoute = `/tenants/${tenant.slug}/branches/${branch.slug}/audit-logs`;
+
+    await session.agent.get(operationalRoute).expect(403);
+    await session.agent.get(auditRoute).expect(200);
+
+    await dataSource.getRepository(Branch).update(branch.id, {
+      status: BranchStatus.ACTIVE,
+    });
+    await session.agent.get(operationalRoute).expect(200);
+  });
+
   it('keeps a valid access token usable by generic guards after disable or logout', async () => {
     const { tenant, branch } = await authFixtures.createTenantWithBranch({
       tenant: { slug: 'token-lifecycle-tenant' },
@@ -326,7 +364,7 @@ describe('Authorization guards (e2e)', () => {
     });
     await loggedOutSession.agent.post('/auth/logout').expect(204);
 
-    await request(app.getHttpServer())
+    await request(app.getHttpServer() as Server)
       .get(route)
       .set('Cookie', loggedOutSession.accessCookie)
       .expect(200);
