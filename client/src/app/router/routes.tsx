@@ -4,6 +4,7 @@ import { LoginPage } from "../../pages/auth/LoginPage";
 import { AcceptTenantOwnerInvitationPage } from "../../pages/auth/AcceptTenantOwnerInvitationPage";
 import { AcceptStaffInvitationPage } from "../../pages/auth/AcceptStaffInvitationPage";
 import { PatientsListPage } from "../../pages/patients/PatientsListPage";
+import { ProfilePage } from "../../pages/profile/ProfilePage";
 import { PlatformHomePage } from "../../pages/platform/PlatformHomePage";
 import { EmailTemplateDetailPage } from "../../pages/platform/EmailTemplateDetailPage";
 import { EmailTemplateManagementPage } from "../../pages/platform/EmailTemplateManagementPage";
@@ -58,6 +59,7 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <RoleHomeRedirect /> },
           { path: PATHS.forbidden, element: <ForbiddenPage /> },
+          { path: PATHS.profile, element: <ProfilePage /> },
           {
             path: PATHS.platform,
             element: (
@@ -100,7 +102,9 @@ export const routes: RouteObject[] = [
                 permission={PERMISSIONS.platformPlanManage}
               />
             ),
-            children: [{ index: true, element: <SubscriptionPlanManagementPage /> }],
+            children: [
+              { index: true, element: <SubscriptionPlanManagementPage /> },
+            ],
           },
           {
             path: PATHS.workspace,
@@ -138,7 +142,9 @@ export const routes: RouteObject[] = [
                             permission={PERMISSIONS.serviceCatalogManage}
                           />
                         ),
-                        children: [{ index: true, element: <ServiceManagementPage /> }],
+                        children: [
+                          { index: true, element: <ServiceManagementPage /> },
+                        ],
                       },
                       {
                         path: "staff",
@@ -147,7 +153,9 @@ export const routes: RouteObject[] = [
                             permission={PERMISSIONS.staffManage}
                           />
                         ),
-                        children: [{ index: true, element: <StaffManagementPage /> }],
+                        children: [
+                          { index: true, element: <StaffManagementPage /> },
+                        ],
                       },
                     ],
                   },
@@ -179,7 +187,9 @@ export const routes: RouteObject[] = [
                             permission={PERMISSIONS.appointmentManage}
                           />
                         ),
-                        children: [{ index: true, element: <AppointmentsPage /> }],
+                        children: [
+                          { index: true, element: <AppointmentsPage /> },
+                        ],
                       },
                       {
                         path: "doctor",
@@ -188,7 +198,9 @@ export const routes: RouteObject[] = [
                             permission={PERMISSIONS.appointmentAssignedRead}
                           />
                         ),
-                        children: [{ index: true, element: <DoctorHomePage /> }],
+                        children: [
+                          { index: true, element: <DoctorHomePage /> },
+                        ],
                       },
                     ],
                   },

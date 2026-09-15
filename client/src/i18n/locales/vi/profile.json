@@ -1,0 +1,25 @@
+{
+  "eyebrow": "Tài khoản",
+  "title": "Thông tin cá nhân",
+  "description": "Cập nhật tên hiển thị và ảnh đại diện của bạn.",
+  "form": {
+    "title": "Hồ sơ của bạn",
+    "description": "Ảnh đại diện được dùng ở sidebar và danh sách nhân sự."
+  },
+  "fields": {
+    "avatar": "Ảnh đại diện",
+    "fullName": "Họ và tên",
+    "email": "Email"
+  },
+  "avatarHint": "Chấp nhận JPG, PNG hoặc WEBP, tối đa 2 MB.",
+  "emailHint": "Đổi email sẽ được hỗ trợ trong phần bảo mật sau này.",
+  "actions": {
+    "removeAvatar": "Xóa ảnh",
+    "save": "Lưu thay đổi",
+    "saving": "Đang lưu..."
+  },
+  "errors": {
+    "nameRequired": "Họ và tên là bắt buộc."
+  },
+  "success": "Đã lưu thông tin cá nhân."
+}

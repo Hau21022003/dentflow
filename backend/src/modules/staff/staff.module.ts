@@ -10,6 +10,7 @@ import { EmailTemplatesModule } from '../email-templates/email-templates.module'
 import { IdempotencyModule } from '../idempotency/idempotency.module';
 import { Tenant } from '../tenants/entities/tenant.entity';
 import { User } from '../users/entities/user.entity';
+import { UsersModule } from '../users/users.module';
 import { EmailModule } from '../../infrastructure/email/email.module';
 import { StaffController } from './staff.controller';
 import { StaffInvitation } from './entities/staff-invitation.entity';
@@ -40,6 +41,7 @@ const isTesting = process.env.NODE_ENV === 'test';
     EmailModule,
     EmailTemplatesModule,
     IdempotencyModule,
+    UsersModule,
     ...(isTesting
       ? []
       : [BullModule.registerQueue({ name: StaffInvitationQueueName })]),

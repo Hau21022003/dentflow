@@ -27,6 +27,7 @@ import {
 import { Branch, BranchStatus } from '../branches/entities/branch.entity';
 import { Tenant } from '../tenants/entities/tenant.entity';
 import { User, UserStatus } from '../users/entities/user.entity';
+import { UsersService } from '../users/users.service';
 import { AcceptStaffInvitationDto } from './dto/accept-staff-invitation.dto';
 import { CreateStaffInvitationDto } from './dto/create-staff-invitation.dto';
 import { GrantRoleAssignmentsDto } from './dto/grant-role-assignments.dto';
@@ -65,6 +66,7 @@ export class StaffService {
     private readonly auditLogService: AuditLogService,
     private readonly tokenService: StaffInvitationTokenService,
     private readonly invitationJobs: StaffInvitationProducer,
+    private readonly usersService: UsersService,
   ) {}
 
   async list(context: AuthorizationContext, query: ListStaffQueryDto) {
@@ -92,18 +94,25 @@ export class StaffService {
       assignments.push(assignment);
       assignmentsByUser.set(assignment.userId, assignments);
     });
+    const memberItems = await Promise.all(
+      memberships.map(async (membership) => {
+        const profile = await this.usersService.toProfile(membership.user);
+        return {
+          kind: 'MEMBER' as const,
+          id: membership.userId,
+          fullName: profile.fullName,
+          email: profile.email,
+          avatarUrl: profile.avatarUrl,
+          status: membership.status,
+          membership: this.membershipResponse(membership),
+          assignments: (assignmentsByUser.get(membership.userId) ?? []).map(
+            (assignment) => this.assignmentResponse(assignment),
+          ),
+        };
+      }),
+    );
     const items = [
-      ...memberships.map((membership) => ({
-        kind: 'MEMBER' as const,
-        id: membership.userId,
-        fullName: membership.user.fullName,
-        email: membership.user.email,
-        status: membership.status,
-        membership: this.membershipResponse(membership),
-        assignments: (assignmentsByUser.get(membership.userId) ?? []).map(
-          (assignment) => this.assignmentResponse(assignment),
-        ),
-      })),
+      ...memberItems,
       ...invitations
         .filter((invitation) => invitation.expiresAt > now)
         .map((invitation) => ({

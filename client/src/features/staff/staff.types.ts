@@ -24,6 +24,7 @@ export type StaffMemberItem = {
   id: string;
   fullName: string;
   email: string;
+  avatarUrl: string | null;
   status: StaffMembershipStatus;
   membership: StaffMembership;
   assignments: StaffAssignment[];

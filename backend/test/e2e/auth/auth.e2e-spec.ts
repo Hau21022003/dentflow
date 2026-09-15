@@ -71,6 +71,7 @@ describe('Authentication (e2e)', () => {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
+        avatarUrl: null,
         authorization: emptyAuthorization(),
       },
     });
@@ -116,6 +117,7 @@ describe('Authentication (e2e)', () => {
           id: user.id,
           email: user.email,
           fullName: user.fullName,
+          avatarUrl: null,
           authorization: emptyAuthorization(),
         },
       });
@@ -172,6 +174,7 @@ describe('Authentication (e2e)', () => {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
+      avatarUrl: null,
       authorization: {
         platform: {
           roles: [PlatformRoleCode.PLATFORM_ADMIN],
@@ -197,6 +200,7 @@ describe('Authentication (e2e)', () => {
             permissions: [
               'audit-log.read',
               'branch.manage',
+              'file.upload',
               'notification-settings.manage',
               'report.read',
               'saas-billing.manage',
@@ -217,6 +221,7 @@ describe('Authentication (e2e)', () => {
                   'appointment.assigned.read',
                   'appointment.manage',
                   'clinical.visit.write',
+                  'file.upload',
                   'follow-up.recommend',
                   'patient-invoice.create',
                   'patient-payment.record',

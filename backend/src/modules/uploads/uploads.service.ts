@@ -15,6 +15,10 @@ import {
 import type { AuthorizationContext } from '../authorization/authorization-context';
 import { CreateImageUploadIntentDto } from './dto/create-image-upload-intent.dto';
 import {
+  CreateUserImageUploadIntentDto,
+  UserImageUploadFolder,
+} from './dto/create-user-image-upload-intent.dto';
+import {
   IMAGE_EXTENSION_BY_CONTENT_TYPE,
   type ImageContentType,
 } from './upload.constants';
@@ -40,6 +44,52 @@ export class UploadsService {
     context: AuthorizationContext,
     input: CreateImageUploadIntentDto,
   ): Promise<ImageUploadIntentResponse> {
+    const tenantId = context.tenant?.id;
+    const branchId = context.branch?.id;
+    if (!tenantId || !branchId) {
+      throw new ServiceUnavailableException(
+        'A branch upload context is required.',
+      );
+    }
+
+    const extension = this.extensionFor(input);
+    const objectKey = `temp/${tenantId}/${branchId}/${randomUUID()}.${extension}`;
+
+    return this.createIntent(objectKey, input);
+  }
+
+  async createUserImageUploadIntent(
+    userId: string,
+    input: CreateUserImageUploadIntentDto,
+  ): Promise<ImageUploadIntentResponse> {
+    const extension = this.extensionFor(input);
+    const objectKey = this.userObjectKey(userId, input.folder, extension);
+
+    return this.createIntent(objectKey, input);
+  }
+
+  private userObjectKey(
+    userId: string,
+    folder: UserImageUploadFolder,
+    extension: string,
+  ): string {
+    switch (folder) {
+      case UserImageUploadFolder.AVATAR:
+        return `temp/users/${userId}/avatar/${randomUUID()}.${extension}`;
+    }
+  }
+
+  private extensionFor(input: CreateImageUploadIntentDto): string {
+    this.assertImageSize(input);
+    const contentType = input.contentType as ImageContentType;
+    const extension = IMAGE_EXTENSION_BY_CONTENT_TYPE[contentType];
+    if (!extension) {
+      throw new BadRequestException('Unsupported image content type.');
+    }
+    return extension;
+  }
+
+  private assertImageSize(input: CreateImageUploadIntentDto): void {
     const maxFileSizeBytes = this.config.uploadConfig.maxFileSizeBytes;
     if (input.sizeBytes < 1) {
       throw new BadRequestException('Image file must not be empty.');
@@ -49,26 +99,17 @@ export class UploadsService {
         `Image size must not exceed ${this.config.uploadConfig.maxFileSizeMb} MB.`,
       );
     }
+  }
 
-    const tenantId = context.tenant?.id;
-    const branchId = context.branch?.id;
-    if (!tenantId || !branchId) {
-      throw new ServiceUnavailableException(
-        'A branch upload context is required.',
-      );
-    }
-
-    const contentType = input.contentType as ImageContentType;
-    const extension = IMAGE_EXTENSION_BY_CONTENT_TYPE[contentType];
-    if (!extension) {
-      throw new BadRequestException('Unsupported image content type.');
-    }
-    const objectKey = `temp/${tenantId}/${branchId}/${randomUUID()}.${extension}`;
-
+  private async createIntent(
+    objectKey: string,
+    input: CreateImageUploadIntentDto,
+  ): Promise<ImageUploadIntentResponse> {
+    const maxFileSizeBytes = this.config.uploadConfig.maxFileSizeBytes;
     try {
       const upload = await this.objectStorage.createPresignedPost({
         key: objectKey,
-        contentType,
+        contentType: input.contentType,
         maxBytes: maxFileSizeBytes,
       });
       const expiresAt = new Date(

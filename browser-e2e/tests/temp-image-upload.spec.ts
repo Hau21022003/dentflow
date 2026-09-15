@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { CAT_AVATAR_PNG_FILE } from "./fixtures/images";
 import { resetDatabase } from "./support/database";
 import { E2E_USERS, login } from "./support/login";
 
@@ -11,7 +12,7 @@ test.beforeEach(async ({ request }) => {
   await resetDatabase(request);
 });
 
-test("uploads a synthetic PNG directly to MinIO using a presigned POST", async ({
+test("uploads the cat avatar PNG directly to MinIO using a presigned POST", async ({
   page,
 }) => {
   await login(page, E2E_USERS.tenantAdmin);
@@ -23,15 +24,7 @@ test("uploads a synthetic PNG directly to MinIO using a presigned POST", async (
     page.getByRole("heading", { name: "Kiểm tra upload ảnh tạm" }),
   ).toBeVisible();
 
-  await page.getByLabel("Ảnh kiểm thử").setInputFiles({
-    name: "synthetic-upload.png",
-    mimeType: "image/png",
-    // Valid 1×1 transparent PNG; no patient or production image is used in E2E.
-    buffer: Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL5zQAAAABJRU5ErkJggg==",
-      "base64",
-    ),
-  });
+  await page.getByLabel("Ảnh kiểm thử").setInputFiles(CAT_AVATAR_PNG_FILE);
 
   const storageResponse = page.waitForResponse((response) => {
     const request = response.request();

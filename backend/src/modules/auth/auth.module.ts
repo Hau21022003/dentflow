@@ -4,6 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthorizationModule } from '../authorization/authorization.module';
 import { AuditModule } from '../audit/audit.module';
+import { UsersModule } from '../users/users.module';
 import { User } from '../users/entities/user.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -22,6 +23,7 @@ import { TotpModule } from './totp/totp.module';
     TypeOrmModule.forFeature([AuthSession, User]),
     AuthorizationModule,
     AuditModule,
+    UsersModule,
     PasskeysModule,
     TotpModule,
   ],

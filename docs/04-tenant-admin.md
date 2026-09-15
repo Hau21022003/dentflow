@@ -133,7 +133,7 @@ Các endpoint nội bộ trong tài liệu này yêu cầu tenant context đã x
 - `POST /tenants/:tenantSlug/services`: tạo service active với `code`, `name`, `serviceGroupId`, `amount`, `currency`, `durationMinutes`. `serviceGroupId` phải là nhóm active trong tenant đã resolve; `code` chỉ gồm chữ thường, số, dấu gạch nối, unique trong tenant và không đổi sau khi tạo. `amount` là số nguyên không âm theo đơn vị nhỏ nhất của currency ISO-4217; request không nhận `tenantId` hoặc `isActive`.
 - `PATCH /tenants/:tenantSlug/services/:serviceId`: chỉ đổi `name`, `serviceGroupId`, `amount`, `currency`, `durationMinutes`; từ chối `code` và `isActive`. Chỉ kiểm tra active khi `serviceGroupId` thực sự đổi; payload có `amount` hoặc `currency` phải có `reason` tối đa 500 ký tự.
 - `POST /tenants/:tenantSlug/services/:serviceId/deactivate` và `/activate`: chuyển trạng thái với `{ reason }`; không hard-delete. Command không đổi trạng thái trả resource hiện tại và không ghi audit mới.
-- `GET /tenants/:tenantSlug/staff`: list phân trang roster `ACTIVE`/`DISABLED` và invitation `INVITED`; search chỉ trên tên/email nhân sự trong tenant.
+- `GET /tenants/:tenantSlug/staff`: list phân trang roster `ACTIVE`/`DISABLED` và invitation `INVITED`; search chỉ trên tên/email nhân sự trong tenant. Member đã accept có thể trả `avatarUrl` ký ngắn hạn từ avatar cá nhân global của User; invitation chưa có avatar.
 - `POST /tenants/:tenantSlug/staff/invitations`, `POST .../invitations/:invitationId/resend`, `POST .../invitations/:invitationId/revoke`
 - `POST /tenants/:tenantSlug/staff/:userId/disable`, `POST .../enable`
 - `POST /tenants/:tenantSlug/staff/:userId/role-assignments`, `DELETE .../role-assignments/:assignmentId`
@@ -152,6 +152,7 @@ Các command staff trên (trừ accept capability) và toàn bộ command Servic
 - Tenant Admin tạo/list/update `ServiceGroup` và Service, lọc trạng thái và deactivate/activate bằng idempotency; tên nhóm unique không phân biệt hoa/thường trong tenant, Service chỉ gán nhóm active, mã service unique theo tenant, bất biến, không hard-delete, còn giá/currency thay đổi phải có reason và audit.
 - Giá catalog mới không hồi tố dữ liệu điều trị/thanh toán; khi các module appointment/treatment/invoice được triển khai, chúng chỉ chọn service active và snapshot giá/currency tại thời điểm tạo.
 - Tenant Admin tạo branch/service, mời user và gán role/branch scope hợp lệ; không tạo được role/permission tuỳ ý hoặc assignment ở tenant khác.
+- Tenant Admin chỉ xem avatar cá nhân của member trong roster; không tạo, thay hoặc xóa avatar global của staff. Mỗi user tự quản lý avatar/họ tên qua profile của mình, kể cả Platform Admin.
 - Tenant Admin có thể deactivate rồi activate lại branch với idempotency và audit; branch inactive bị chặn khỏi route vận hành branch-scoped nhưng audit log lịch sử vẫn đọc được theo quyền.
 - Tenant Admin không có `DENTIST` nhận `403` khi tạo/sửa clinical note, diagnosis hoặc treatment plan; không gọi được endpoint sửa/xóa payment điều trị.
 - Tenant Admin xem dashboard/báo cáo tenant và audit log, nhưng payload không tự tiết lộ clinical detail ngoài quyền được cấp.

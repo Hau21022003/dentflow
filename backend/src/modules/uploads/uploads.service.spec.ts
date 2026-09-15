@@ -17,7 +17,13 @@ describe('UploadsService', () => {
     Promise<PresignedPost>,
     [CreatePresignedPostInput]
   >();
-  const storage: ObjectStorage = { createPresignedPost };
+  const storage: ObjectStorage = {
+    createPresignedPost,
+    createPresignedGet: jest.fn(),
+    headObject: jest.fn(),
+    copyObject: jest.fn(),
+    deleteObject: jest.fn(),
+  };
   const config = {
     uploadConfig: {
       maxFileSizeMb: 2,
@@ -78,6 +84,24 @@ describe('UploadsService', () => {
         sizeBytes: 1,
       }),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('creates a user-owned key only for the AVATAR upload folder', async () => {
+    const response = await service.createUserImageUploadIntent('user-uuid', {
+      folder: 'AVATAR' as never,
+      contentType: 'image/webp',
+      sizeBytes: 524_288,
+    });
+
+    expect(response.objectKey).toMatch(
+      /^temp\/users\/user-uuid\/avatar\/[0-9a-f-]{36}\.webp$/i,
+    );
+    expect(createPresignedPost).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        key: response.objectKey,
+        contentType: 'image/webp',
+      }),
+    );
   });
 });
 

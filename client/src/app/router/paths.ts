@@ -4,6 +4,7 @@ export const PATHS = {
   acceptTenantOwnerInvitation: "/accept-tenant-owner-invitation",
   acceptStaffInvitation: "/accept-staff-invitation",
   forbidden: "/forbidden",
+  profile: "/profile",
   patients: "/patients",
   platform: "/platform",
   platformEmailTemplates: "/platform/email-templates",
@@ -19,7 +20,8 @@ export const PATHS = {
   workspaceReceptionAppointments:
     "/workspace/:tenantSlug/branches/:branchSlug/reception/appointments",
   workspaceDoctor: "/workspace/:tenantSlug/branches/:branchSlug/doctor",
-  workspaceUploadTest: "/workspace/:tenantSlug/branches/:branchSlug/upload-test",
+  workspaceUploadTest:
+    "/workspace/:tenantSlug/branches/:branchSlug/upload-test",
 } as const;
 
 function toPathSegment(value: string): string {
@@ -31,8 +33,7 @@ export const pathFor = {
     `/platform/email-templates/${toPathSegment(templateKey)}`,
   platformTenantDetail: (tenantId: string) =>
     `/platform/tenants/${toPathSegment(tenantId)}`,
-  workspace: (tenantSlug: string) =>
-    `/workspace/${toPathSegment(tenantSlug)}`,
+  workspace: (tenantSlug: string) => `/workspace/${toPathSegment(tenantSlug)}`,
   workspaceTenantHome: (tenantSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/tenant`,
   workspaceTenantBranches: (tenantSlug: string) =>

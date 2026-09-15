@@ -25,6 +25,7 @@ import {
   hasTenantPermission,
 } from "@/features/auth/authorization";
 import { cn } from "@/shared/lib/utils";
+import { UserAvatar } from "@/shared/components/UserAvatar";
 import type { LucideIcon } from "lucide-react";
 import {
   Bell,
@@ -32,7 +33,6 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronRight,
-  CircleUserRound,
   ClipboardList,
   LayoutDashboard,
   Mail,
@@ -338,11 +338,7 @@ export function AppLayout() {
       }
 
       if (
-        hasTenantPermission(
-          user,
-          { slug: tenantSlug },
-          PERMISSIONS.staffManage,
-        )
+        hasTenantPermission(user, { slug: tenantSlug }, PERMISSIONS.staffManage)
       ) {
         tenantItems.push({
           end: true,
@@ -504,13 +500,16 @@ export function AppLayout() {
           {sidebarNavigation}
         </div>
         <div className="border-t border-border/80 p-3">
-          <div
-            className="mb-2 flex min-w-0 items-center gap-3 px-3 py-2"
+          <Link
+            aria-label={t("layout.userAccount")}
+            className="mb-2 flex min-w-0 items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted"
             title={user?.email}
+            to={PATHS.profile}
           >
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-              <CircleUserRound aria-hidden="true" className="size-5" />
-            </span>
+            <UserAvatar
+              avatarUrl={user?.avatarUrl}
+              fullName={user?.fullName ?? ""}
+            />
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold">
                 {user?.fullName}
@@ -519,7 +518,7 @@ export function AppLayout() {
                 {user?.email}
               </span>
             </span>
-          </div>
+          </Link>
           <Button
             className="w-full justify-start"
             disabled={logoutMutation.isPending}
@@ -555,12 +554,20 @@ export function AppLayout() {
             />
           </div>
           <div className="border-t border-border/80 p-3">
-            <p
-              className="truncate px-3 py-2 text-sm font-semibold"
+            <Link
+              aria-label={t("layout.userAccount")}
+              className="mb-2 flex min-w-0 items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-muted"
               title={user?.fullName}
+              to={PATHS.profile}
             >
-              {user?.fullName}
-            </p>
+              <UserAvatar
+                avatarUrl={user?.avatarUrl}
+                fullName={user?.fullName ?? ""}
+              />
+              <span className="truncate text-sm font-semibold">
+                {user?.fullName}
+              </span>
+            </Link>
             <Button
               className="w-full justify-start"
               disabled={logoutMutation.isPending}

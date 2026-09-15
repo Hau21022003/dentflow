@@ -75,7 +75,18 @@ export type AuthUser = {
   id: string;
   email: string;
   fullName: string;
+  avatarUrl: string | null;
   authorization: AuthorizationSnapshot;
+};
+
+export type UserProfile = Pick<
+  AuthUser,
+  "id" | "email" | "fullName" | "avatarUrl"
+>;
+
+export type UpdateMyProfileInput = {
+  fullName: string;
+  avatarObjectKey?: string | null;
 };
 
 export type AuthResponse = {

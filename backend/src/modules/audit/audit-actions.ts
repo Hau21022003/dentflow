@@ -2,6 +2,7 @@ import { AuditDomain } from './entities/audit-log.entity';
 
 export const AuditAction = {
   AUTH_ACCOUNT_LOCKED: 'AUTH_ACCOUNT_LOCKED',
+  USER_PROFILE_UPDATED: 'USER_PROFILE_UPDATED',
   USER_DISABLED: 'USER_DISABLED',
   USER_ENABLED: 'USER_ENABLED',
   ROLE_GRANTED: 'ROLE_GRANTED',
@@ -108,6 +109,11 @@ const USER_STATUS_PAYLOAD: AuditPayloadPolicy = {
   after: ['status'],
   metadata: ['reasonCode'],
 };
+const USER_PROFILE_PAYLOAD: AuditPayloadPolicy = {
+  before: [],
+  after: ['changedFields'],
+  metadata: [],
+};
 const ROLE_ASSIGNMENT_PAYLOAD: AuditPayloadPolicy = {
   before: ['roleCode', 'branchId', 'revokedAt'],
   after: ['roleCode', 'branchId', 'revokedAt'],
@@ -212,6 +218,12 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     'USER',
     false,
     ACCOUNT_LOCK_PAYLOAD,
+  ),
+  [AuditAction.USER_PROFILE_UPDATED]: definition(
+    AuditDomain.SECURITY,
+    'USER',
+    false,
+    USER_PROFILE_PAYLOAD,
   ),
   [AuditAction.USER_DISABLED]: definition(
     AuditDomain.TENANT_ADMIN,

@@ -6,6 +6,7 @@ import enCommon from "./locales/en/common.json";
 import enEmailTemplates from "./locales/en/email-templates.json";
 import enPatients from "./locales/en/patients.json";
 import enPlans from "./locales/en/plans.json";
+import enProfile from "./locales/en/profile.json";
 import enServiceGroups from "./locales/en/service-groups.json";
 import enServices from "./locales/en/services.json";
 import enValidation from "./locales/en/validation.json";
@@ -17,6 +18,7 @@ import viCommon from "./locales/vi/common.json";
 import viEmailTemplates from "./locales/vi/email-templates.json";
 import viPatients from "./locales/vi/patients.json";
 import viPlans from "./locales/vi/plans.json";
+import viProfile from "./locales/vi/profile.json";
 import viServiceGroups from "./locales/vi/service-groups.json";
 import viServices from "./locales/vi/services.json";
 import viValidation from "./locales/vi/validation.json";
@@ -40,6 +42,7 @@ i18n
       "invitations",
       "patients",
       "plans",
+      "profile",
       "serviceGroups",
       "services",
       "staff",
@@ -55,6 +58,7 @@ i18n
         invitations: enInvitations,
         patients: enPatients,
         plans: enPlans,
+        profile: enProfile,
         serviceGroups: enServiceGroups,
         services: enServices,
         staff: enStaff,
@@ -68,6 +72,7 @@ i18n
         invitations: viInvitations,
         patients: viPatients,
         plans: viPlans,
+        profile: viProfile,
         serviceGroups: viServiceGroups,
         services: viServices,
         staff: viStaff,

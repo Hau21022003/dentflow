@@ -62,6 +62,35 @@ describe('Image upload intents (e2e)', () => {
       .expect(413);
   });
 
+  it('issues user-owned avatar intents only to authenticated users', async () => {
+    const user = await authFixtures.createUser({
+      email: 'avatar-intent@example.test',
+    });
+    const session = await loginAs(app, {
+      email: user.email,
+      password: PASSWORD,
+    });
+
+    await request(app.getHttpServer() as Server)
+      .post('/uploads/image-intents')
+      .send({ folder: 'AVATAR', contentType: 'image/png', sizeBytes: 1 })
+      .expect(401);
+    await session.agent
+      .post('/uploads/image-intents')
+      .send({
+        folder: 'ARBITRARY_PATH',
+        contentType: 'image/png',
+        sizeBytes: 1,
+      })
+      .expect(422);
+    await session.agent
+      .post('/uploads/image-intents')
+      .send({ folder: 'AVATAR', contentType: 'image/png', sizeBytes: 1 })
+      // Storage is intentionally disabled in API e2e. Reaching 503 proves
+      // JWT authentication and the AVATAR policy were accepted.
+      .expect(503);
+  });
+
   it('allows every operational role only in its verified branch scope', async () => {
     const tenant = await authFixtures.createTenant({
       slug: 'image-upload-tenant',
