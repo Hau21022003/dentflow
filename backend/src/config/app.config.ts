@@ -85,10 +85,13 @@ export default registerAs('app', () => {
 
     // ========== AWS S3 ==========
     s3: {
+      enabled: env.S3_ENABLED,
       accessKeyId: env.AWS_ACCESS_KEY_ID,
       secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
       region: env.AWS_DEFAULT_REGION,
       bucket: env.AWS_BUCKET,
+      endpoint: env.S3_ENDPOINT,
+      presignedPostTtl: env.S3_PRESIGNED_POST_TTL,
       usePathStyleEndpoint: env.AWS_USE_PATH_STYLE_ENDPOINT ?? false,
     },
 

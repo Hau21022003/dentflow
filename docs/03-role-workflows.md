@@ -23,6 +23,8 @@ Tenant Admin → Branch Admin → Receptionist → Dental Assistant → Dentist 
 
 MVP triển khai bốn role tenant-facing: `TENANT_ADMIN`, `BRANCH_ADMIN`, `RECEPTIONIST`, `DENTIST`. `DENTAL_ASSISTANT` là milestone ngay sau MVP để phản ánh hoạt động chairside thực tế. Một user có thể có nhiều role, ví dụ `TENANT_ADMIN` đồng thời là `DENTIST`; API phải kiểm tra role cần thiết cho từng hành động, không suy luận quyền lâm sàng từ role quản trị.
 
+`file.upload` được cấp cho cả bốn role MVP nhưng chỉ dùng để tạo upload intent ảnh tạm trong branch context đã xác minh. Permission này không cho phép đọc, gắn, chuyển hoặc giữ lâu dài object; module nghiệp vụ trong tương lai vẫn phải kiểm tra quyền trên Patient/Visit và xác minh key thuộc tenant/branch trước khi dùng.
+
 ## 3. Tenant Admin: quản trị tenant
 
 Tenant Admin quản lý cấu hình tenant, branch, danh mục dịch vụ, user/role assignment, báo cáo toàn chuỗi, audit log và SaaS billing. Role này có scope toàn tenant nhưng không tự cấp quyền lâm sàng, không sửa payment điều trị đã ghi nhận và không truy cập tenant khác.

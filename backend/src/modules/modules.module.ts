@@ -12,6 +12,7 @@ import { UsersModule } from './users/users.module';
 import { StaffModule } from './staff/staff.module';
 import { ServicesModule } from './services/services.module';
 import { ServiceGroupsModule } from './service-groups/service-groups.module';
+import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ServiceGroupsModule } from './service-groups/service-groups.module';
     SubscriptionPlansModule,
     BranchesModule,
     ServiceGroupsModule,
+    UploadsModule,
     ServicesModule,
     IdempotencyModule,
     EmailTemplatesModule,

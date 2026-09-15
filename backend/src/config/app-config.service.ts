@@ -148,11 +148,18 @@ export class AppConfigService {
 
   // ========== AWS S3 ==========
   get s3Config() {
+    const presignedPostTtl = this.config.getOrThrow<string>(
+      'app.s3.presignedPostTtl',
+    );
+
     return {
-      accessKeyId: this.config.getOrThrow<string>('app.s3.accessKeyId'),
-      secretAccessKey: this.config.getOrThrow<string>('app.s3.secretAccessKey'),
-      region: this.config.getOrThrow<string>('app.s3.region'),
-      bucket: this.config.getOrThrow<string>('app.s3.bucket'),
+      enabled: this.config.getOrThrow<boolean>('app.s3.enabled'),
+      accessKeyId: this.config.get<string>('app.s3.accessKeyId'),
+      secretAccessKey: this.config.get<string>('app.s3.secretAccessKey'),
+      region: this.config.get<string>('app.s3.region'),
+      bucket: this.config.get<string>('app.s3.bucket'),
+      endpoint: this.config.get<string>('app.s3.endpoint'),
+      presignedPostTtlMs: ms(presignedPostTtl as StringValue),
       usePathStyleEndpoint: this.config.get<boolean>(
         'app.s3.usePathStyleEndpoint',
         false,

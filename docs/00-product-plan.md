@@ -138,6 +138,7 @@ Tài liệu này chỉ mô tả route nội bộ của backend và không ghi c�
 - `GET/POST /tenants/:tenantSlug/services`, `GET/PATCH /tenants/:tenantSlug/services/:serviceId`, `POST .../:serviceId/deactivate` và `/activate`: Tenant Admin quản lý catalog dịch vụ chung tenant. Mã dịch vụ dạng slug là bất biến và unique trong tenant; create/update dùng `serviceGroupId` active cùng tenant, command dùng idempotency và không nhận tenant context từ client. Chỉ service `ACTIVE` được chọn cho appointment/treatment mới khi các module đó được triển khai; bản ghi nghiệp vụ phải snapshot giá/currency tại thời điểm tạo để thay đổi catalog không hồi tố điều trị hoặc thanh toán.
 - `GET/POST /patients`, `GET/POST /appointments`, `POST /appointments/:id/check-in`, `POST /appointments/:id/start`, `POST /appointments/:id/complete`.
 - `GET/POST /visits`, `GET/POST /treatment-plans`, `POST /treatment-items/:id/complete`.
+- `POST /tenants/:tenantSlug/branches/:branchSlug/uploads/image-intents`: route branch-scoped với permission `file.upload`; chỉ cấp presigned POST ngắn hạn cho ảnh JPG/PNG/WEBP không quá 2 MB dưới key temp do server tạo. Client upload trực tiếp vào object storage; route không nhận tenant/branch ID hoặc object key trong body, không lưu attachment và không trả public URL.
 - `GET/POST /patient-invoices`, `POST /patient-invoices/:id/payments`.
 - `POST /billing/checkout-session`, `POST /billing/webhook`; webhook không dùng JWT mà xác minh chữ ký Stripe.
 

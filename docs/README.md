@@ -14,6 +14,7 @@ Thư mục này là nguồn thông tin sản phẩm và kỹ thuật chính củ
 | [09-idempotency-implementation-plan.md](./09-idempotency-implementation-plan.md) | Quyết định kỹ thuật và lộ trình triển khai idempotency cho command backend |
 | [10-background-jobs-architecture.md](./10-background-jobs-architecture.md) | Kiến trúc BullMQ, worker và quy ước background job backend |
 | [12-email-template-management.md](./12-email-template-management.md) | Template email hệ thống, publish revision và tích hợp delivery |
+| [13-file-storage.md](./13-file-storage.md) | Direct upload ảnh tạm qua S3/MinIO, tenant isolation và vận hành bucket |
 | [flows/README.md](./flows/README.md)               | Sơ đồ Mermaid đọc nhanh cho developer; không thay thế tài liệu domain chuẩn            |
 
 ## Quy ước làm việc với Codex
