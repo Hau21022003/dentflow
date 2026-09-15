@@ -16,6 +16,7 @@ export const PERMISSIONS = {
   auditLogRead: "audit-log.read",
   saasBillingManage: "saas-billing.manage",
   notificationSettingsManage: "notification-settings.manage",
+  fileUpload: "file.upload",
   patientAdministrativeManage: "patient.administrative.manage",
   appointmentManage: "appointment.manage",
   patientInvoiceCreate: "patient-invoice.create",

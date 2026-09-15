@@ -41,7 +41,13 @@ S3_ENDPOINT=http://localhost:9000
 S3_PRESIGNED_POST_TTL=5m
 ```
 
-Compose tạo bucket private và lifecycle rule cho `temp/` expire sau một ngày. CORS local chỉ cho `http://localhost:5173`; thay đổi origin theo môi trường frontend thực tế.
+Compose tạo bucket private và lifecycle rule cho `temp/` expire sau một ngày. CORS local chỉ cho Vite development (`http://localhost:5173`) và isolated Playwright (`http://127.0.0.1:5174`); thay đổi origin theo môi trường frontend thực tế.
+
+### Trang kiểm tra tạm và Browser E2E
+
+Client route test-only `/workspace/:tenantSlug/branches/:branchSlug/upload-test` không nằm trong navigation. Nó dùng đúng frontend helper và API upload intent hiện có, sau đó POST trực tiếp tới MinIO/S3; không tạo API, attachment hay entity nghiệp vụ. Route yêu cầu `file.upload`, hiển thị object key tạm và phải bị xóa khi UI attachment thực tế được triển khai.
+
+`browser-e2e` tự chạy `docker compose -f docker-compose.minio.yml up -d` trước khi mở test và chờ health check MinIO. Vì vậy Docker Desktop phải đang chạy khi dùng `npm run test`, `test:headed` hoặc `test:ui`; stack MinIO sẽ được giữ chạy sau test để tạo lần chạy sau nhanh hơn.
 
 ## Production checklist
 

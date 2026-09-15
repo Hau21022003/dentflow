@@ -40,7 +40,18 @@ export function hasBranchAccess(
   lookup: TenantLookup,
   branchSlug: string,
 ): boolean {
-  return findBranchAuthorization(user, lookup, branchSlug) !== undefined;
+  const tenantAuthorization = findTenantAuthorization(user, lookup);
+  if (!tenantAuthorization) {
+    return false;
+  }
+
+  // A tenant-wide role (currently TENANT_ADMIN) is verified by the backend for
+  // every branch in its tenant. Branch-scoped roles remain limited to an
+  // explicit branch assignment below.
+  return (
+    tenantAuthorization.permissions.length > 0 ||
+    tenantAuthorization.branches.some(({ branch }) => branch.slug === branchSlug)
+  );
 }
 
 export function hasPlatformPermission(
