@@ -2,6 +2,32 @@
   "eyebrow": "Workspace · Tenant Admin",
   "title": "Staff management",
   "description": "Invite staff, manage tenant membership, and assign fixed roles across active branches.",
+  "branch": {
+    "eyebrow": "Workspace · Branch",
+    "title": "Branch staff",
+    "description": "Manage the staff roster and Receptionist/Dentist access at {{branch}}.",
+    "table": {
+      "description": "Only staff and invitations for {{branch}} · {{tenant}} are shown."
+    },
+    "form": {
+      "roles": "Branch roles",
+      "rolesHint": "Only Receptionist or Dentist can be granted at the current branch."
+    },
+    "validation": {
+      "roleRequired": "Choose at least one role."
+    },
+    "invite": {
+      "title": "Invite staff to branch",
+      "description": "The recipient receives access only at this branch after accepting the invitation."
+    },
+    "grant": {
+      "title": "Grant branch roles",
+      "description": "Add a Receptionist or Dentist role for {{name}} at the current branch."
+    },
+    "empty": {
+      "description": "Invite staff or adjust the current search and status filter."
+    }
+  },
   "loading": "Loading staff",
   "roles": {
     "TENANT_ADMIN": "Tenant Admin",
@@ -100,6 +126,12 @@
       "title": "Revoke role",
       "description": "Revoke {{role}} from {{name}}. This can reduce their access immediately.",
       "confirm": "Revoke role"
+    },
+    "removeFromBranch": {
+      "label": "Remove from branch",
+      "title": "Remove staff from branch",
+      "description": "Revoke all Receptionist/Dentist roles held by {{name}} at this branch. Their tenant membership is not disabled.",
+      "confirm": "Remove from branch"
     }
   },
   "errors": {

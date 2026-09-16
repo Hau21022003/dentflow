@@ -205,6 +205,7 @@ describe('Authentication (e2e)', () => {
               'report.read',
               'saas-billing.manage',
               'service-catalog.manage',
+              'staff.branch.manage',
               'staff.manage',
               'tenant.settings.manage',
             ],

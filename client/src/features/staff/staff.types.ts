@@ -73,6 +73,18 @@ export type StaffRoleSelection = {
   branchSlugs: string[];
 };
 
+export type BranchStaffRoleCode = "RECEPTIONIST" | "DENTIST";
+
+export type BranchStaffRolesInput = {
+  roleCodes: BranchStaffRoleCode[];
+  reason?: string;
+};
+
+export type CreateBranchStaffInvitationInput = BranchStaffRolesInput & {
+  email: string;
+  fullName: string;
+};
+
 export type CreateStaffInvitationInput = {
   email: string;
   fullName: string;

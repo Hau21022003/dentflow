@@ -13,6 +13,7 @@ export enum Permission {
   BRANCH_MANAGE = 'branch.manage',
   SERVICE_CATALOG_MANAGE = 'service-catalog.manage',
   STAFF_MANAGE = 'staff.manage',
+  STAFF_BRANCH_MANAGE = 'staff.branch.manage',
   REPORT_READ = 'report.read',
   AUDIT_LOG_READ = 'audit-log.read',
   SAAS_BILLING_MANAGE = 'saas-billing.manage',
@@ -44,6 +45,7 @@ const tenantAdminPermissions = [
   Permission.BRANCH_MANAGE,
   Permission.SERVICE_CATALOG_MANAGE,
   Permission.STAFF_MANAGE,
+  Permission.STAFF_BRANCH_MANAGE,
   Permission.REPORT_READ,
   Permission.AUDIT_LOG_READ,
   Permission.SAAS_BILLING_MANAGE,
@@ -62,6 +64,7 @@ export const tenantRolePermissions: Readonly<
 > = {
   [TenantRoleCode.TENANT_ADMIN]: tenantAdminPermissions,
   [TenantRoleCode.BRANCH_ADMIN]: [
+    Permission.STAFF_BRANCH_MANAGE,
     Permission.APPOINTMENT_MANAGE,
     Permission.REPORT_READ,
     Permission.AUDIT_LOG_READ,

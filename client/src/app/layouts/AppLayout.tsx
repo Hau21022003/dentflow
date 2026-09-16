@@ -393,6 +393,23 @@ export function AppLayout() {
           user,
           { slug: tenantSlug },
           branchSlug,
+          PERMISSIONS.staffBranchManage,
+        )
+      ) {
+        branchItems.push({
+          end: true,
+          icon: UsersRound,
+          kind: "link",
+          label: t("navigation.staff"),
+          to: pathFor.workspaceBranchStaff(tenantSlug, branchSlug),
+        });
+      }
+
+      if (
+        hasBranchPermission(
+          user,
+          { slug: tenantSlug },
+          branchSlug,
           PERMISSIONS.appointmentAssignedRead,
         )
       ) {

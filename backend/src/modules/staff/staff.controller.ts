@@ -25,7 +25,9 @@ import type { AuthorizationContext } from '../authorization/authorization-contex
 import { Permission } from '../authorization/authorization.policy';
 import { Idempotent } from '../idempotency/idempotent.decorator';
 import { AcceptStaffInvitationDto } from './dto/accept-staff-invitation.dto';
+import { CreateBranchStaffInvitationDto } from './dto/create-branch-staff-invitation.dto';
 import { CreateStaffInvitationDto } from './dto/create-staff-invitation.dto';
+import { GrantBranchStaffRolesDto } from './dto/grant-branch-staff-roles.dto';
 import { GrantRoleAssignmentsDto } from './dto/grant-role-assignments.dto';
 import { ListStaffQueryDto } from './dto/list-staff-query.dto';
 import { StaffReasonDto } from './dto/staff-reason.dto';
@@ -137,6 +139,104 @@ export class StaffController {
       assignmentId,
       body.reason,
     );
+  }
+
+  @Get('tenants/:tenantSlug/branches/:branchSlug/staff')
+  @TenantScope('branch')
+  @RequirePermissions(Permission.STAFF_BRANCH_MANAGE)
+  listBranch(
+    @RequestContext() context: AuthorizationContext,
+    @Query() query: ListStaffQueryDto,
+  ) {
+    return this.staffService.listBranch(context, query);
+  }
+
+  @Post('tenants/:tenantSlug/branches/:branchSlug/staff/invitations')
+  @Idempotent('branch.staff.invitation.create')
+  @TenantScope('branch')
+  @RequirePermissions(Permission.STAFF_BRANCH_MANAGE)
+  createBranchInvitation(
+    @RequestContext() context: AuthorizationContext,
+    @Body() body: CreateBranchStaffInvitationDto,
+  ) {
+    return this.staffService.createBranchInvitation(context, body);
+  }
+
+  @Post(
+    'tenants/:tenantSlug/branches/:branchSlug/staff/invitations/:invitationId/resend',
+  )
+  @Idempotent('branch.staff.invitation.resend')
+  @TenantScope('branch')
+  @RequirePermissions(Permission.STAFF_BRANCH_MANAGE)
+  resendBranchInvitation(
+    @RequestContext() context: AuthorizationContext,
+    @Param('invitationId', ParseUUIDPipe) invitationId: string,
+  ) {
+    return this.staffService.resendBranchInvitation(context, invitationId);
+  }
+
+  @Post(
+    'tenants/:tenantSlug/branches/:branchSlug/staff/invitations/:invitationId/revoke',
+  )
+  @Idempotent('branch.staff.invitation.revoke')
+  @TenantScope('branch')
+  @RequirePermissions(Permission.STAFF_BRANCH_MANAGE)
+  revokeBranchInvitation(
+    @RequestContext() context: AuthorizationContext,
+    @Param('invitationId', ParseUUIDPipe) invitationId: string,
+    @Body() body: StaffReasonDto,
+  ) {
+    return this.staffService.revokeBranchInvitation(
+      context,
+      invitationId,
+      body.reason,
+    );
+  }
+
+  @Post(
+    'tenants/:tenantSlug/branches/:branchSlug/staff/:userId/role-assignments',
+  )
+  @Idempotent('branch.staff.role-grant')
+  @TenantScope('branch')
+  @RequirePermissions(Permission.STAFF_BRANCH_MANAGE)
+  grantBranchRoles(
+    @RequestContext() context: AuthorizationContext,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() body: GrantBranchStaffRolesDto,
+  ) {
+    return this.staffService.grantBranchRoles(context, userId, body);
+  }
+
+  @Delete(
+    'tenants/:tenantSlug/branches/:branchSlug/staff/:userId/role-assignments/:assignmentId',
+  )
+  @Idempotent('branch.staff.role-revoke')
+  @TenantScope('branch')
+  @RequirePermissions(Permission.STAFF_BRANCH_MANAGE)
+  revokeBranchRole(
+    @RequestContext() context: AuthorizationContext,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('assignmentId', ParseUUIDPipe) assignmentId: string,
+    @Body() body: StaffReasonDto,
+  ) {
+    return this.staffService.revokeBranchRole(
+      context,
+      userId,
+      assignmentId,
+      body.reason,
+    );
+  }
+
+  @Post('tenants/:tenantSlug/branches/:branchSlug/staff/:userId/remove')
+  @Idempotent('branch.staff.remove')
+  @TenantScope('branch')
+  @RequirePermissions(Permission.STAFF_BRANCH_MANAGE)
+  removeFromBranch(
+    @RequestContext() context: AuthorizationContext,
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() body: StaffReasonDto,
+  ) {
+    return this.staffService.removeFromBranch(context, userId, body.reason);
   }
 
   @Public()

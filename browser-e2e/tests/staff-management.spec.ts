@@ -7,6 +7,7 @@ import { E2E_TENANT_INVITATION_TOKEN_SECRET } from "./support/tenant-invitation"
 const API_URL = "http://127.0.0.1:3001";
 const TENANT_SLUG = "test-brightsmile";
 const STAFF_ROUTE = `/tenants/${TENANT_SLUG}/staff`;
+const BRANCH_STAFF_ROUTE = `/tenants/${TENANT_SLUG}/branches/central/staff`;
 
 type AuthenticatedUser = {
   authorization: {
@@ -141,6 +142,50 @@ test("Tenant Admin sends, resends, and revokes an invitation with the required c
   await revokeDialog.getByRole("button", { name: "Revoke invitation" }).click();
   expect((await revokeRequest).postDataJSON()).toEqual({
     reason: "Synthetic invitation is no longer needed",
+  });
+});
+
+test("Branch Admin manages invitations only through the current branch staff route", async ({
+  page,
+}) => {
+  await login(page, E2E_USERS.branchAdminReceptionist);
+  await switchToEnglish(page);
+  await page.goto(`/workspace/${TENANT_SLUG}/branches/central/staff`);
+  await expect(page.getByRole("heading", { name: "Branch staff" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Disable access" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Invite staff" }).click();
+  const dialog = page.getByRole("dialog", { name: "Invite staff to branch" });
+  await dialog.getByLabel("Email").fill("branch-ui-invite@dentflow.test");
+  await dialog.getByLabel("Full name").fill("Branch UI Invite");
+  await dialog.getByLabel("Dentist").click();
+  const createRequest = page.waitForRequest(
+    (entry) =>
+      entry.method() === "POST" &&
+      new URL(entry.url()).pathname === `${BRANCH_STAFF_ROUTE}/invitations`,
+  );
+  await dialog.getByRole("button", { name: "Send invitation" }).click();
+  expect((await createRequest).postDataJSON()).toEqual({
+    email: "branch-ui-invite@dentflow.test",
+    fullName: "Branch UI Invite",
+    roleCodes: ["RECEPTIONIST", "DENTIST"],
+  });
+  await expect(dialog).toHaveCount(0);
+
+  const row = page.getByRole("row").filter({ hasText: "branch-ui-invite@dentflow.test" });
+  await expect(row).toBeVisible();
+  await row.getByRole("button", { name: "Open actions for Branch UI Invite" }).click();
+  await page.getByRole("menuitem", { name: "Revoke invitation" }).click();
+  const revokeDialog = page.getByRole("alertdialog", { name: "Revoke invitation" });
+  await revokeDialog.getByLabel("Reason").fill("Branch staffing changed");
+  const revokeRequest = page.waitForRequest(
+    (entry) =>
+      entry.method() === "POST" &&
+      /\/invitations\/[\w-]+\/revoke$/.test(new URL(entry.url()).pathname),
+  );
+  await revokeDialog.getByRole("button", { name: "Revoke invitation" }).click();
+  expect((await revokeRequest).postDataJSON()).toEqual({
+    reason: "Branch staffing changed",
   });
 });
 

@@ -12,6 +12,7 @@ export const PERMISSIONS = {
   branchManage: "branch.manage",
   serviceCatalogManage: "service-catalog.manage",
   staffManage: "staff.manage",
+  staffBranchManage: "staff.branch.manage",
   reportRead: "report.read",
   auditLogRead: "audit-log.read",
   saasBillingManage: "saas-billing.manage",

@@ -80,7 +80,8 @@ Kết nối domain gửi mail riêng của tenant là roadmap sau MVP. Chỉ tri
 
 ### User, role và branch scope
 
-- Chỉ `TENANT_ADMIN` dùng API quản lý nhân sự trong MVP. `BRANCH_ADMIN` chưa có API mời, vô hiệu hóa hoặc thay quyền nhân sự; capability giới hạn theo branch là milestone sau.
+- `TENANT_ADMIN` dùng API quản lý nhân sự tenant-wide, gồm lời mời đa-branch, `TENANT_ADMIN`/`BRANCH_ADMIN` grant và disable/enable `TenantUserMembership`. `BRANCH_ADMIN` dùng route branch-scoped riêng chỉ để quản lý roster tại branch đã resolve: mời, resend/revoke invitation, grant/revoke `RECEPTIONIST`/`DENTIST` và gỡ các role đó khỏi branch.
+- Branch Admin không disable/enable membership cấp tenant, không thao tác lời mời multi-branch, không gán role admin và không quản lý user đang có active `TENANT_ADMIN` hoặc `BRANCH_ADMIN`. Các ràng buộc này được kiểm tra ở backend, không chỉ ẩn nút UI.
 - Lời mời nhân sự chỉ lưu email, tên hiển thị và proposed grants. Không tạo `TenantUserMembership`, `RoleAssignment` hoặc quyền tenant nào trước khi người nhận accept; quy tắc này áp dụng cả khi email đã có User global.
 - Khi accept, User hiện hữu phải đăng nhập bằng đúng email; User mới tạo password. Transaction accept mới tạo/kích hoạt membership rồi materialize proposed grants. Token một lần, có hạn, resend sẽ revoke token cũ; token/payload không xuất hiện trong audit.
 - Tenant Admin vô hiệu hóa User bằng `TenantUserMembership` trong tenant, không đổi `User.status` toàn cục hay quyền ở tenant khác. Kích hoạt lại phục hồi grant chưa thu hồi. Không được thu hồi/disable làm tenant mất Tenant Admin active cuối cùng.
@@ -137,6 +138,9 @@ Các endpoint nội bộ trong tài liệu này yêu cầu tenant context đã x
 - `POST /tenants/:tenantSlug/staff/invitations`, `POST .../invitations/:invitationId/resend`, `POST .../invitations/:invitationId/revoke`
 - `POST /tenants/:tenantSlug/staff/:userId/disable`, `POST .../enable`
 - `POST /tenants/:tenantSlug/staff/:userId/role-assignments`, `DELETE .../role-assignments/:assignmentId`
+- `GET /tenants/:tenantSlug/branches/:branchSlug/staff`: roster và pending invitation chỉ của branch đã resolve; response không có assignment hoặc invitation branch khác.
+- `POST /tenants/:tenantSlug/branches/:branchSlug/staff/invitations`, `POST .../invitations/:invitationId/resend`, `POST .../invitations/:invitationId/revoke`: Branch Admin mời/quản lý invitation với `roleCodes` chỉ gồm `RECEPTIONIST`/`DENTIST`; branch scope được server suy ra từ URL.
+- `POST /tenants/:tenantSlug/branches/:branchSlug/staff/:userId/role-assignments`, `DELETE .../role-assignments/:assignmentId`, `POST .../:userId/remove`: chỉ grant/revoke hoặc gỡ atomically các role `RECEPTIONIST`/`DENTIST` tại branch hiện tại; không có route branch-scoped disable/enable membership.
 - `POST /auth/staff-invitations/accept`: public capability endpoint; User đã có identity phải xác thực bằng đúng email invitation, endpoint không tạo session.
 - `GET /dashboard`, `GET /reports/*`
 - `GET /tenants/:tenantSlug/audit-logs` và `/:id`; Branch Admin dùng route branch-scoped tương ứng. List chỉ trả summary, còn detail trả payload đã redacted theo [audit log](./05-audit-log.md).
@@ -144,7 +148,7 @@ Các endpoint nội bộ trong tài liệu này yêu cầu tenant context đã x
 
 Settings API không nhận credential mail/provider hoặc `tenantId` để chọn tenant. Các command tạo, cập nhật, ngừng hoạt động hoặc mở lại branch bắt buộc `Idempotency-Key`, validation tenant scope và audit log cùng transaction. Audit branch chỉ ghi status/changed field an toàn, không ghi địa chỉ hay số điện thoại. `TenantScope('branch')` chặn branch `INACTIVE` trước authorization, trừ route read-only khai báo `@AllowInactiveBranchAccess()`; guard này không áp dụng lên command tenant-wide đóng/mở branch. Giờ hoạt động, slot duration và appointment rules chưa thuộc API branch V1 vì chưa có schema riêng.
 
-Các command staff trên (trừ accept capability) và toàn bộ command Service/ServiceGroup (`create`, `update`, `deactivate`, `activate`) bắt buộc `Idempotency-Key`. Disable/enable/revoke role/revoke invitation bắt buộc `reason` tối đa 500 ký tự. Request role nhận fixed `roleCode` và `branchSlugs`: `TENANT_ADMIN` không có branch, còn role branch-scoped phải có một hay nhiều slug branch `ACTIVE` trong tenant đã resolve.
+Các command staff trên (trừ accept capability), bao gồm toàn bộ command branch-staff, và toàn bộ command Service/ServiceGroup (`create`, `update`, `deactivate`, `activate`) bắt buộc `Idempotency-Key`. Disable/enable/revoke role/revoke invitation/remove-from-branch bắt buộc `reason` tối đa 500 ký tự. Request role tenant-wide nhận fixed `roleCode` và `branchSlugs`: `TENANT_ADMIN` không có branch, còn role branch-scoped phải có một hay nhiều slug branch `ACTIVE` trong tenant đã resolve. Request branch-staff chỉ nhận `roleCodes` `RECEPTIONIST`/`DENTIST` và không nhận branch scope.
 
 ## 9. Acceptance criteria và test
 

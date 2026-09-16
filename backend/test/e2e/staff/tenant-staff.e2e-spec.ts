@@ -2,6 +2,8 @@ import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import { AppConfigService } from 'src/config/app-config.service';
+import { AuditAction } from 'src/modules/audit/audit-actions';
+import { AuditLog } from 'src/modules/audit/entities/audit-log.entity';
 import {
   RoleAssignment,
   TenantRoleCode,
@@ -21,7 +23,7 @@ import {
 import { StaffInvitationTokenService } from 'src/modules/staff/staff-invitation-token.service';
 import { Tenant } from 'src/modules/tenants/entities/tenant.entity';
 import { User } from 'src/modules/users/entities/user.entity';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, IsNull, Repository } from 'typeorm';
 import request from 'supertest';
 import { createAuthFixtures } from 'test/fixtures/auth.fixture';
 import { loginAs } from 'test/helpers/auth.helper';
@@ -480,6 +482,233 @@ describe('Tenant staff management (e2e)', () => {
       .set('Idempotency-Key', randomUUID())
       .send({ reason: 'SYNTHETIC_LAST_ADMIN' })
       .expect(409);
+  });
+
+  it('limits Branch Admin staff management to its active branch and permitted roles', async () => {
+    const { tenant, user: tenantAdmin, agent: tenantAdminAgent } =
+      await createTenantAdmin('branch-staff-scope');
+    const branchA = await authFixtures.createBranch(tenant, {
+      slug: 'branch-staff-a',
+    });
+    const branchB = await authFixtures.createBranch(tenant, {
+      slug: 'branch-staff-b',
+    });
+    const branchAdmin = await authFixtures.createUser({
+      email: 'branch-staff-admin@tenant-staff.test',
+    });
+    const staffA = await authFixtures.createUser({
+      email: 'branch-staff-a@tenant-staff.test',
+    });
+    const staffB = await authFixtures.createUser({
+      email: 'branch-staff-b@tenant-staff.test',
+    });
+    await authFixtures.grantBranchRole(
+      branchAdmin,
+      branchA,
+      TenantRoleCode.BRANCH_ADMIN,
+    );
+    const receptionistAssignment = await authFixtures.grantBranchRole(
+      staffA,
+      branchA,
+      TenantRoleCode.RECEPTIONIST,
+    );
+    await authFixtures.grantBranchRole(
+      staffB,
+      branchB,
+      TenantRoleCode.RECEPTIONIST,
+    );
+    const branchAdminSession = await loginAs(app, {
+      email: branchAdmin.email,
+      password: PASSWORD,
+    });
+    const branchRoute = (branch: Branch) =>
+      `/tenants/${tenant.slug}/branches/${branch.slug}/staff`;
+
+    await branchAdminSession.agent
+      .get(branchRoute(branchA))
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as {
+          items: Array<{ email: string; assignments: Array<{ branchId: string }> }>;
+        };
+        expect(body.items.map((item) => item.email)).toContain(staffA.email);
+        expect(body.items.map((item) => item.email)).not.toContain(staffB.email);
+        expect(
+          body.items.flatMap((item) => item.assignments).every(
+            (assignment) => assignment.branchId === branchA.id,
+          ),
+        ).toBe(true);
+      });
+    await branchAdminSession.agent.get(branchRoute(branchB)).expect(403);
+
+    await branchAdminSession.agent
+      .post(`${branchRoute(branchA)}/${staffA.id}/role-assignments`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ roleCodes: [TenantRoleCode.DENTIST], reason: 'SYNTHETIC_COVER' })
+      .expect(201);
+    await expect(
+      roleAssignments.findOneByOrFail({
+        tenantId: tenant.id,
+        branchId: branchA.id,
+        userId: staffA.id,
+        roleCode: TenantRoleCode.DENTIST,
+      }),
+    ).resolves.toBeDefined();
+
+    await branchAdminSession.agent
+      .delete(
+        `${branchRoute(branchA)}/${staffA.id}/role-assignments/${receptionistAssignment.id}`,
+      )
+      .set('Idempotency-Key', randomUUID())
+      .send({ reason: 'SYNTHETIC_ROLE_CHANGE' })
+      .expect(200);
+    await branchAdminSession.agent
+      .post(`${branchRoute(branchA)}/${staffA.id}/remove`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reason: 'SYNTHETIC_TRANSFER' })
+      .expect(201);
+    await expect(
+      roleAssignments.count({
+        where: {
+          tenantId: tenant.id,
+          branchId: branchA.id,
+          userId: staffA.id,
+          revokedAt: IsNull(),
+        },
+      }),
+    ).resolves.toBe(0);
+    await expect(
+      memberships.findOneByOrFail({ tenantId: tenant.id, userId: staffA.id }),
+    ).resolves.toMatchObject({ status: TenantUserMembershipStatus.ACTIVE });
+
+    await branchAdminSession.agent
+      .post(`${branchRoute(branchA)}/${staffA.id}/role-assignments`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ roleCodes: [TenantRoleCode.BRANCH_ADMIN] })
+      .expect(422);
+    await branchAdminSession.agent
+      .post(`${branchRoute(branchA)}/invitations`)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        email: tenantAdmin.email,
+        fullName: tenantAdmin.fullName,
+        roleCodes: [TenantRoleCode.RECEPTIONIST],
+      })
+      .expect(403);
+
+    const multiBranchInvitation = await tenantAdminAgent
+      .post(`/tenants/${tenant.slug}/staff/invitations`)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        email: 'multi-branch-hidden@tenant-staff.test',
+        fullName: 'Multi Branch Hidden',
+        assignments: [
+          {
+            roleCode: TenantRoleCode.RECEPTIONIST,
+            branchSlugs: [branchA.slug, branchB.slug],
+          },
+        ],
+      })
+      .expect(201);
+    expect((multiBranchInvitation.body as { id: string }).id).toBeTruthy();
+    await branchAdminSession.agent
+      .get(branchRoute(branchA))
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as { items: Array<{ email: string }> };
+        expect(body.items.map((item) => item.email)).not.toContain(
+          'multi-branch-hidden@tenant-staff.test',
+        );
+      });
+  });
+
+  it('creates, resends, revokes, and accepts a branch-local staff invitation', async () => {
+    const { tenant } = await createTenantAdmin('branch-staff-invitation');
+    const branch = await authFixtures.createBranch(tenant, {
+      slug: 'branch-staff-invitation-a',
+    });
+    const branchAdmin = await authFixtures.createUser({
+      email: 'branch-invitation-admin@tenant-staff.test',
+    });
+    await authFixtures.grantBranchRole(
+      branchAdmin,
+      branch,
+      TenantRoleCode.BRANCH_ADMIN,
+    );
+    const branchAdminSession = await loginAs(app, {
+      email: branchAdmin.email,
+      password: PASSWORD,
+    });
+    const route = `/tenants/${tenant.slug}/branches/${branch.slug}/staff`;
+
+    const createKey = randomUUID();
+    const invitationInput = {
+      email: 'branch-invitation-target@tenant-staff.test',
+      fullName: 'Branch Invitation Target',
+      roleCodes: [TenantRoleCode.RECEPTIONIST, TenantRoleCode.DENTIST],
+    };
+    const created = await branchAdminSession.agent
+      .post(`${route}/invitations`)
+      .set('Idempotency-Key', createKey)
+      .send(invitationInput)
+      .expect(201);
+    const invitationId = (created.body as { id: string }).id;
+    await branchAdminSession.agent
+      .post(`${route}/invitations`)
+      .set('Idempotency-Key', createKey)
+      .send(invitationInput)
+      .expect(201)
+      .expect(created.body);
+    await expect(
+      dataSource.getRepository(AuditLog).findOneByOrFail({
+        action: AuditAction.STAFF_INVITATION_CREATED,
+        resourceId: invitationId,
+      }),
+    ).resolves.toMatchObject({
+      branchId: branch.id,
+      actorUserId: branchAdmin.id,
+    });
+
+    const resent = await branchAdminSession.agent
+      .post(`${route}/invitations/${invitationId}/resend`)
+      .set('Idempotency-Key', randomUUID())
+      .send({})
+      .expect(201);
+    const replacementId = (resent.body as { id: string }).id;
+    await branchAdminSession.agent
+      .post(`${route}/invitations/${replacementId}/revoke`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reason: 'SYNTHETIC_REVOKE' })
+      .expect(201);
+
+    const acceptedInvitation = await branchAdminSession.agent
+      .post(`${route}/invitations`)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        email: 'branch-accept-target@tenant-staff.test',
+        fullName: 'Branch Accept Target',
+        roleCodes: [TenantRoleCode.DENTIST],
+      })
+      .expect(201);
+    const acceptedInvitationId = (acceptedInvitation.body as { id: string }).id;
+    const invitation = await invitations.findOneByOrFail({
+      id: acceptedInvitationId,
+    });
+    await request(httpServer())
+      .post('/auth/staff-invitations/accept')
+      .send({ token: tokenService.createToken(invitation), password: PASSWORD })
+      .expect(200);
+    const acceptedUser = await dataSource.getRepository(User).findOneByOrFail({
+      emailNormalized: 'branch-accept-target@tenant-staff.test',
+    });
+    await expect(
+      roleAssignments.findOneByOrFail({
+        tenantId: tenant.id,
+        branchId: branch.id,
+        userId: acceptedUser.id,
+        roleCode: TenantRoleCode.DENTIST,
+      }),
+    ).resolves.toBeDefined();
   });
 
   async function createTenantAdmin(slug: string): Promise<{

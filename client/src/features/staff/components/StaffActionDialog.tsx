@@ -21,7 +21,13 @@ import {
 } from "@/shared/lib/idempotency";
 
 type StaffActionDialogProps = {
-  action: "disable" | "enable" | "resend" | "revokeInvitation" | "revokeRole";
+  action:
+    | "disable"
+    | "enable"
+    | "resend"
+    | "revokeInvitation"
+    | "revokeRole"
+    | "removeFromBranch";
   description: string;
   intentCommand: Record<string, unknown>;
   onOpenChange: (open: boolean) => void;
@@ -43,7 +49,10 @@ export function StaffActionDialog({
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const reasonRequired = action !== "resend";
-  const destructive = action === "disable" || action.startsWith("revoke");
+  const destructive =
+    action === "disable" ||
+    action.startsWith("revoke") ||
+    action === "removeFromBranch";
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen && !isPending) {

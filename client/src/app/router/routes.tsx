@@ -12,6 +12,7 @@ import { SubscriptionPlanManagementPage } from "../../pages/platform/Subscriptio
 import { TenantManagementPage } from "../../pages/platform/TenantManagementPage";
 import { TenantDetailPage } from "../../pages/platform/TenantDetailPage";
 import { BranchWorkspaceHomePage } from "../../pages/workspace/branch/BranchWorkspaceHomePage";
+import { BranchStaffManagementPage } from "../../pages/workspace/branch/BranchStaffManagementPage";
 import { TempImageUploadTestPage } from "../../pages/workspace/branch/TempImageUploadTestPage";
 import { DoctorHomePage } from "../../pages/workspace/doctor/DoctorHomePage";
 import { AppointmentsPage } from "../../pages/workspace/reception/AppointmentsPage";
@@ -168,6 +169,17 @@ export const routes: RouteObject[] = [
                     element: <RequireBranchAccess />,
                     children: [
                       { index: true, element: <BranchWorkspaceHomePage /> },
+                      {
+                        path: "staff",
+                        element: (
+                          <RequireBranchPermission
+                            permission={PERMISSIONS.staffBranchManage}
+                          />
+                        ),
+                        children: [
+                          { index: true, element: <BranchStaffManagementPage /> },
+                        ],
+                      },
                       // Temporary, unlinked diagnostic route for direct-storage E2E coverage.
                       {
                         path: "upload-test",

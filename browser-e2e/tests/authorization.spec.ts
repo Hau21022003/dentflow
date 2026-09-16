@@ -38,7 +38,7 @@ test("tenant admin reaches tenant, branch, and staff-management pages but not Pl
   await expect(page.getByText("403 · Không có quyền truy cập")).toBeVisible();
 });
 
-test("combined branch-admin and receptionist roles do not receive staff management", async ({ page }) => {
+test("combined branch-admin and receptionist roles receive branch-only staff management", async ({ page }) => {
   await login(page, E2E_USERS.branchAdminReceptionist);
 
   await expect(page).toHaveURL(
@@ -51,8 +51,12 @@ test("combined branch-admin and receptionist roles do not receive staff manageme
   await page.goto(
     `/workspace/${brightSmileSlug}/branches/${brightSmileCentralSlug}/branch/staff`,
   );
-  await expect(page).toHaveURL(new RegExp(`/workspace/${brightSmileSlug}/tenant/staff$`));
-  await expect(page.getByText(/403/)).toBeVisible();
+  await expect(page).toHaveURL(
+    new RegExp(
+      `/workspace/${brightSmileSlug}/branches/${brightSmileCentralSlug}/staff$`,
+    ),
+  );
+  await expect(page.getByRole("heading", { name: /Nhân sự chi nhánh|Branch staff/ })).toBeVisible();
 
   await page.goto(
     `/workspace/${brightSmileSlug}/branches/${brightSmileCentralSlug}/reception/appointments`,
