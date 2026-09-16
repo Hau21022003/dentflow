@@ -31,13 +31,17 @@ import { GrantBranchStaffRolesDto } from './dto/grant-branch-staff-roles.dto';
 import { GrantRoleAssignmentsDto } from './dto/grant-role-assignments.dto';
 import { ListStaffQueryDto } from './dto/list-staff-query.dto';
 import { StaffReasonDto } from './dto/staff-reason.dto';
+import { BranchStaffService } from './branch-staff.service';
 import { StaffService } from './staff.service';
 
 type OptionalAuthenticatedRequest = Request & { user?: AccessTokenPayload };
 
 @Controller()
 export class StaffController {
-  constructor(private readonly staffService: StaffService) {}
+  constructor(
+    private readonly staffService: StaffService,
+    private readonly branchStaffService: BranchStaffService,
+  ) {}
 
   @Get('tenants/:tenantSlug/staff')
   @TenantScope('tenant')
@@ -148,7 +152,7 @@ export class StaffController {
     @RequestContext() context: AuthorizationContext,
     @Query() query: ListStaffQueryDto,
   ) {
-    return this.staffService.listBranch(context, query);
+    return this.branchStaffService.list(context, query);
   }
 
   @Post('tenants/:tenantSlug/branches/:branchSlug/staff/invitations')
@@ -159,7 +163,7 @@ export class StaffController {
     @RequestContext() context: AuthorizationContext,
     @Body() body: CreateBranchStaffInvitationDto,
   ) {
-    return this.staffService.createBranchInvitation(context, body);
+    return this.branchStaffService.createInvitation(context, body);
   }
 
   @Post(
@@ -172,7 +176,7 @@ export class StaffController {
     @RequestContext() context: AuthorizationContext,
     @Param('invitationId', ParseUUIDPipe) invitationId: string,
   ) {
-    return this.staffService.resendBranchInvitation(context, invitationId);
+    return this.branchStaffService.resendInvitation(context, invitationId);
   }
 
   @Post(
@@ -186,7 +190,7 @@ export class StaffController {
     @Param('invitationId', ParseUUIDPipe) invitationId: string,
     @Body() body: StaffReasonDto,
   ) {
-    return this.staffService.revokeBranchInvitation(
+    return this.branchStaffService.revokeInvitation(
       context,
       invitationId,
       body.reason,
@@ -204,7 +208,7 @@ export class StaffController {
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body() body: GrantBranchStaffRolesDto,
   ) {
-    return this.staffService.grantBranchRoles(context, userId, body);
+    return this.branchStaffService.grantRoles(context, userId, body);
   }
 
   @Delete(
@@ -219,7 +223,7 @@ export class StaffController {
     @Param('assignmentId', ParseUUIDPipe) assignmentId: string,
     @Body() body: StaffReasonDto,
   ) {
-    return this.staffService.revokeBranchRole(
+    return this.branchStaffService.revokeRole(
       context,
       userId,
       assignmentId,
@@ -236,7 +240,7 @@ export class StaffController {
     @Param('userId', ParseUUIDPipe) userId: string,
     @Body() body: StaffReasonDto,
   ) {
-    return this.staffService.removeFromBranch(context, userId, body.reason);
+    return this.branchStaffService.remove(context, userId, body.reason);
   }
 
   @Public()

@@ -20,6 +20,8 @@ import { StaffInvitationProcessor } from './jobs/staff-invitation.processor';
 import { StaffInvitationProducer } from './jobs/staff-invitation.producer';
 import { StaffInvitationQueueName } from './jobs/staff-invitation.types';
 import { StaffInvitationTokenService } from './staff-invitation-token.service';
+import { BranchStaffService } from './branch-staff.service';
+import { StaffOperationsService } from './staff-operations.service';
 import { StaffService } from './staff.service';
 
 const isTesting = process.env.NODE_ENV === 'test';
@@ -49,6 +51,8 @@ const isTesting = process.env.NODE_ENV === 'test';
   controllers: [StaffController],
   providers: [
     StaffService,
+    BranchStaffService,
+    StaffOperationsService,
     StaffInvitationTokenService,
     ...(isTesting
       ? [
