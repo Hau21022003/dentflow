@@ -79,9 +79,10 @@ test("app shell shows granted navigation, switches branch, and adapts for mobile
   );
   await expect(navigation.getByRole("link", { name: "Workspace bác sĩ" })).toHaveCount(0);
 
-  await expect(page.getByRole("combobox", { name: "Chọn phòng khám" })).toBeVisible();
-  const branchSelector = page.getByRole("combobox", { name: "Chọn chi nhánh" });
-  await branchSelector.click();
+  const workspaceSwitcher = page.getByRole("button", { name: "Chuyển workspace" });
+  await expect(workspaceSwitcher).toBeVisible();
+  await workspaceSwitcher.click();
+  await page.getByRole("option", { name: "BrightSmile Test", exact: true }).click();
   await page.getByRole("option", { name: "BrightSmile Test West" }).click();
   await expect(page).toHaveURL(
     new RegExp(`/workspace/${brightSmileSlug}/branches/${brightSmileWestSlug}$`),

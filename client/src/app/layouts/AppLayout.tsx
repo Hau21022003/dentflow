@@ -4,7 +4,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import {
   Sheet,
@@ -18,7 +17,6 @@ import { cn } from "@/shared/lib/utils";
 import { UserAvatar } from "@/shared/components/UserAvatar";
 import {
   Bell,
-  Building2,
   Menu,
   Stethoscope,
   UserRoundCog,
@@ -31,19 +29,14 @@ import {
   Outlet,
   useNavigate,
 } from "react-router-dom";
-import {
-  canUseTenantWorkspaceHome,
-  getTenantWorkspaceLandingSelection,
-} from "../workspace/workspace-context";
+import { WorkspaceSwitcher } from "../workspace/WorkspaceSwitcher";
+import type { WorkspaceSelection } from "../workspace/workspace-context";
 import { useNavigationWorkspaceContext } from "../workspace/use-navigation-workspace-context";
 import {
   resolveNavigationSections,
   type NavigationSection,
 } from "../workspace/workspace-navigation";
 import { PATHS, pathFor } from "../router/paths";
-
-/** Giá trị nội bộ của Select cho phạm vi tenant, không bao giờ đi vào URL/API. */
-const TENANT_SCOPE_VALUE = "__tenant_scope__";
 
 function LanguageFlag({ language }: { language: "en" | "vi" }) {
   return (
@@ -148,11 +141,6 @@ export function AppLayout() {
     () => resolveNavigationSections(user, workspaceContext),
     [user, workspaceContext],
   );
-  const selectedTenantSlug = workspaceContext?.tenantSlug;
-  const selectedBranchValue = workspaceContext?.branchSlug ?? TENANT_SCOPE_VALUE;
-  const canSelectTenantScope = Boolean(
-    selectedTenantSlug && canUseTenantWorkspaceHome(user, selectedTenantSlug),
-  );
 
   /** Dùng chung cho link và bộ chọn để đóng sidebar di động sau khi đổi ngữ cảnh. */
   function handleNavigation() {
@@ -164,38 +152,15 @@ export function AppLayout() {
   }
 
   /**
-   * Đổi tenant qua điểm vào đã tính từ authorization snapshot; không tái dùng
-   * branch preference vì lựa chọn đó có thể thuộc tenant khác.
+   * Đổi workspace từ lựa chọn đã được switcher dựng theo authorization snapshot.
+   * Hàm chỉ tạo route; route guard và API vẫn xác minh scope độc lập với UI.
    */
-  function changeTenant(tenantSlug: string) {
-    const selection = getTenantWorkspaceLandingSelection(user, tenantSlug);
-
-    if (!selection) {
-      return;
-    }
-
+  function changeWorkspace(selection: WorkspaceSelection) {
     handleNavigation();
     navigate(
       selection.branchSlug
         ? pathFor.workspaceBranch(selection.tenantSlug, selection.branchSlug)
         : pathFor.workspaceTenantHome(selection.tenantSlug),
-    );
-  }
-
-  /**
-   * Đổi branch trong tenant đang được resolve. Giá trị Select chỉ tạo route;
-   * RequireBranchAccess và API vẫn xác minh quyền độc lập với UI này.
-   */
-  function changeBranch(value: string) {
-    if (!selectedTenantSlug) {
-      return;
-    }
-
-    handleNavigation();
-    navigate(
-      value === TENANT_SCOPE_VALUE
-        ? pathFor.workspaceTenantHome(selectedTenantSlug)
-        : pathFor.workspaceBranch(selectedTenantSlug, value),
     );
   }
 
@@ -325,57 +290,14 @@ export function AppLayout() {
             </Button>
 
             <div className="flex flex-1 items-center justify-end gap-2 sm:gap-3">
-              {workspaceContext && selectedTenantSlug && (
-                <div className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-xl lg:flex-none">
-                  <Select
-                    onValueChange={changeTenant}
-                    value={selectedTenantSlug}
-                  >
-                    <SelectTrigger
-                      aria-label={t("layout.tenantSelector")}
-                      className="h-9 min-w-0 flex-1 [&>span]:truncate sm:max-w-48 lg:w-48 lg:flex-none"
-                    >
-                      <Building2
-                        aria-hidden="true"
-                        className="size-4 shrink-0 text-primary"
-                      />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {user?.authorization.tenants.map(({ tenant }) => (
-                        <SelectItem key={tenant.id} value={tenant.slug}>
-                          {tenant.displayName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {(canSelectTenantScope || branchOptions.length > 0) && (
-                    <Select
-                      disabled={isLoadingBranchOptions}
-                      onValueChange={changeBranch}
-                      value={selectedBranchValue}
-                    >
-                      <SelectTrigger
-                        aria-label={t("layout.branchSelector")}
-                        className="h-9 min-w-0 flex-1 [&>span]:truncate sm:max-w-48 lg:w-48 lg:flex-none"
-                      >
-                        <SelectValue placeholder={t("layout.branchSelector")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {canSelectTenantScope && (
-                          <SelectItem value={TENANT_SCOPE_VALUE}>
-                            {t("layout.allTenant")}
-                          </SelectItem>
-                        )}
-                        {branchOptions.map((branch) => (
-                          <SelectItem key={branch.slug} value={branch.slug}>
-                            {branch.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
+              {workspaceContext && user && (
+                <WorkspaceSwitcher
+                  branchOptions={branchOptions}
+                  context={workspaceContext}
+                  isLoadingBranchOptions={isLoadingBranchOptions}
+                  onSelect={changeWorkspace}
+                  user={user}
+                />
               )}
               <Button
                 aria-label={t("layout.notificationsComingSoon")}

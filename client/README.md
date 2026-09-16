@@ -52,6 +52,8 @@ navigation và authorization nhất quán; giao diện không bao giờ là lớ
    `src/app/workspace/workspace-navigation.ts` với `scope`, `permission`,
    `labelKey`, `icon`, `order` và builder `to`. Bộ lọc navigation chỉ là UX;
    luôn thêm route guard tương ứng. Thêm bản dịch `vi` và `en` cho `labelKey`.
+   Bộ chọn header duy nhất là `WorkspaceSwitcher`; không thêm lại các Select
+   tenant/branch riêng lẻ trong layout hoặc page.
 5. Không tự lưu tenant/branch trong page. `useNavigationWorkspaceContext()` là
    nơi duy nhất resolve selection theo thứ tự: route hiện tại, preference của
    đúng `userId` còn hợp lệ, rồi lựa chọn mặc định. Preference trong
