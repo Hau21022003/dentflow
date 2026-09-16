@@ -31,6 +31,43 @@ npm run build
 Đường dẫn route tập trung ở `src/app/router/paths.ts`; khai báo route và guard
 ở `src/app/router/routes.tsx`.
 
+## Thêm hoặc sửa workspace route
+
+Đọc phần này trước khi thêm route dưới `/workspace`. Mục tiêu là giữ URL,
+navigation và authorization nhất quán; giao diện không bao giờ là lớp quyết
+định quyền truy cập dữ liệu.
+
+1. Xác định scope trước: `platform`, `tenant` hay `branch`. Route dùng tenant
+   phải nằm dưới `RequireTenantAccess`; route quản trị tenant thêm
+   `RequireTenantPermission`. Route branch phải nằm dưới `RequireBranchAccess`
+   và route thao tác cụ thể thêm `RequireBranchPermission` với đúng permission.
+   Backend vẫn phải xác minh tenant/branch context cho từng request.
+2. Khai báo template trong `PATHS` và builder encode segment tương ứng trong
+   `pathFor` tại `src/app/router/paths.ts`. Không ghép URL workspace thủ công
+   trong page hoặc layout.
+3. Đăng ký page và guard theo cây route tại `src/app/router/routes.tsx`. Page
+   workspace dùng `useRouteWorkspaceContext()` để đọc context theo URL đang mở;
+   không dùng context preference của thanh điều hướng để gọi API cho page.
+4. Nếu route cần hiện trong sidebar, thêm một item vào
+   `src/app/workspace/workspace-navigation.ts` với `scope`, `permission`,
+   `labelKey`, `icon`, `order` và builder `to`. Bộ lọc navigation chỉ là UX;
+   luôn thêm route guard tương ứng. Thêm bản dịch `vi` và `en` cho `labelKey`.
+5. Không tự lưu tenant/branch trong page. `useNavigationWorkspaceContext()` là
+   nơi duy nhất resolve selection theo thứ tự: route hiện tại, preference của
+   đúng `userId` còn hợp lệ, rồi lựa chọn mặc định. Preference trong
+   `workspace-preference.store.ts` chỉ là gợi ý UX, phải được kiểm tra lại
+   quyền và trạng thái `ACTIVE` trước khi dùng.
+6. Tenant Admin có `branch.manage` lấy toàn bộ branch `ACTIVE` trong tenant;
+   role branch-scoped (ví dụ Branch Admin) chỉ nhận các branch được gán trực
+   tiếp từ authorization snapshot. Không thay đổi quy tắc này chỉ để mở rộng
+   danh sách Select.
+7. Dùng `WorkspaceRootRedirect` cho `/workspace` và `WorkspaceTenantRedirect`
+   cho `/workspace/:tenantSlug`. Khi đổi URL cũ, thêm redirect tương thích thay
+   vì để link đã chia sẻ rơi vào trang lỗi.
+
+Sau thay đổi, bổ sung/chỉnh E2E phù hợp (đặc biệt tenant/branch ngoài scope)
+và chạy `npm run lint`, `npm run build`.
+
 ## Quy ước frontend
 
 - Dùng alias `@/` cho `src/`; utilities là `@/shared/lib/utils`.

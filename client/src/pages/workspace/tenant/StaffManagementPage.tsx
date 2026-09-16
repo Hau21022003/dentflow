@@ -60,7 +60,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useWorkspaceContext } from "../use-workspace-context";
+import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
@@ -91,7 +91,7 @@ function statusVariant(status: StaffListStatus) {
 export function StaffManagementPage() {
   const { i18n, t } = useTranslation("staff");
   const { t: tCommon } = useTranslation("common");
-  const { tenant, tenantSlug } = useWorkspaceContext();
+  const { tenant, tenantSlug } = useRouteWorkspaceContext();
   const queryClient = useQueryClient();
   const setAuthenticatedUser = useAuthStore(
     (state) => state.setAuthenticatedUser,

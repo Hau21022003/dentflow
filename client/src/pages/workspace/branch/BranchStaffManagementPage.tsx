@@ -55,7 +55,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useWorkspaceContext } from "../use-workspace-context";
+import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
@@ -100,7 +100,7 @@ function canManageMember(item: StaffMemberItem): boolean {
 export function BranchStaffManagementPage() {
   const { i18n, t } = useTranslation("staff");
   const { t: tCommon } = useTranslation("common");
-  const { branch, branchSlug, tenant, tenantSlug } = useWorkspaceContext();
+  const { branch, branchSlug, tenant, tenantSlug } = useRouteWorkspaceContext();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [grantMember, setGrantMember] = useState<StaffMemberItem | null>(null);
   const [actionSelection, setActionSelection] =

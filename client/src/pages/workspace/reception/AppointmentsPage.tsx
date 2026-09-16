@@ -10,10 +10,10 @@ import {
   CircleDollarSign,
   UserRoundCheck,
 } from "lucide-react";
-import { useWorkspaceContext } from "../use-workspace-context";
+import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 export function AppointmentsPage() {
-  const { branch, tenant, tenantSlug } = useWorkspaceContext();
+  const { branch, tenant, tenantSlug } = useRouteWorkspaceContext();
   const context = `${tenant?.tenant.displayName ?? tenantSlug} · ${branch?.branch.name ?? "Branch"}`;
 
   return (

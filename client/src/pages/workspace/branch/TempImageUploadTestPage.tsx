@@ -15,7 +15,7 @@ import {
   uploadTempImage,
   type UploadedTempImage,
 } from "@/shared/lib/temp-image-upload";
-import { useWorkspaceContext } from "../use-workspace-context";
+import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 /**
  * Temporary diagnostic screen for exercising the browser -> S3/MinIO upload
@@ -23,7 +23,7 @@ import { useWorkspaceContext } from "../use-workspace-context";
  * a real attachment workflow owns this interaction.
  */
 export function TempImageUploadTestPage() {
-  const { branch, branchSlug, tenant, tenantSlug } = useWorkspaceContext();
+  const { branch, branchSlug, tenant, tenantSlug } = useRouteWorkspaceContext();
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [result, setResult] = useState<UploadedTempImage | null>(null);

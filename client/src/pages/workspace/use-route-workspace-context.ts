@@ -5,7 +5,11 @@ import {
 } from "@/features/auth/authorization";
 import { useAuthStore } from "@/features/auth/auth.store";
 
-export function useWorkspaceContext() {
+/**
+ * Cung cấp context đúng theo params của trang đang mở. Không dùng navigation
+ * preference ở đây để dữ liệu/trạng thái trang luôn khớp route đã qua guard.
+ */
+export function useRouteWorkspaceContext() {
   const user = useAuthStore((state) => state.user);
   const { branchSlug = "", tenantSlug = "" } = useParams();
   const tenant = tenantSlug

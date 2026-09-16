@@ -15,7 +15,7 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useWorkspaceContext } from "../use-workspace-context";
+import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 type RolePanel = {
   title: string;
@@ -26,7 +26,7 @@ type RolePanel = {
 };
 
 export function BranchWorkspaceHomePage() {
-  const { branch, branchSlug, tenant, tenantSlug } = useWorkspaceContext();
+  const { branch, branchSlug, tenant, tenantSlug } = useRouteWorkspaceContext();
   const tenantName = tenant?.tenant.displayName ?? tenantSlug;
   const branchName = branch?.branch.name ?? branchSlug;
   const rolePanels: Partial<Record<TenantRoleCode, RolePanel>> = {

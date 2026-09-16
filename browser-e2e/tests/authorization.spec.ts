@@ -71,16 +71,15 @@ test("app shell shows granted navigation, switches branch, and adapts for mobile
   await page.getByRole("option", { name: "VI", exact: true }).click();
 
   const navigation = page.getByRole("navigation", { name: "Điều hướng chính" });
-  await expect(navigation.getByRole("button", { name: "Vận hành chi nhánh" })).toHaveAttribute(
-    "aria-expanded",
-    "true",
-  );
+  await expect(navigation.getByText("Công việc", { exact: true })).toBeVisible();
+  await expect(navigation.getByText("Quản lý", { exact: true })).toBeVisible();
   await expect(navigation.getByRole("link", { name: "Tổng quan chi nhánh" })).toHaveAttribute(
     "aria-current",
     "page",
   );
   await expect(navigation.getByRole("link", { name: "Workspace bác sĩ" })).toHaveCount(0);
 
+  await expect(page.getByRole("combobox", { name: "Chọn phòng khám" })).toBeVisible();
   const branchSelector = page.getByRole("combobox", { name: "Chọn chi nhánh" });
   await branchSelector.click();
   await page.getByRole("option", { name: "BrightSmile Test West" }).click();
@@ -90,7 +89,11 @@ test("app shell shows granted navigation, switches branch, and adapts for mobile
 
   await page.getByRole("combobox", { name: "Chọn ngôn ngữ" }).click();
   await page.getByRole("option", { name: "EN", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Branch operations" })).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Primary navigation" })
+      .getByText("Work", { exact: true }),
+  ).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("complementary", { name: "Sidebar" })).toBeHidden();
@@ -108,9 +111,6 @@ test("app shell shows granted navigation, switches branch, and adapts for mobile
   await page.getByRole("button", { name: "Open navigation" }).click();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
-
-  await page.goto(`/workspace/${brightSmileSlug}/tenant/branches`);
-  await expect(page.getByRole("combobox", { name: "Select branch" })).toHaveCount(0);
 });
 
 test("dentist can open only its doctor workspace and receives 403 for other branch functions", async ({ page }) => {

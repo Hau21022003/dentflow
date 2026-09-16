@@ -21,6 +21,7 @@ import { ServiceManagementPage } from "../../pages/workspace/tenant/ServiceManag
 import { TenantHomePage } from "../../pages/workspace/tenant/TenantHomePage";
 import { StaffManagementPage } from "../../pages/workspace/tenant/StaffManagementPage";
 import { AppLayout } from "../layouts/AppLayout";
+import { LegacyBranchStaffRedirect } from "./LegacyBranchStaffRedirect";
 import { RoleHomeRedirect } from "./RoleHomeRedirect";
 import {
   WorkspaceRootRedirect,
@@ -35,7 +36,6 @@ import { RequirePlatformPermission } from "./guards/RequirePlatformPermission";
 import { RequireTenantAccess } from "./guards/RequireTenantAccess";
 import { RequireTenantPermission } from "./guards/RequireTenantPermission";
 import { PATHS } from "./paths";
-import { LegacyBranchStaffRedirect } from "./LegacyBranchStaffRedirect";
 
 export const routes: RouteObject[] = [
   {
@@ -161,10 +161,6 @@ export const routes: RouteObject[] = [
                     ],
                   },
                   {
-                    path: "branches/:branchSlug/branch/staff",
-                    element: <LegacyBranchStaffRedirect />,
-                  },
-                  {
                     path: "branches/:branchSlug",
                     element: <RequireBranchAccess />,
                     children: [
@@ -179,6 +175,10 @@ export const routes: RouteObject[] = [
                         children: [
                           { index: true, element: <BranchStaffManagementPage /> },
                         ],
+                      },
+                      {
+                        path: "branch/staff",
+                        element: <LegacyBranchStaffRedirect />,
                       },
                       // Temporary, unlinked diagnostic route for direct-storage E2E coverage.
                       {

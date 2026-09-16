@@ -9,10 +9,10 @@ import {
   HeartPulse,
   Stethoscope,
 } from "lucide-react";
-import { useWorkspaceContext } from "../use-workspace-context";
+import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 export function DoctorHomePage() {
-  const { branch, tenant, tenantSlug } = useWorkspaceContext();
+  const { branch, tenant, tenantSlug } = useRouteWorkspaceContext();
   const context = `${tenant?.tenant.displayName ?? tenantSlug} · ${branch?.branch.name ?? "Branch"}`;
 
   return (

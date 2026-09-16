@@ -12,10 +12,10 @@ import {
   UsersRound,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useWorkspaceContext } from "../use-workspace-context";
+import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 export function TenantHomePage() {
-  const { tenant, tenantSlug } = useWorkspaceContext();
+  const { tenant, tenantSlug } = useRouteWorkspaceContext();
   const tenantName = tenant?.tenant.displayName ?? tenantSlug;
 
   return (
