@@ -36,6 +36,14 @@ export class User {
   fullName: string;
 
   @Column({
+    name: 'avatar_object_key',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  avatarObjectKey: string | null;
+
+  @Column({
     type: 'enum',
     enum: UserStatus,
     enumName: 'user_status_enum',

@@ -62,6 +62,10 @@ Mỗi tenant ở cả hai môi trường có cùng catalog synthetic gồm sáu 
 
 Không đưa dữ liệu bệnh nhân thật vào seed hoặc test. Khi bổ sung luồng nghiệp vụ mới, chỉ thêm dữ liệu synthetic với tenant context đã được xác minh bởi backend.
 
+## Storage dependency
+
+Browser E2E tự chạy `docker compose -f docker-compose.minio.yml up -d` và cấu hình backend test dùng MinIO local. Vì vậy Docker Desktop phải đang chạy trước `npm run test`, `test:headed` hoặc `test:ui`. Spec upload mở route test-only `upload-test`, tải một PNG 1×1 synthetic bằng presigned POST và xác nhận phản hồi thành công từ MinIO. Stack MinIO vẫn chạy sau test; dừng khi cần bằng `docker compose -f docker-compose.minio.yml down` từ repository root.
+
 ## CI
 
-Workflow `browser-e2e/.github/workflows/playwright.yml` tạo PostgreSQL và Redis sạch, sinh `.env.test` từ mẫu, chạy browser E2E và lưu Playwright HTML report làm artifact.
+Workflow `browser-e2e/.github/workflows/playwright.yml` tạo PostgreSQL và Redis sạch, sinh `.env.test` từ mẫu; Playwright khởi động MinIO Compose, chạy browser E2E và lưu Playwright HTML report làm artifact.

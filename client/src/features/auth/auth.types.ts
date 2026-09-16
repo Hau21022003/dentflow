@@ -12,10 +12,12 @@ export const PERMISSIONS = {
   branchManage: "branch.manage",
   serviceCatalogManage: "service-catalog.manage",
   staffManage: "staff.manage",
+  staffBranchManage: "staff.branch.manage",
   reportRead: "report.read",
   auditLogRead: "audit-log.read",
   saasBillingManage: "saas-billing.manage",
   notificationSettingsManage: "notification-settings.manage",
+  fileUpload: "file.upload",
   patientAdministrativeManage: "patient.administrative.manage",
   appointmentManage: "appointment.manage",
   patientInvoiceCreate: "patient-invoice.create",
@@ -74,7 +76,18 @@ export type AuthUser = {
   id: string;
   email: string;
   fullName: string;
+  avatarUrl: string | null;
   authorization: AuthorizationSnapshot;
+};
+
+export type UserProfile = Pick<
+  AuthUser,
+  "id" | "email" | "fullName" | "avatarUrl"
+>;
+
+export type UpdateMyProfileInput = {
+  fullName: string;
+  avatarObjectKey?: string | null;
 };
 
 export type AuthResponse = {

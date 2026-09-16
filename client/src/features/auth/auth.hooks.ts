@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useWorkspacePreferenceStore } from "@/app/workspace/workspace-preference.store";
 import { authService } from "./auth.service";
 import { useAuthStore } from "./auth.store";
 
@@ -29,6 +30,10 @@ export function useLoginMutation() {
   });
 }
 
+/**
+ * Đăng xuất chỉ xóa preference sau khi API xác nhận thành công, đồng thời xóa
+ * auth cache/store để lần đăng nhập sau phải resolve workspace lại từ quyền mới.
+ */
 export function useLogoutMutation() {
   const queryClient = useQueryClient();
 
@@ -36,6 +41,7 @@ export function useLogoutMutation() {
     mutationFn: authService.logout,
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: authQueryKeys.me() });
+      useWorkspacePreferenceStore.getState().clearPreference();
       useAuthStore.getState().clearSession();
     },
   });

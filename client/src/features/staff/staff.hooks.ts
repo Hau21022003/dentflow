@@ -17,6 +17,13 @@ export const staffQueryKeys = {
     [...staffQueryKeys.tenant(tenantSlug), "list", query] as const,
   branches: (tenantSlug: string) =>
     [...staffQueryKeys.tenant(tenantSlug), "branches"] as const,
+  branch: (tenantSlug: string, branchSlug: string) =>
+    [...staffQueryKeys.tenant(tenantSlug), "branch", branchSlug] as const,
+  branchList: (
+    tenantSlug: string,
+    branchSlug: string,
+    query: StaffListQuery,
+  ) => [...staffQueryKeys.branch(tenantSlug, branchSlug), "list", query] as const,
 };
 
 export function useTenantStaffQuery(
@@ -27,6 +34,19 @@ export function useTenantStaffQuery(
     queryKey: staffQueryKeys.list(tenantSlug, query),
     queryFn: () => staffService.list(tenantSlug, query),
     enabled: Boolean(tenantSlug),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useBranchStaffQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  query: StaffListQuery,
+) {
+  return useQuery({
+    queryKey: staffQueryKeys.branchList(tenantSlug, branchSlug, query),
+    queryFn: () => staffService.listBranch(tenantSlug, branchSlug, query),
+    enabled: Boolean(tenantSlug && branchSlug),
     placeholderData: keepPreviousData,
   });
 }
@@ -106,4 +126,28 @@ export function useRevokeStaffRoleMutation() {
 
 export function useAcceptStaffInvitationMutation() {
   return useMutation({ mutationFn: staffService.acceptInvitation });
+}
+
+export function useCreateBranchStaffInvitationMutation() {
+  return useStaffMutation(staffService.createBranchInvitation);
+}
+
+export function useResendBranchStaffInvitationMutation() {
+  return useStaffMutation(staffService.resendBranchInvitation);
+}
+
+export function useRevokeBranchStaffInvitationMutation() {
+  return useStaffMutation(staffService.revokeBranchInvitation);
+}
+
+export function useGrantBranchStaffRolesMutation() {
+  return useStaffMutation(staffService.grantBranchRoles);
+}
+
+export function useRevokeBranchStaffRoleMutation() {
+  return useStaffMutation(staffService.revokeBranchRole);
+}
+
+export function useRemoveBranchStaffMutation() {
+  return useStaffMutation(staffService.removeFromBranch);
 }

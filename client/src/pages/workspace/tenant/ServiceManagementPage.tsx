@@ -50,7 +50,7 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
-import { useWorkspaceContext } from "../use-workspace-context";
+import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 import { ServiceGroupsManagementPanel } from "./ServiceGroupsManagementPanel";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
@@ -85,7 +85,7 @@ function toSortBy(sorting: SortingState): ServiceSortBy | undefined {
 export function ServiceManagementPage() {
   const { i18n, t } = useTranslation("services");
   const { t: tCommon } = useTranslation("common");
-  const { tenant, tenantSlug } = useWorkspaceContext();
+  const { tenant, tenantSlug } = useRouteWorkspaceContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab: CatalogTab =
     searchParams.get("tab") === "groups" ? "groups" : "services";

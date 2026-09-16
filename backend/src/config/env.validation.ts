@@ -33,6 +33,11 @@ const optionalText = z.preprocess(
   z.string().trim().optional(),
 );
 
+const optionalUrl = z.preprocess(
+  emptyToUndefined,
+  z.string().trim().url('must be a valid URL.').optional(),
+);
+
 const requiredEmailAddress = z.preprocess(
   emptyToUndefined,
   z.string().trim().email('must be a valid email address.'),
@@ -152,6 +157,9 @@ export const envSchema = z
     AWS_SECRET_ACCESS_KEY: optionalText,
     AWS_DEFAULT_REGION: optionalText,
     AWS_BUCKET: optionalText,
+    S3_ENABLED: booleanFlag.default(false),
+    S3_ENDPOINT: optionalUrl,
+    S3_PRESIGNED_POST_TTL: duration.default('5m'),
     FIREBASE_CREDENTIALS: optionalText,
     PUSH_REDIRECT_TOKENS: optionalText,
     SAAS_BILLING_PROVIDER: z
@@ -219,6 +227,21 @@ export const envSchema = z
         environment.AWS_SES_SECRET_ACCESS_KEY
       ) {
         addRequiredIssue('AWS_SES_ACCESS_KEY_ID');
+      }
+    }
+
+    if (environment.S3_ENABLED) {
+      if (!environment.AWS_DEFAULT_REGION) {
+        addRequiredIssue('AWS_DEFAULT_REGION');
+      }
+      if (!environment.AWS_BUCKET) {
+        addRequiredIssue('AWS_BUCKET');
+      }
+      if (environment.AWS_ACCESS_KEY_ID && !environment.AWS_SECRET_ACCESS_KEY) {
+        addRequiredIssue('AWS_SECRET_ACCESS_KEY');
+      }
+      if (!environment.AWS_ACCESS_KEY_ID && environment.AWS_SECRET_ACCESS_KEY) {
+        addRequiredIssue('AWS_ACCESS_KEY_ID');
       }
     }
 

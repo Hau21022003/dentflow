@@ -7,14 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { hash } from 'bcrypt';
-import { randomUUID } from 'node:crypto';
-import {
-  DataSource,
-  EntityManager,
-  In,
-  IsNull,
-  QueryFailedError,
-} from 'typeorm';
+import { DataSource, EntityManager, In, IsNull } from 'typeorm';
 import { AppConfigService } from '../../config/app-config.service';
 import { AuditAction } from '../audit/audit-actions';
 import { AuditLogService } from '../audit/audit-log.service';
@@ -27,6 +20,7 @@ import {
 import { Branch, BranchStatus } from '../branches/entities/branch.entity';
 import { Tenant } from '../tenants/entities/tenant.entity';
 import { User, UserStatus } from '../users/entities/user.entity';
+import { UsersService } from '../users/users.service';
 import { AcceptStaffInvitationDto } from './dto/accept-staff-invitation.dto';
 import { CreateStaffInvitationDto } from './dto/create-staff-invitation.dto';
 import { GrantRoleAssignmentsDto } from './dto/grant-role-assignments.dto';
@@ -35,27 +29,17 @@ import { ProposedRoleAssignmentDto } from './dto/proposed-role-assignment.dto';
 import { StaffInvitationAssignment } from './entities/staff-invitation-assignment.entity';
 import {
   StaffInvitation,
-  StaffInvitationDeliveryStatus,
   StaffInvitationStatus,
 } from './entities/staff-invitation.entity';
 import {
   TenantUserMembership,
   TenantUserMembershipStatus,
 } from './entities/tenant-user-membership.entity';
-import { StaffInvitationProducer } from './jobs/staff-invitation.producer';
 import { StaffInvitationTokenService } from './staff-invitation-token.service';
-
-type MaterializedGrant = {
-  roleCode: TenantRoleCode;
-  branchId: string | null;
-};
-
-type StaffAssignmentResponse = {
-  id: string;
-  roleCode: TenantRoleCode;
-  branchId: string | null;
-  assignedAt: Date;
-};
+import {
+  MaterializedStaffGrant,
+  StaffOperationsService,
+} from './staff-operations.service';
 
 @Injectable()
 export class StaffService {
@@ -64,7 +48,8 @@ export class StaffService {
     private readonly appConfig: AppConfigService,
     private readonly auditLogService: AuditLogService,
     private readonly tokenService: StaffInvitationTokenService,
-    private readonly invitationJobs: StaffInvitationProducer,
+    private readonly usersService: UsersService,
+    private readonly operations: StaffOperationsService,
   ) {}
 
   async list(context: AuthorizationContext, query: ListStaffQueryDto) {
@@ -92,18 +77,25 @@ export class StaffService {
       assignments.push(assignment);
       assignmentsByUser.set(assignment.userId, assignments);
     });
+    const memberItems = await Promise.all(
+      memberships.map(async (membership) => {
+        const profile = await this.usersService.toProfile(membership.user);
+        return {
+          kind: 'MEMBER' as const,
+          id: membership.userId,
+          fullName: profile.fullName,
+          email: profile.email,
+          avatarUrl: profile.avatarUrl,
+          status: membership.status,
+          membership: this.membershipResponse(membership),
+          assignments: (assignmentsByUser.get(membership.userId) ?? []).map(
+            (assignment) => this.assignmentResponse(assignment),
+          ),
+        };
+      }),
+    );
     const items = [
-      ...memberships.map((membership) => ({
-        kind: 'MEMBER' as const,
-        id: membership.userId,
-        fullName: membership.user.fullName,
-        email: membership.user.email,
-        status: membership.status,
-        membership: this.membershipResponse(membership),
-        assignments: (assignmentsByUser.get(membership.userId) ?? []).map(
-          (assignment) => this.assignmentResponse(assignment),
-        ),
-      })),
+      ...memberItems,
       ...invitations
         .filter((invitation) => invitation.expiresAt > now)
         .map((invitation) => ({
@@ -357,7 +349,16 @@ export class StaffService {
       const proposedAssignments = await manager
         .getRepository(StaffInvitationAssignment)
         .find({ where: { staffInvitationId: invitation.id } });
-      await this.assertGrantBranchesAreActive(
+      const branchInvitationId = proposedAssignments[0]?.branchId;
+      const auditBranchId =
+        branchInvitationId &&
+        this.operations.isBranchManagedInvitation(
+          proposedAssignments,
+          branchInvitationId,
+        )
+          ? branchInvitationId
+          : undefined;
+      await this.operations.assertGrantBranchesAreActive(
         manager,
         invitation.tenantId,
         proposedAssignments,
@@ -444,6 +445,7 @@ export class StaffService {
         action: AuditAction.STAFF_INVITATION_ACCEPTED,
         actor: { type: AuditActorType.USER, userId: user.id },
         tenantId: invitation.tenantId,
+        branchId: auditBranchId,
         resourceId: invitation.id,
         before: { status: StaffInvitationStatus.PENDING },
         after: { status: StaffInvitationStatus.ACCEPTED },
@@ -669,13 +671,13 @@ export class StaffService {
     manager: EntityManager,
     tenantId: string,
     input: ProposedRoleAssignmentDto[],
-  ): Promise<MaterializedGrant[]> {
+  ): Promise<MaterializedStaffGrant[]> {
     if (input.length === 0) {
       throw new BadRequestException(
         'At least one role assignment is required.',
       );
     }
-    const grants: MaterializedGrant[] = [];
+    const grants: MaterializedStaffGrant[] = [];
     for (const assignment of input) {
       const branchSlugs = assignment.branchSlugs ?? [];
       if (assignment.roleCode === TenantRoleCode.TENANT_ADMIN) {
@@ -717,29 +719,6 @@ export class StaffService {
     return grants;
   }
 
-  private async assertGrantBranchesAreActive(
-    manager: EntityManager,
-    tenantId: string,
-    assignments: readonly StaffInvitationAssignment[],
-  ): Promise<void> {
-    const branchIds = assignments.flatMap((assignment) =>
-      assignment.branchId ? [assignment.branchId] : [],
-    );
-    if (branchIds.length === 0) return;
-    const activeBranchCount = await manager.getRepository(Branch).count({
-      where: {
-        id: In(branchIds),
-        tenantId,
-        status: BranchStatus.ACTIVE,
-      },
-    });
-    if (activeBranchCount !== branchIds.length) {
-      throw new UnprocessableEntityException(
-        'Every proposed branch must still be active before accepting the invitation.',
-      );
-    }
-  }
-
   private newInvitation(
     tenantId: string,
     email: string,
@@ -748,29 +727,14 @@ export class StaffService {
     createdByUserId: string,
     now: Date,
   ): StaffInvitation {
-    const invitation = this.dataSource.manager.create(StaffInvitation, {
-      id: randomUUID(),
+    return this.operations.newInvitation(
       tenantId,
       email,
       emailNormalized,
       fullName,
-      tokenHash: '',
-      status: StaffInvitationStatus.PENDING,
-      expiresAt: new Date(
-        now.getTime() + this.appConfig.tenantInvitationConfig.ttlMs,
-      ),
-      acceptedAt: null,
-      acceptedByUserId: null,
-      revokedAt: null,
-      deliveryStatus: StaffInvitationDeliveryStatus.PENDING,
-      lastSentAt: null,
-      lastDeliveryErrorCode: null,
       createdByUserId,
-    });
-    invitation.tokenHash = this.tokenService.hashToken(
-      this.tokenService.createToken(invitation),
+      now,
     );
-    return invitation;
   }
 
   private async resolveInvitationUser(
@@ -831,22 +795,15 @@ export class StaffService {
     userId: string,
     assignedByUserId: string,
     reason: string | null,
-    grants: MaterializedGrant[],
+    grants: MaterializedStaffGrant[],
   ): Promise<RoleAssignment[]> {
-    return manager.getRepository(RoleAssignment).save(
-      grants.map((grant) =>
-        manager.create(RoleAssignment, {
-          userId,
-          tenantId,
-          branchId: grant.branchId,
-          roleCode: grant.roleCode,
-          assignedByUserId,
-          assignmentReason: reason,
-          revokedByUserId: null,
-          revokedAt: null,
-          revocationReason: null,
-        }),
-      ),
+    return this.operations.materializeGrants(
+      manager,
+      tenantId,
+      userId,
+      assignedByUserId,
+      reason,
+      grants,
     );
   }
 
@@ -855,15 +812,7 @@ export class StaffService {
     tenantId: string,
     userId: string,
   ): Promise<TenantUserMembership> {
-    const membership = await manager
-      .getRepository(TenantUserMembership)
-      .createQueryBuilder('membership')
-      .setLock('pessimistic_write')
-      .where('membership.tenant_id = :tenantId', { tenantId })
-      .andWhere('membership.user_id = :userId', { userId })
-      .getOne();
-    if (!membership) throw new NotFoundException('Staff member was not found.');
-    return membership;
+    return this.operations.findMembershipForUpdate(manager, tenantId, userId);
   }
 
   private async findInvitationForUpdate(
@@ -871,16 +820,11 @@ export class StaffService {
     tenantId: string,
     invitationId: string,
   ): Promise<StaffInvitation> {
-    const invitation = await manager
-      .getRepository(StaffInvitation)
-      .createQueryBuilder('invitation')
-      .setLock('pessimistic_write')
-      .where('invitation.id = :invitationId', { invitationId })
-      .andWhere('invitation.tenant_id = :tenantId', { tenantId })
-      .getOne();
-    if (!invitation)
-      throw new NotFoundException('Staff invitation was not found.');
-    return invitation;
+    return this.operations.findInvitationForUpdate(
+      manager,
+      tenantId,
+      invitationId,
+    );
   }
 
   private async assertNotLastTenantAdmin(
@@ -925,86 +869,37 @@ export class StaffService {
     actor: { userId: string; sessionId?: string },
     reason?: string | null,
   ): Promise<void> {
-    await this.auditLogService.record(manager, {
-      action: AuditAction.ROLE_GRANTED,
-      actor: {
-        type: AuditActorType.USER,
-        userId: actor.userId,
-        sessionId: actor.sessionId,
-      },
+    await this.operations.auditRoleGrant(
+      manager,
       tenantId,
-      branchId: assignment.branchId ?? undefined,
-      resourceId: assignment.id,
-      reason: reason ?? undefined,
-      after: this.assignmentAuditSnapshot(assignment),
-    });
+      assignment,
+      actor,
+      reason,
+    );
   }
 
   private auditActor(context: AuthorizationContext) {
-    return {
-      type: AuditActorType.USER,
-      userId: context.actor.userId,
-      sessionId: context.actor.sessionId,
-    };
+    return this.operations.auditActor(context);
   }
 
   private assignmentAuditSnapshot(assignment: RoleAssignment) {
-    return {
-      roleCode: assignment.roleCode,
-      branchId: assignment.branchId,
-      revokedAt: assignment.revokedAt?.toISOString() ?? null,
-    };
+    return this.operations.assignmentAuditSnapshot(assignment);
   }
 
-  private assignmentResponse(
-    assignment: RoleAssignment,
-  ): StaffAssignmentResponse {
-    return {
-      id: assignment.id,
-      roleCode: assignment.roleCode,
-      branchId: assignment.branchId,
-      assignedAt: assignment.assignedAt,
-    };
+  private assignmentResponse(assignment: RoleAssignment) {
+    return this.operations.assignmentResponse(assignment);
   }
 
   private membershipResponse(membership: TenantUserMembership) {
-    return {
-      id: membership.id,
-      userId: membership.userId,
-      status: membership.status,
-      disabledAt: membership.disabledAt,
-      updatedAt: membership.updatedAt,
-    };
+    return this.operations.membershipResponse(membership);
   }
 
   private async invitationResponse(invitationId: string) {
-    const invitation = await this.dataSource
-      .getRepository(StaffInvitation)
-      .findOne({
-        where: { id: invitationId },
-        relations: { proposedAssignments: true },
-      });
-    if (!invitation)
-      throw new NotFoundException('Staff invitation was not found.');
-    return this.invitationEntityResponse(invitation);
+    return this.operations.invitationResponse(invitationId);
   }
 
   private invitationEntityResponse(invitation: StaffInvitation) {
-    return {
-      id: invitation.id,
-      email: invitation.email,
-      fullName: invitation.fullName,
-      status: invitation.status,
-      expiresAt: invitation.expiresAt,
-      deliveryStatus: invitation.deliveryStatus,
-      lastSentAt: invitation.lastSentAt,
-      proposedAssignments: (invitation.proposedAssignments ?? []).map(
-        (assignment) => ({
-          roleCode: assignment.roleCode,
-          branchId: assignment.branchId,
-        }),
-      ),
-    };
+    return this.operations.invitationEntityResponse(invitation);
   }
 
   private async acceptedInvitationResponse(
@@ -1031,28 +926,10 @@ export class StaffService {
   }
 
   private async enqueueInvitation(invitationId: string): Promise<void> {
-    try {
-      await this.invitationJobs.enqueueStaffInvitation(invitationId);
-    } catch {
-      await this.dataSource
-        .getRepository(StaffInvitation)
-        .update(invitationId, {
-          deliveryStatus: StaffInvitationDeliveryStatus.FAILED,
-          lastDeliveryErrorCode: 'ENQUEUE_FAILED',
-        });
-    }
+    return this.operations.enqueueInvitation(invitationId);
   }
 
   private isActiveGrantConflict(error: unknown): boolean {
-    return (
-      error instanceof QueryFailedError &&
-      [
-        'uq_active_tenant_wide_role_assignment',
-        'uq_active_branch_role_assignment',
-      ].includes(
-        (error.driverError as { constraint?: string } | undefined)
-          ?.constraint ?? '',
-      )
-    );
+    return this.operations.isActiveGrantConflict(error);
   }
 }

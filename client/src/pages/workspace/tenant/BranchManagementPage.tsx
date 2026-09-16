@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useWorkspaceContext } from "../use-workspace-context";
+import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
@@ -77,7 +77,7 @@ function toSortBy(sorting: SortingState): BranchSortBy | undefined {
 export function BranchManagementPage() {
   const { i18n, t } = useTranslation("branches");
   const { t: tCommon } = useTranslation("common");
-  const { tenant, tenantSlug } = useWorkspaceContext();
+  const { tenant, tenantSlug } = useRouteWorkspaceContext();
   const [createOpen, setCreateOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | undefined>();
   const [lifecycleSelection, setLifecycleSelection] =

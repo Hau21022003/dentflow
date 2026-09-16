@@ -2,6 +2,32 @@
   "eyebrow": "Workspace · Tenant Admin",
   "title": "Quản lý nhân sự",
   "description": "Mời nhân sự, quản lý membership tenant và cấp role cố định theo các chi nhánh đang hoạt động.",
+  "branch": {
+    "eyebrow": "Workspace · Chi nhánh",
+    "title": "Nhân sự chi nhánh",
+    "description": "Quản lý roster và quyền Lễ tân/Bác sĩ tại {{branch}}.",
+    "table": {
+      "description": "Chỉ hiển thị nhân sự và lời mời thuộc {{branch}} · {{tenant}}."
+    },
+    "form": {
+      "roles": "Vai trò tại chi nhánh",
+      "rolesHint": "Chỉ có thể cấp Lễ tân hoặc Bác sĩ tại chi nhánh hiện tại."
+    },
+    "validation": {
+      "roleRequired": "Hãy chọn ít nhất một vai trò."
+    },
+    "invite": {
+      "title": "Mời nhân sự vào chi nhánh",
+      "description": "Người nhận chỉ nhận role tại chi nhánh hiện tại sau khi chấp nhận lời mời."
+    },
+    "grant": {
+      "title": "Cấp role tại chi nhánh",
+      "description": "Thêm role Lễ tân hoặc Bác sĩ cho {{name}} tại chi nhánh hiện tại."
+    },
+    "empty": {
+      "description": "Mời nhân sự hoặc điều chỉnh tìm kiếm và bộ lọc trạng thái."
+    }
+  },
   "loading": "Đang tải nhân sự",
   "roles": {
     "TENANT_ADMIN": "Quản trị tenant",
@@ -100,6 +126,12 @@
       "title": "Thu hồi role",
       "description": "Thu hồi {{role}} của {{name}}. Quyền truy cập có thể giảm ngay lập tức.",
       "confirm": "Thu hồi role"
+    },
+    "removeFromBranch": {
+      "label": "Gỡ khỏi chi nhánh",
+      "title": "Gỡ nhân sự khỏi chi nhánh",
+      "description": "Thu hồi toàn bộ role Lễ tân/Bác sĩ của {{name}} tại chi nhánh này. Membership tenant của họ không bị vô hiệu hóa.",
+      "confirm": "Gỡ khỏi chi nhánh"
     }
   },
   "errors": {

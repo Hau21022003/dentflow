@@ -24,6 +24,7 @@ export type StaffMemberItem = {
   id: string;
   fullName: string;
   email: string;
+  avatarUrl: string | null;
   status: StaffMembershipStatus;
   membership: StaffMembership;
   assignments: StaffAssignment[];
@@ -70,6 +71,18 @@ export type StaffPage = {
 export type StaffRoleSelection = {
   roleCode: TenantRoleCode;
   branchSlugs: string[];
+};
+
+export type BranchStaffRoleCode = "RECEPTIONIST" | "DENTIST";
+
+export type BranchStaffRolesInput = {
+  roleCodes: BranchStaffRoleCode[];
+  reason?: string;
+};
+
+export type CreateBranchStaffInvitationInput = BranchStaffRolesInput & {
+  email: string;
+  fullName: string;
 };
 
 export type CreateStaffInvitationInput = {

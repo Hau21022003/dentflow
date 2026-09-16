@@ -4,6 +4,7 @@ import { LoginPage } from "../../pages/auth/LoginPage";
 import { AcceptTenantOwnerInvitationPage } from "../../pages/auth/AcceptTenantOwnerInvitationPage";
 import { AcceptStaffInvitationPage } from "../../pages/auth/AcceptStaffInvitationPage";
 import { PatientsListPage } from "../../pages/patients/PatientsListPage";
+import { ProfilePage } from "../../pages/profile/ProfilePage";
 import { PlatformHomePage } from "../../pages/platform/PlatformHomePage";
 import { EmailTemplateDetailPage } from "../../pages/platform/EmailTemplateDetailPage";
 import { EmailTemplateManagementPage } from "../../pages/platform/EmailTemplateManagementPage";
@@ -11,6 +12,8 @@ import { SubscriptionPlanManagementPage } from "../../pages/platform/Subscriptio
 import { TenantManagementPage } from "../../pages/platform/TenantManagementPage";
 import { TenantDetailPage } from "../../pages/platform/TenantDetailPage";
 import { BranchWorkspaceHomePage } from "../../pages/workspace/branch/BranchWorkspaceHomePage";
+import { BranchStaffManagementPage } from "../../pages/workspace/branch/BranchStaffManagementPage";
+import { TempImageUploadTestPage } from "../../pages/workspace/branch/TempImageUploadTestPage";
 import { DoctorHomePage } from "../../pages/workspace/doctor/DoctorHomePage";
 import { AppointmentsPage } from "../../pages/workspace/reception/AppointmentsPage";
 import { BranchManagementPage } from "../../pages/workspace/tenant/BranchManagementPage";
@@ -18,6 +21,7 @@ import { ServiceManagementPage } from "../../pages/workspace/tenant/ServiceManag
 import { TenantHomePage } from "../../pages/workspace/tenant/TenantHomePage";
 import { StaffManagementPage } from "../../pages/workspace/tenant/StaffManagementPage";
 import { AppLayout } from "../layouts/AppLayout";
+import { LegacyBranchStaffRedirect } from "./LegacyBranchStaffRedirect";
 import { RoleHomeRedirect } from "./RoleHomeRedirect";
 import {
   WorkspaceRootRedirect,
@@ -32,7 +36,6 @@ import { RequirePlatformPermission } from "./guards/RequirePlatformPermission";
 import { RequireTenantAccess } from "./guards/RequireTenantAccess";
 import { RequireTenantPermission } from "./guards/RequireTenantPermission";
 import { PATHS } from "./paths";
-import { LegacyBranchStaffRedirect } from "./LegacyBranchStaffRedirect";
 
 export const routes: RouteObject[] = [
   {
@@ -57,6 +60,7 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <RoleHomeRedirect /> },
           { path: PATHS.forbidden, element: <ForbiddenPage /> },
+          { path: PATHS.profile, element: <ProfilePage /> },
           {
             path: PATHS.platform,
             element: (
@@ -99,7 +103,9 @@ export const routes: RouteObject[] = [
                 permission={PERMISSIONS.platformPlanManage}
               />
             ),
-            children: [{ index: true, element: <SubscriptionPlanManagementPage /> }],
+            children: [
+              { index: true, element: <SubscriptionPlanManagementPage /> },
+            ],
           },
           {
             path: PATHS.workspace,
@@ -137,7 +143,9 @@ export const routes: RouteObject[] = [
                             permission={PERMISSIONS.serviceCatalogManage}
                           />
                         ),
-                        children: [{ index: true, element: <ServiceManagementPage /> }],
+                        children: [
+                          { index: true, element: <ServiceManagementPage /> },
+                        ],
                       },
                       {
                         path: "staff",
@@ -146,13 +154,11 @@ export const routes: RouteObject[] = [
                             permission={PERMISSIONS.staffManage}
                           />
                         ),
-                        children: [{ index: true, element: <StaffManagementPage /> }],
+                        children: [
+                          { index: true, element: <StaffManagementPage /> },
+                        ],
                       },
                     ],
-                  },
-                  {
-                    path: "branches/:branchSlug/branch/staff",
-                    element: <LegacyBranchStaffRedirect />,
                   },
                   {
                     path: "branches/:branchSlug",
@@ -160,13 +166,42 @@ export const routes: RouteObject[] = [
                     children: [
                       { index: true, element: <BranchWorkspaceHomePage /> },
                       {
+                        path: "staff",
+                        element: (
+                          <RequireBranchPermission
+                            permission={PERMISSIONS.staffBranchManage}
+                          />
+                        ),
+                        children: [
+                          { index: true, element: <BranchStaffManagementPage /> },
+                        ],
+                      },
+                      {
+                        path: "branch/staff",
+                        element: <LegacyBranchStaffRedirect />,
+                      },
+                      // Temporary, unlinked diagnostic route for direct-storage E2E coverage.
+                      {
+                        path: "upload-test",
+                        element: (
+                          <RequireBranchPermission
+                            permission={PERMISSIONS.fileUpload}
+                          />
+                        ),
+                        children: [
+                          { index: true, element: <TempImageUploadTestPage /> },
+                        ],
+                      },
+                      {
                         path: "reception/appointments",
                         element: (
                           <RequireBranchPermission
                             permission={PERMISSIONS.appointmentManage}
                           />
                         ),
-                        children: [{ index: true, element: <AppointmentsPage /> }],
+                        children: [
+                          { index: true, element: <AppointmentsPage /> },
+                        ],
                       },
                       {
                         path: "doctor",
@@ -175,7 +210,9 @@ export const routes: RouteObject[] = [
                             permission={PERMISSIONS.appointmentAssignedRead}
                           />
                         ),
-                        children: [{ index: true, element: <DoctorHomePage /> }],
+                        children: [
+                          { index: true, element: <DoctorHomePage /> },
+                        ],
                       },
                     ],
                   },

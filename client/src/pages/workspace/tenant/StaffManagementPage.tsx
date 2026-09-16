@@ -46,6 +46,7 @@ import type {
 } from "@/features/staff/staff.types";
 import { createDataTableLocale } from "@/i18n/data-table";
 import { getErrorMessage } from "@/shared/lib/error";
+import { UserAvatar } from "@/shared/components/UserAvatar";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ColumnDef, type ColumnFiltersState } from "@tanstack/react-table";
 import {
@@ -59,7 +60,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useWorkspaceContext } from "../use-workspace-context";
+import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
@@ -90,12 +91,15 @@ function statusVariant(status: StaffListStatus) {
 export function StaffManagementPage() {
   const { i18n, t } = useTranslation("staff");
   const { t: tCommon } = useTranslation("common");
-  const { tenant, tenantSlug } = useWorkspaceContext();
+  const { tenant, tenantSlug } = useRouteWorkspaceContext();
   const queryClient = useQueryClient();
-  const setAuthenticatedUser = useAuthStore((state) => state.setAuthenticatedUser);
+  const setAuthenticatedUser = useAuthStore(
+    (state) => state.setAuthenticatedUser,
+  );
   const [inviteOpen, setInviteOpen] = useState(false);
   const [grantMember, setGrantMember] = useState<StaffMemberItem | null>(null);
-  const [actionSelection, setActionSelection] = useState<StaffActionSelection | null>(null);
+  const [actionSelection, setActionSelection] =
+    useState<StaffActionSelection | null>(null);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [globalFilter, setGlobalFilter] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -135,15 +139,21 @@ export function StaffManagementPage() {
     [t, tCommon],
   );
   const branchesById = useMemo(
-    () => new Map((staffBranchesQuery.data ?? []).map((branch) => [branch.id, branch])),
+    () =>
+      new Map(
+        (staffBranchesQuery.data ?? []).map((branch) => [branch.id, branch]),
+      ),
     [staffBranchesQuery.data],
   );
   const dateFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat(i18n.resolvedLanguage === "en" ? "en-US" : "vi-VN", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }),
+      new Intl.DateTimeFormat(
+        i18n.resolvedLanguage === "en" ? "en-US" : "vi-VN",
+        {
+          dateStyle: "medium",
+          timeStyle: "short",
+        },
+      ),
     [i18n.resolvedLanguage],
   );
 
@@ -157,13 +167,16 @@ export function StaffManagementPage() {
     setAuthenticatedUser(user);
   }
 
-  const assignmentScope = useCallback((assignment: { roleCode: string; branchId: string | null }) => {
-    if (!assignment.branchId) return t("scope.tenantWide");
-    const branch = branchesById.get(assignment.branchId);
-    return branch
-      ? `${branch.name}${branch.status === "INACTIVE" ? ` · ${t("scope.inactive")}` : ""}`
-      : t("scope.unavailable");
-  }, [branchesById, t]);
+  const assignmentScope = useCallback(
+    (assignment: { roleCode: string; branchId: string | null }) => {
+      if (!assignment.branchId) return t("scope.tenantWide");
+      const branch = branchesById.get(assignment.branchId);
+      return branch
+        ? `${branch.name}${branch.status === "INACTIVE" ? ` · ${t("scope.inactive")}` : ""}`
+        : t("scope.unavailable");
+    },
+    [branchesById, t],
+  );
 
   const columns = useMemo<ColumnDef<StaffListItem>[]>(
     () => [
@@ -172,12 +185,23 @@ export function StaffManagementPage() {
         header: () => <span>{t("table.staff")}</span>,
         cell: ({ row }) => (
           <div className="flex min-w-56 items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-              {row.original.kind === "INVITATION" ? <Mail aria-hidden="true" className="size-4" /> : <UsersRound aria-hidden="true" className="size-4" />}
-            </span>
+            {row.original.kind === "INVITATION" ? (
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+                <Mail aria-hidden="true" className="size-4" />
+              </span>
+            ) : (
+              <UserAvatar
+                avatarUrl={row.original.avatarUrl}
+                fullName={row.original.fullName}
+              />
+            )}
             <span className="min-w-0">
-              <span className="block truncate font-semibold">{row.original.fullName}</span>
-              <span className="block truncate text-sm text-muted-foreground">{row.original.email}</span>
+              <span className="block truncate font-semibold">
+                {row.original.fullName}
+              </span>
+              <span className="block truncate text-sm text-muted-foreground">
+                {row.original.email}
+              </span>
             </span>
           </div>
         ),
@@ -187,16 +211,28 @@ export function StaffManagementPage() {
         header: () => <span>{t("table.access")}</span>,
         cell: ({ row }) => {
           const item = row.original;
-          const assignments = item.kind === "INVITATION" ? item.invitation.proposedAssignments : item.assignments;
+          const assignments =
+            item.kind === "INVITATION"
+              ? item.invitation.proposedAssignments
+              : item.assignments;
           return (
             <div className="grid min-w-52 gap-2">
               {assignments.map((assignment) => (
-                <div className="flex items-center gap-2" key={`${assignment.roleCode}-${assignment.branchId ?? "tenant"}`}>
-                  <Badge variant="outline">{t(`roles.${assignment.roleCode}`)}</Badge>
-                  <span className="text-xs text-muted-foreground">{assignmentScope(assignment)}</span>
+                <div
+                  className="flex items-center gap-2"
+                  key={`${assignment.roleCode}-${assignment.branchId ?? "tenant"}`}
+                >
+                  <Badge variant="outline">
+                    {t(`roles.${assignment.roleCode}`)}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {assignmentScope(assignment)}
+                  </span>
                   {item.kind === "MEMBER" && "id" in assignment && (
                     <Button
-                      aria-label={t("actions.revokeRole.label", { role: t(`roles.${assignment.roleCode}`) })}
+                      aria-label={t("actions.revokeRole.label", {
+                        role: t(`roles.${assignment.roleCode}`),
+                      })}
                       className="size-6"
                       onClick={() =>
                         setActionSelection({
@@ -224,14 +260,20 @@ export function StaffManagementPage() {
         header: () => <span>{t("table.status")}</span>,
         cell: ({ row }) => (
           <div className="grid gap-1">
-            <Badge variant={statusVariant(row.original.status)}>{t(`status.${row.original.status}`)}</Badge>
+            <Badge variant={statusVariant(row.original.status)}>
+              {t(`status.${row.original.status}`)}
+            </Badge>
             {row.original.kind === "INVITATION" && (
               <>
                 <span className="text-xs text-muted-foreground">
                   {t(`delivery.${row.original.invitation.deliveryStatus}`)}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {t("table.expiresAt", { date: dateFormatter.format(new Date(row.original.invitation.expiresAt)) })}
+                  {t("table.expiresAt", {
+                    date: dateFormatter.format(
+                      new Date(row.original.invitation.expiresAt),
+                    ),
+                  })}
                 </span>
               </>
             )}
@@ -247,18 +289,40 @@ export function StaffManagementPage() {
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button aria-label={t("actions.openMenu", { name: item.fullName })} size="icon" type="button" variant="ghost">
+                <Button
+                  aria-label={t("actions.openMenu", { name: item.fullName })}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                >
                   <Ellipsis aria-hidden="true" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {item.kind === "INVITATION" ? (
                   <>
-                    <DropdownMenuItem onSelect={() => setActionSelection({ action: "resend", item, kind: "invitation" })}>
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        setActionSelection({
+                          action: "resend",
+                          item,
+                          kind: "invitation",
+                        })
+                      }
+                    >
                       <RefreshCw aria-hidden="true" />
                       {t("actions.resend.label")}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => setActionSelection({ action: "revokeInvitation", item, kind: "invitation" })} variant="destructive">
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        setActionSelection({
+                          action: "revokeInvitation",
+                          item,
+                          kind: "invitation",
+                        })
+                      }
+                      variant="destructive"
+                    >
                       <X aria-hidden="true" />
                       {t("actions.revokeInvitation.label")}
                     </DropdownMenuItem>
@@ -272,11 +336,26 @@ export function StaffManagementPage() {
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
-                      onSelect={() => setActionSelection({ action: item.status === "ACTIVE" ? "disable" : "enable", item, kind: "member" })}
-                      variant={item.status === "ACTIVE" ? "destructive" : "default"}
+                      onSelect={() =>
+                        setActionSelection({
+                          action:
+                            item.status === "ACTIVE" ? "disable" : "enable",
+                          item,
+                          kind: "member",
+                        })
+                      }
+                      variant={
+                        item.status === "ACTIVE" ? "destructive" : "default"
+                      }
                     >
-                      {item.status === "ACTIVE" ? <X aria-hidden="true" /> : <ShieldCheck aria-hidden="true" />}
-                      {t(`actions.${item.status === "ACTIVE" ? "disable" : "enable"}.label`)}
+                      {item.status === "ACTIVE" ? (
+                        <X aria-hidden="true" />
+                      ) : (
+                        <ShieldCheck aria-hidden="true" />
+                      )}
+                      {t(
+                        `actions.${item.status === "ACTIVE" ? "disable" : "enable"}.label`,
+                      )}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -289,7 +368,10 @@ export function StaffManagementPage() {
     [assignmentScope, dateFormatter, t],
   );
 
-  async function submitAction(reason: string | undefined, idempotencyKey: string) {
+  async function submitAction(
+    reason: string | undefined,
+    idempotencyKey: string,
+  ) {
     if (!actionSelection) return;
     if (actionSelection.kind === "member") {
       const command = {
@@ -335,8 +417,13 @@ export function StaffManagementPage() {
 
   const actionDescription = actionSelection
     ? actionSelection.kind === "assignment"
-      ? t("actions.revokeRole.description", { name: actionSelection.item.fullName, role: t(`roles.${actionSelection.assignment.roleCode}`) })
-      : t(`actions.${actionSelection.action}.description`, { name: actionSelection.item.fullName })
+      ? t("actions.revokeRole.description", {
+          name: actionSelection.item.fullName,
+          role: t(`roles.${actionSelection.assignment.roleCode}`),
+        })
+      : t(`actions.${actionSelection.action}.description`, {
+          name: actionSelection.item.fullName,
+        })
     : "";
 
   return (
@@ -344,10 +431,18 @@ export function StaffManagementPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-3xl space-y-2">
           <p className="text-sm font-semibold text-primary">{t("eyebrow")}</p>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{t("title")}</h1>
-          <p className="text-sm leading-6 text-muted-foreground sm:text-base">{t("description")}</p>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            {t("title")}
+          </h1>
+          <p className="text-sm leading-6 text-muted-foreground sm:text-base">
+            {t("description")}
+          </p>
         </div>
-        <Button disabled={staffBranchesQuery.isLoading} onClick={() => setInviteOpen(true)} type="button">
+        <Button
+          disabled={staffBranchesQuery.isLoading}
+          onClick={() => setInviteOpen(true)}
+          type="button"
+        >
           <UserPlus aria-hidden="true" />
           {t("actions.invite")}
         </Button>
@@ -357,18 +452,30 @@ export function StaffManagementPage() {
         <CardHeader className="gap-4 border-b border-border/70 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>{t("table.title")}</CardTitle>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{t("table.description", { tenant: tenantName })}</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              {t("table.description", { tenant: tenantName })}
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            {staffQuery.isFetching && !staffQuery.isLoading && <RefreshCw aria-label={t("loading")} className="size-4 animate-spin text-muted-foreground" />}
+            {staffQuery.isFetching && !staffQuery.isLoading && (
+              <RefreshCw
+                aria-label={t("loading")}
+                className="size-4 animate-spin text-muted-foreground"
+              />
+            )}
             <Select
               onValueChange={(value) => {
-                setStatus(value === "ALL" ? undefined : (value as StaffListStatus));
+                setStatus(
+                  value === "ALL" ? undefined : (value as StaffListStatus),
+                );
                 resetToFirstPage();
               }}
               value={status ?? "ALL"}
             >
-              <SelectTrigger aria-label={t("table.statusFilter")} className="w-40">
+              <SelectTrigger
+                aria-label={t("table.statusFilter")}
+                className="w-40"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -388,18 +495,32 @@ export function StaffManagementPage() {
               staffQuery.isError ? (
                 <Empty className="border-0 py-10">
                   <EmptyHeader>
-                    <EmptyMedia variant="icon"><UsersRound aria-hidden="true" /></EmptyMedia>
+                    <EmptyMedia variant="icon">
+                      <UsersRound aria-hidden="true" />
+                    </EmptyMedia>
                     <EmptyTitle>{t("errors.listTitle")}</EmptyTitle>
-                    <EmptyDescription>{getErrorMessage(staffQuery.error)}</EmptyDescription>
-                    <Button onClick={() => void staffQuery.refetch()} size="sm" type="button">{t("actions.retry")}</Button>
+                    <EmptyDescription>
+                      {getErrorMessage(staffQuery.error)}
+                    </EmptyDescription>
+                    <Button
+                      onClick={() => void staffQuery.refetch()}
+                      size="sm"
+                      type="button"
+                    >
+                      {t("actions.retry")}
+                    </Button>
                   </EmptyHeader>
                 </Empty>
               ) : (
                 <Empty className="border-0 py-10">
                   <EmptyHeader>
-                    <EmptyMedia variant="icon"><UsersRound aria-hidden="true" /></EmptyMedia>
+                    <EmptyMedia variant="icon">
+                      <UsersRound aria-hidden="true" />
+                    </EmptyMedia>
                     <EmptyTitle>{t("empty.title")}</EmptyTitle>
-                    <EmptyDescription>{t("empty.description")}</EmptyDescription>
+                    <EmptyDescription>
+                      {t("empty.description")}
+                    </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
               )
@@ -413,10 +534,12 @@ export function StaffManagementPage() {
               pageSize: pagination.pageSize,
               pageSizeOptions: PAGE_SIZE_OPTIONS,
               rowCount: staffQuery.data?.meta.total ?? 0,
-              onPaginationChange: (next) => setPagination((current) => ({
-                pageIndex: next.pageSize === current.pageSize ? next.pageIndex : 0,
-                pageSize: next.pageSize,
-              })),
+              onPaginationChange: (next) =>
+                setPagination((current) => ({
+                  pageIndex:
+                    next.pageSize === current.pageSize ? next.pageIndex : 0,
+                  pageSize: next.pageSize,
+                })),
             }}
             serverState={{
               filtering: {

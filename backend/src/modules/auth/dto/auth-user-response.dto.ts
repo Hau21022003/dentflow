@@ -84,6 +84,12 @@ export class AuthUserResponseDto {
   @ApiProperty({ example: 'Bác sĩ Demo' })
   fullName: string;
 
+  @ApiProperty({
+    nullable: true,
+    example: 'https://storage.example.test/avatar?signature=...',
+  })
+  avatarUrl: string | null;
+
   @ApiProperty({ type: AuthorizationSnapshotResponseDto })
   authorization: AuthorizationSnapshotResponseDto;
 }

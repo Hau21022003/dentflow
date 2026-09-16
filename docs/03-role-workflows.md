@@ -23,6 +23,8 @@ Tenant Admin → Branch Admin → Receptionist → Dental Assistant → Dentist 
 
 MVP triển khai bốn role tenant-facing: `TENANT_ADMIN`, `BRANCH_ADMIN`, `RECEPTIONIST`, `DENTIST`. `DENTAL_ASSISTANT` là milestone ngay sau MVP để phản ánh hoạt động chairside thực tế. Một user có thể có nhiều role, ví dụ `TENANT_ADMIN` đồng thời là `DENTIST`; API phải kiểm tra role cần thiết cho từng hành động, không suy luận quyền lâm sàng từ role quản trị.
 
+`file.upload` được cấp cho cả bốn role MVP nhưng chỉ dùng để tạo upload intent ảnh tạm trong branch context đã xác minh. Permission này không cho phép đọc, gắn, chuyển hoặc giữ lâu dài object; module nghiệp vụ trong tương lai vẫn phải kiểm tra quyền trên Patient/Visit và xác minh key thuộc tenant/branch trước khi dùng.
+
 ## 3. Tenant Admin: quản trị tenant
 
 Tenant Admin quản lý cấu hình tenant, branch, danh mục dịch vụ, user/role assignment, báo cáo toàn chuỗi, audit log và SaaS billing. Role này có scope toàn tenant nhưng không tự cấp quyền lâm sàng, không sửa payment điều trị đã ghi nhận và không truy cập tenant khác.
@@ -42,7 +44,8 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 ### Trong ngày
 
 - Hỗ trợ Receptionist xử lý lịch hủy, no-show, walk-in và chuyển ca.
-- Không có API mời/điều chỉnh nhân sự cho Branch Admin trong MVP; capability giới hạn theo branch là milestone sau. Branch Admin không cấp Tenant Admin hoặc mở rộng scope của chính mình.
+- Quản lý roster tại branch được gán: mời, resend/revoke invitation, cấp/thu hồi `RECEPTIONIST` hoặc `DENTIST`, và gỡ toàn bộ các role này khỏi branch. API luôn resolve branch từ URL đã xác minh; không nhận branch ID/slug trong body.
+- Không disable/enable `TenantUserMembership`, không quản lý lời mời đa-branch, không cấp/thu hồi `TENANT_ADMIN`/`BRANCH_ADMIN`, và không thao tác lên user đang có active admin role. Tenant Admin vẫn quản lý mọi thay đổi liên-branch hoặc tenant-wide.
 - Theo dõi dashboard branch: lịch theo trạng thái, ca đang diễn ra, doanh thu đã thu trong ngày và treatment plan cần follow-up.
 
 ### Cuối ngày
@@ -118,7 +121,7 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 
 - Receptionist tạo và check-in appointment trong branch được gán, nhưng nhận `403` khi tạo clinical note.
 - Dentist được phân công có thể tạo visit/treatment plan; Dentist không được phân công nhận `403` dù biết appointment ID.
-- Branch Admin có thể đổi lịch trong scope nhưng không quản lý user hoặc appointment của branch khác.
+- Branch Admin có thể đổi lịch và quản lý staff giới hạn trong scope, nhưng không quản lý user, role assignment hoặc appointment của branch khác.
 - Tenant Admin xem báo cáo tenant và billing SaaS, nhưng không có quyền clinical write nếu không có `DENTIST` role.
 - Một payment đã tạo không có endpoint update/delete thông thường; mọi adjustment ghi lại actor, reason và quan hệ payment gốc.
 - User có nhiều role được cấp hợp quyền của role trong đúng tenant/branch scope, không được hợp quyền qua tenant khác.

@@ -6,6 +6,8 @@ import type {
   AuthResponse,
   AuthUser,
   LoginInput,
+  UpdateMyProfileInput,
+  UserProfile,
 } from "./auth.types";
 
 export const authService = {
@@ -31,6 +33,11 @@ export const authService = {
     await http.post<void>(SHARED_ENDPOINTS.AUTH.LOGOUT, undefined, {
       authRequired: false,
     });
+  },
+
+  async updateMyProfile(input: UpdateMyProfileInput): Promise<UserProfile> {
+    const { payload } = await http.patch<UserProfile>("/users/me", input);
+    return payload;
   },
 
   async acceptTenantOwnerInvitation(

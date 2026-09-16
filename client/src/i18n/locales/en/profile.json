@@ -1,0 +1,25 @@
+{
+  "eyebrow": "Account",
+  "title": "Personal information",
+  "description": "Update your display name and avatar.",
+  "form": {
+    "title": "Your profile",
+    "description": "Your avatar appears in the sidebar and staff directory."
+  },
+  "fields": {
+    "avatar": "Avatar",
+    "fullName": "Full name",
+    "email": "Email"
+  },
+  "avatarHint": "JPG, PNG, or WEBP up to 2 MB.",
+  "emailHint": "Email changes will be available in security settings later.",
+  "actions": {
+    "removeAvatar": "Remove avatar",
+    "save": "Save changes",
+    "saving": "Saving..."
+  },
+  "errors": {
+    "nameRequired": "Full name is required."
+  },
+  "success": "Personal information saved."
+}

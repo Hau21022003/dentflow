@@ -8,6 +8,7 @@ import { AppConfigService } from '../../config/app-config.service';
 import { AuditAction, AuditLogService, AuditActorType } from '../audit';
 import { AuthorizationService } from '../authorization/authorization.service';
 import { User, UserStatus } from '../users/entities/user.entity';
+import { UsersService } from '../users/users.service';
 import {
   AccessTokenPayload,
   AuthenticatedUser,
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly appConfig: AppConfigService,
     private readonly authorizationService: AuthorizationService,
+    private readonly usersService: UsersService,
     private readonly auditLogService: AuditLogService,
   ) {}
 
@@ -318,10 +320,9 @@ export class AuthService {
   }
 
   private async toAuthenticatedUser(user: User): Promise<AuthenticatedUser> {
+    const profile = await this.usersService.toProfile(user);
     return {
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName,
+      ...profile,
       authorization: await this.authorizationService.getAuthorizationSnapshot(
         user.id,
       ),
