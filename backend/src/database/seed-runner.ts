@@ -1,70 +1,59 @@
 // database/seeds/runner.ts
 import * as dotenv from 'dotenv';
-import * as fs from 'fs';
 import * as path from 'path';
 import dataSource from './data-source';
+import { readSeedFiles, runSeedFiles } from './database-reset';
 
 const env = process.env.NODE_ENV ?? 'development';
 dotenv.config({ path: `.env.${env}` });
 const seedEnv = env === 'development' ? 'dev' : env;
 
-async function runSeeds() {
-  await dataSource.initialize();
-  const queryRunner = dataSource.createQueryRunner();
-  await queryRunner.connect();
+async function runSeeds(): Promise<void> {
+  const seedDirectory = path.join(__dirname, 'seeds', seedEnv);
+  const seedFiles = readSeedFiles(seedDirectory);
 
-  const seedDir = path.join(__dirname, 'seeds', seedEnv);
-
-  if (!fs.existsSync(seedDir)) {
-    console.error(`❌ Seed directory not found: ${seedDir}`);
-    process.exit(1);
-  }
-
-  const files = fs
-    .readdirSync(seedDir)
-    .filter((f) => f.endsWith('.sql'))
-    .sort();
-
-  if (files.length === 0) {
-    console.log('⚠️  No seed files found.');
-    await dataSource.destroy();
+  if (seedFiles.length === 0) {
+    console.log('No seed files found.');
     return;
   }
 
-  console.log(`📂 Found ${files.length} seed file(s) in [${seedEnv}]`);
+  console.log(`Found ${seedFiles.length} seed file(s) in [${seedEnv}]`);
 
-  await queryRunner.startTransaction();
+  await dataSource.initialize();
+  const queryRunner = dataSource.createQueryRunner();
 
   try {
-    for (const file of files) {
-      const filePath = path.join(seedDir, file);
-      const sql = fs.readFileSync(filePath, 'utf8');
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-      const cleaned = sql.trim();
+    const result = await runSeedFiles(queryRunner, seedFiles);
 
-      if (!cleaned) {
-        console.log(`⚠️  Skipped (empty): ${file}`);
-        continue;
-      }
-
-      await queryRunner.query(cleaned);
-
-      console.log(`✅ Seeded: ${file}`);
+    for (const file of result.skipped) {
+      console.log(`Skipped (empty): ${file}`);
+    }
+    for (const file of result.seeded) {
+      console.log(`Seeded: ${file}`);
     }
 
     await queryRunner.commitTransaction();
-    console.log('🎉 All seeds committed successfully.');
-  } catch (err) {
-    await queryRunner.rollbackTransaction();
-    console.error('❌ Seed failed, rolled back:', err);
-    process.exit(1);
+    console.log('All seeds committed successfully.');
+  } catch (error) {
+    if (queryRunner.isTransactionActive) {
+      await queryRunner.rollbackTransaction();
+    }
+
+    throw error;
   } finally {
-    await queryRunner.release();
-    await dataSource.destroy();
+    if (!queryRunner.isReleased) {
+      await queryRunner.release();
+    }
+    if (dataSource.isInitialized) {
+      await dataSource.destroy();
+    }
   }
 }
 
-runSeeds().catch((err) => {
-  console.error('Unexpected error:', err);
-  process.exit(1);
+runSeeds().catch((error: unknown) => {
+  console.error('Seed failed:', error);
+  process.exitCode = 1;
 });

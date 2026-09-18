@@ -26,6 +26,8 @@
     "migration:test:revert": "cross-env NODE_ENV=test ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
     "seed:dev": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/database/seed-runner.ts",
     "seed:test": "cross-env NODE_ENV=test       ts-node -r tsconfig-paths/register src/database/seed-runner.ts",
+    "reset:dev": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/database/dev-reset-runner.ts",
+    "refresh:dev": "npm run migration:run && npm run reset:dev",
     "setup:dev": "npm run migration:run && npm run seed:dev",
     "setup:test": "npm run migration:test:run && npm run seed:test"
   },

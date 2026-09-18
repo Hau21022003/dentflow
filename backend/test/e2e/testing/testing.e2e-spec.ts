@@ -67,7 +67,7 @@ describe('Testing database reset (e2e)', () => {
   async function expectSeededFixtures(): Promise<void> {
     const users = await usersRepository.find();
 
-    expect(users).toHaveLength(4);
+    expect(users).toHaveLength(5);
     expect(users.find((user) => user.email === E2E_USER.email)).toMatchObject({
       email: E2E_USER.email,
       fullName: 'Synthetic E2E Tenant Admin',
@@ -75,7 +75,7 @@ describe('Testing database reset (e2e)', () => {
     expect(await tenantsRepository.count()).toBe(2);
     expect(await branchesRepository.count()).toBe(3);
     expect(await platformRoleAssignmentsRepository.count()).toBe(1);
-    expect(await roleAssignmentsRepository.count()).toBe(6);
+    expect(await roleAssignmentsRepository.count()).toBe(7);
 
     const platformAssignments = await platformRoleAssignmentsRepository.find();
     const tenantAssignments = await roleAssignmentsRepository.find();
@@ -89,6 +89,7 @@ describe('Testing database reset (e2e)', () => {
       TenantRoleCode.DENTIST,
       TenantRoleCode.RECEPTIONIST,
       TenantRoleCode.RECEPTIONIST,
+      TenantRoleCode.TENANT_ADMIN,
       TenantRoleCode.TENANT_ADMIN,
     ]);
     expect(

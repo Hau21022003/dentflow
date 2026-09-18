@@ -56,13 +56,31 @@ Seed được tách theo môi trường và luôn nạp theo thứ tự `Tenant 
 | `harmony.reception@dentflow.local`     | Harmony Quận 7: `RECEPTIONIST`                                 |
 | `riverfront.admin@dentflow.local`      | Riverfront: `TENANT_ADMIN`, thêm `BRANCH_ADMIN` tại Bình Thạnh |
 
-`backend/src/database/seeds/test/` giữ fixture nhỏ hơn cho test lặp lại: hai tenant, ba branch, bốn user, một grant platform và sáu grant tenant/branch. Browser E2E tiếp tục dùng `e2e.user@dentflow.test`, hiện là `TENANT_ADMIN` của `BrightSmile Test`. Các fixture test còn lại là `platform.admin@dentflow.test`, `branch.admin@dentflow.test` (`BRANCH_ADMIN` và `RECEPTIONIST` tại Central lẫn West) và `dentist@dentflow.test` (`DENTIST` tại Harmony Test).
+`backend/src/database/seeds/test/` giữ fixture nhỏ hơn cho test lặp lại: hai tenant, ba branch, năm user, một grant platform và bảy grant tenant/branch. Browser E2E tiếp tục dùng `e2e.user@dentflow.test`, hiện là `TENANT_ADMIN` của `BrightSmile Test`. Các fixture test còn lại là `platform.admin@dentflow.test`, `branch.admin@dentflow.test` (`BRANCH_ADMIN` và `RECEPTIONIST` tại Central lẫn West), `dentist@dentflow.test` (`DENTIST` tại Harmony Test) và `harmony.admin@dentflow.test` (`TENANT_ADMIN` của Harmony Test).
 
 Mỗi tenant ở cả hai môi trường có cùng catalog synthetic gồm sáu nhóm dịch vụ active và 39 dịch vụ nha khoa active, đều tenant-scoped: Khám & chẩn đoán, Phòng ngừa & nha chu, Phục hồi & nội nha, Nhổ răng & tiểu phẫu, Phục hình & implant, Chỉnh nha & thẩm mỹ. Giá là giá niêm yết tham chiếu bằng VND, còn thời lượng là thời gian ghế ước tính cho một lần hẹn. Vì vậy dev có 18 nhóm/117 dịch vụ và test có 12 nhóm/78 dịch vụ; mã dịch vụ được lặp lại giữa tenant nhưng unique trong từng tenant.
 
 Hai môi trường cũng nạp cùng 22 hồ sơ Patient synthetic vào tenant BrightSmile chính tương ứng (`brightsmile-dental` ở dev và `test-brightsmile` ở test). Dữ liệu có UUID, thời điểm tạo và số điện thoại giả cố định để kết quả tìm kiếm, sắp xếp và phân trang lặp lại được; Patient vẫn chỉ thuộc tenant, nên có thể được tìm thấy từ mọi branch active có quyền của tenant đó. Seed này chỉ có dữ liệu hành chính tối thiểu, không có alert hay dữ liệu clinical.
 
 Không đưa dữ liệu bệnh nhân thật vào seed hoặc test. Khi bổ sung luồng nghiệp vụ mới, chỉ thêm dữ liệu synthetic với tenant context đã được xác minh bởi backend.
+
+## Reset fixture development
+
+`backend` có hai lệnh dành cho database development local riêng:
+
+```powershell
+# Xóa data trong schema public, giữ lại migration history, rồi nạp seeds/dev.
+npm run reset:dev
+
+# Apply migration pending, sau đó reset và nạp lại development fixture.
+npm run refresh:dev
+```
+
+Cả hai lệnh đều yêu cầu `NODE_ENV=development` và
+`ALLOW_DEV_DB_RESET=true` trong `backend/.env.development`. Lệnh reset sử dụng
+`TRUNCATE … RESTART IDENTITY CASCADE` cho mọi bảng `public` ngoại trừ
+`migrations`, nên mọi data development tự tạo sẽ mất. Không chạy khi backend đang
+phục vụ request; lệnh không reset Redis, MinIO/S3 hay database schema.
 
 ## Storage dependency
 
