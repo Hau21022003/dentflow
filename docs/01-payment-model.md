@@ -44,12 +44,15 @@ Mỗi provider cần ánh xạ event tạo/cập nhật/hủy subscription và i
 
 ### MVP: ghi nhận tại quầy, không chuyển tiền qua DentFlow
 
-Lễ tân lập `PatientInvoice` từ hạng mục treatment plan đã được xác nhận và ghi nhận một hoặc nhiều `Payment`.
+Lễ tân lập `PatientInvoice` từ `TreatmentItem` của Treatment Plan `ACCEPTED` và ghi nhận một hoặc nhiều `Payment`. Item chưa cần `COMPLETED`, nên tenant có thể thu trước hoặc thu nhiều đợt. Contract workflow, quyền và API branch-scoped nằm tại [06-domain-workflows.md](./06-domain-workflows.md).
 
 - Phương thức hỗ trợ: `CASH`, `BANK_TRANSFER`, `CARD`, `OTHER`.
-- Payment có số tiền, thời điểm, người thu, mã tham chiếu/ghi chú và bằng chứng tùy chọn ở giai đoạn sau.
-- Một invoice cho phép thanh toán nhiều lần và chuyển `ISSUED → PARTIALLY_PAID → PAID` theo tổng tiền thực thu.
-- Không sửa hoặc xóa payment đã ghi nhận. Hoàn/điều chỉnh tạo bản ghi mới tham chiếu payment gốc và audit log.
+- Một TreatmentItem thuộc tối đa một invoice còn hiệu lực. Void invoice sau khi tất toán correction mới giải phóng item để invoice lại.
+- Invoice chỉ dùng một currency và snapshot line/item/service/amount tại thời điểm tạo; catalog hay Treatment Plan thay đổi không hồi tố invoice đã issue.
+- Payment có số tiền, thời điểm, người thu, mã tham chiếu/ghi chú và bằng chứng tùy chọn ở giai đoạn sau. `BANK_TRANSFER`/`CARD` dùng transaction reference unique theo policy tenant.
+- Một invoice cho phép thanh toán nhiều lần và chuyển `ISSUED → PARTIALLY_PAID → PAID` theo số tiền thực thu ròng, dưới lock invoice.
+- Không sửa hoặc xóa Payment đã ghi nhận. Refund/adjustment là record bù trừ mới tham chiếu Payment gốc, mang amount/direction/reason code và audit log; Branch Admin cần permission `patient-payment.adjust` trong đúng branch để tạo correction.
+- Invoice chỉ `VOID` ở `DRAFT`/`ISSUED`; nếu đã có net collected amount, phải refund/adjust về 0 trước khi void.
 - `PatientInvoice` và `Payment` luôn có `tenantId` và `branchId`; chỉ người có phạm vi branch phù hợp được truy cập.
 
 Tiền mặt, chuyển khoản hay quẹt thẻ được nộp vào quỹ/tài khoản của chi nhánh theo quy trình riêng của tenant. DentFlow lưu sổ theo dõi vận hành, không đóng vai trò ngân hàng, cổng thanh toán hay bên chịu trách nhiệm đối soát ngân hàng trong MVP.
@@ -74,5 +77,7 @@ Nếu sau này có nhu cầu thật sự, đây là một product line riêng: �
 - Thanh toán SaaS thành công qua provider đã cấu hình trong sandbox/test mode kích hoạt tenant mà không tác động đến `PatientInvoice` hay `Payment`.
 - Tenant hết hạn/chưa thanh toán bị Subscription Guard chặn endpoint vận hành nhưng vẫn truy cập được trang billing.
 - Giao dịch tiền điều trị được tạo bởi lễ tân chỉ ảnh hưởng invoice của bệnh nhân trong tenant/branch của họ; không gọi Stripe Platform API.
+- Item `ACCEPTED` không thể xuất hiện trong hai invoice còn hiệu lực; partial payment chỉ tạo thêm Payment trên invoice hiện hữu.
+- Refund/adjustment không sửa Payment gốc, chỉ tạo record bù trừ trong đúng branch có audit; Platform Admin không tự có quyền command này.
 - Một Platform Admin không thể tạo payout hoặc xem/chỉnh sửa payment điều trị nếu không có tenant/branch assignment hợp lệ.
 - Test tenant isolation chứng minh không thể dùng ID của tenant khác cho subscription invoice, patient invoice hoặc payment.

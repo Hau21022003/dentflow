@@ -38,7 +38,7 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 ### Đầu ngày
 
 1. Mở danh sách lịch hẹn hôm nay, ca chưa xác nhận, lịch trùng và bác sĩ vắng mặt.
-2. Điều chỉnh phân công bác sĩ hoặc slot lịch hẹn trong branch được gán; thay đổi phải lưu lý do/audit log nếu ca đã confirmed.
+2. Điều chỉnh phân công bác sĩ hoặc slot lịch hẹn trong branch được gán đến hết `CHECKED_IN`; thay đổi Appointment `CONFIRMED` phải lưu reason code/audit và cần xác nhận lại.
 3. Theo dõi trạng thái bệnh nhân chờ và cân bằng tải lịch cho nhân sự.
 
 ### Trong ngày
@@ -52,24 +52,24 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 
 - Rà soát lịch chưa hoàn tất, no-show và các invoice chưa thanh toán.
 - Ghi nhận vấn đề vận hành và xem audit log liên quan.
-- Không sửa giao dịch payment để "khớp sổ"; chỉ tạo adjustment/refund theo quyền và quy trình sau này.
+- Không sửa giao dịch payment để "khớp sổ"; chỉ tạo adjustment/refund bất biến khi có permission `patient-payment.adjust` trong đúng branch.
 
 ## 5. Receptionist: tiếp nhận đến thu tiền và tái khám
 
 ### Luồng bệnh nhân mới hoặc quay lại
 
-1. Tìm kiếm bệnh nhân theo số điện thoại trong tenant để tránh tạo trùng.
+1. Tìm kiếm bệnh nhân theo số điện thoại chuẩn hóa trong tenant, qua branch workspace được gán; số trùng phải chọn hồ sơ có sẵn, không tạo bypass.
 2. Tạo hoặc cập nhật thông tin hành chính được phép: liên hệ, ngày sinh, địa chỉ, người liên hệ khẩn cấp và nguồn giới thiệu.
-3. Tạo appointment với branch, dịch vụ/lý do khám, bác sĩ dự kiến, thời gian và ghi chú.
-4. Khi bệnh nhân đến, xác minh thông tin và chuyển appointment sang `CHECKED_IN`.
+3. Tạo appointment với branch, dịch vụ/lý do khám, Dentist tùy chọn, thời gian và ghi chú. Receptionist không chuyển Dentist đã gán.
+4. Khi bệnh nhân đến, xác minh thông tin và chuyển appointment sang `CHECKED_IN`; ca chưa có Dentist vẫn được check-in nhưng chưa thể bắt đầu.
 5. Khi bác sĩ hoàn tất, lập `PatientInvoice` từ treatment plan/hạng mục được chấp nhận.
 6. Ghi nhận một hoặc nhiều payment tại quầy: `CASH`, `BANK_TRANSFER`, `CARD` hoặc `OTHER`; lưu mã tham chiếu và người thu.
-7. Đặt lịch tái khám theo chỉ định, chuyển appointment sang `COMPLETED` hoặc ghi `NO_SHOW`/`CANCELLED` kèm lý do.
+7. Tạo appointment tái khám từ recommendation của Dentist, chuyển appointment sang `COMPLETED` khi Visit đã hoàn tất hoặc ghi `NO_SHOW`/`CANCELLED` kèm reason code.
 
 ### Ranh giới bắt buộc
 
-- Không tạo chẩn đoán, treatment plan hoặc clinical note.
-- Không xóa/sửa payment đã ghi nhận; refund hoặc adjustment là bản ghi mới có audit log.
+- Không tạo/xem/sửa PatientAlert, chẩn đoán, treatment plan hoặc clinical note.
+- Không xóa/sửa payment đã ghi nhận, cũng không tạo refund/adjustment; các record bù trừ thuộc Branch Admin có permission riêng.
 - Không xem/sửa appointment, payment hoặc patient thuộc branch ngoài scope, trừ patient profile tenant-wide ở mức thông tin hành chính được cho phép.
 
 ## 6. Dentist: khám và điều trị
@@ -78,17 +78,17 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 
 1. Xem danh sách appointment được phân công tại branch của mình.
 2. Khi bệnh nhân đã check-in, bắt đầu appointment và mở `Visit`.
-3. Ghi triệu chứng, thông tin khám, chẩn đoán và clinical note.
+3. Ghi triệu chứng, thông tin khám, chẩn đoán, PatientAlert và clinical note; có thể đọc lịch sử clinical cùng branch của Patient, nhưng không đọc clinical branch khác.
 4. Tạo `TreatmentPlan` gồm hạng mục, dịch vụ, vị trí/răng, số lượng, đơn giá dự kiến, chỉ định và bác sĩ thực hiện.
 5. Chuyển kế hoạch sang `PROPOSED`; Receptionist ghi nhận sự chấp thuận của bệnh nhân trước khi tạo invoice.
 6. Thực hiện từng treatment item, cập nhật tiến độ và ghi diễn biến điều trị.
-7. Hoàn tất visit, đề xuất tái khám hoặc chuyển chuyên khoa; Receptionist tạo appointment tái khám.
+7. Hoàn tất visit để khóa nội dung gốc; nếu cần sửa sau đó chỉ thêm addendum. Đề xuất tái khám hoặc chuyển chuyên khoa để Receptionist tạo appointment tái khám.
 
 ### Ranh giới bắt buộc
 
-- Chỉ truy cập ca được phân công hoặc ca được Branch Admin chuyển giao có audit trail.
+- Chỉ truy cập ca được phân công; Branch Admin chỉ chuyển Dentist đến hết `CHECKED_IN` và luôn có audit trail.
 - Không tự đánh dấu invoice là paid, tạo refund hay sửa payment.
-- Không truy cập clinical notes của bác sĩ khác ngoài chính sách tenant/branch đã cấp.
+- Không truy cập clinical history ở branch khác hoặc Patient/Visit không gắn với một Appointment đang được phân công cho mình.
 
 ## 7. Dental Assistant: hỗ trợ ghế nha khoa (sau MVP)
 
@@ -109,21 +109,22 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 
 | Sự kiện | Người tạo/cập nhật | Người nhận bàn giao | Quy tắc |
 | --- | --- | --- | --- |
-| Appointment `BOOKED` | Receptionist | Branch Admin, Dentist | Có branch và bác sĩ dự kiến |
-| Appointment `CHECKED_IN` | Receptionist | Dentist/Dental Assistant | Không tạo clinical visit trước check-in, trừ walk-in có lý do |
+| Appointment `BOOKED` | Receptionist | Branch Admin, Dentist | Có branch; Dentist có thể chưa được gán |
+| Appointment `CHECKED_IN` | Receptionist | Dentist/Dental Assistant | Có thể chưa gán Dentist, nhưng phải gán trước khi start/Visit |
 | Treatment plan `PROPOSED` | Dentist | Receptionist, bệnh nhân | Receptionist không sửa nội dung chuyên môn |
 | Treatment plan `ACCEPTED` | Receptionist ghi xác nhận | Dentist | Lưu thời điểm và người xác nhận |
-| Treatment item `COMPLETED` | Dentist | Receptionist | Chỉ item hoàn tất mới sẵn sàng invoice theo policy |
-| Payment recorded | Receptionist | Tenant/Branch reporting | Không thể sửa trực tiếp; dùng adjustment/refund |
-| Tái khám | Dentist đề xuất, Receptionist tạo lịch | Patient/Dentist | Liên kết với visit/treatment plan gốc nếu có |
+| Treatment plan `REOPENED` | Dentist | Receptionist, bệnh nhân | Acceptance cũ hết hiệu lực; phải đề xuất/xác nhận lại |
+| Treatment plan `ACCEPTED` / item eligible | Receptionist ghi xác nhận Plan | Receptionist | Mỗi item được đưa vào tối đa một invoice còn hiệu lực, dù chưa completed |
+| Payment recorded | Receptionist | Tenant/Branch reporting | Không thể sửa trực tiếp; Branch Admin có permission riêng tạo adjustment/refund |
+| Tái khám | Dentist đề xuất, Receptionist tạo lịch | Patient/Dentist | Có FollowUpRecommendation và reference Visit/Treatment Plan nguồn |
 
 ## 9. Acceptance criteria cho RBAC
 
 - Receptionist tạo và check-in appointment trong branch được gán, nhưng nhận `403` khi tạo clinical note.
 - Dentist được phân công có thể tạo visit/treatment plan; Dentist không được phân công nhận `403` dù biết appointment ID.
-- Branch Admin có thể đổi lịch và quản lý staff giới hạn trong scope, nhưng không quản lý user, role assignment hoặc appointment của branch khác.
+- Branch Admin có thể đổi lịch/gán Dentist đến `CHECKED_IN`, tạo adjustment/refund khi có permission riêng và quản lý staff giới hạn trong scope; không quản lý user, role assignment hoặc appointment của branch khác.
 - Tenant Admin xem báo cáo tenant và billing SaaS, nhưng không có quyền clinical write nếu không có `DENTIST` role.
-- Một payment đã tạo không có endpoint update/delete thông thường; mọi adjustment ghi lại actor, reason và quan hệ payment gốc.
+- Một payment đã tạo không có endpoint update/delete thông thường; mọi adjustment/refund ghi actor, reason code và quan hệ payment gốc.
 - User có nhiều role được cấp hợp quyền của role trong đúng tenant/branch scope, không được hợp quyền qua tenant khác.
 
 ## 10. Kiến trúc entity authorization (chốt trước service)
@@ -259,7 +260,7 @@ Migration `1786060800005-CreateAuthorizationRoleAssignments` và module `authori
 
 Permission đã được định nghĩa bằng policy map bất biến tại `modules/authorization/authorization.policy.ts`; không lưu thành entity/database enum và không có endpoint CRUD. Snapshot auth trả platform permission và effective permission theo tenant/branch để client ẩn/hiện UI, nhưng policy backend vẫn là nguồn quyết định quyền.
 
-Policy hiện có capability Platform (`platform.*`, gồm `platform.email-template.manage`), quản trị tenant (`tenant.settings.manage`, `branch.manage`, `service-catalog.manage`, `staff.manage`, reports/audit/billing/notification), Receptionist và Dentist theo ma trận role ở đầu tài liệu. Mỗi action mới phải được thêm có chủ đích vào policy, guard và test; mặc định không khớp permission là `403`. Không thêm direct user permission, tenant-custom role, wildcard (`*`) hay super-admin bypass cho dữ liệu tenant.
+Policy hiện có capability Platform (`platform.*`, gồm `platform.email-template.manage`), quản trị tenant (`tenant.settings.manage`, `branch.manage`, `service-catalog.manage`, `staff.manage`, reports/audit/billing/notification), Receptionist và Dentist theo ma trận role ở đầu tài liệu. Contract clinical bổ sung `patient-payment.adjust` cho `BRANCH_ADMIN` khi module được triển khai; các quyền clinical khác vẫn kết hợp fixed permission hiện có với case assignment ở service. Mỗi action mới phải được thêm có chủ đích vào policy, guard và test; mặc định không khớp permission là `403`. Không thêm direct user permission, tenant-custom role, wildcard (`*`) hay super-admin bypass cho dữ liệu tenant.
 
 ### 10.5 Entity nghiệp vụ dùng làm điều kiện quyền
 
@@ -267,10 +268,12 @@ Role và branch scope chỉ trả lời "người này có thể làm loại tha
 
 | Entity nghiệp vụ                  | Thuộc tính authorization cần có                                     | Quy tắc dành cho Dentist                                                           |
 | --------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `Patient` / `PatientAlert`        | `tenant_id`; Alert tham chiếu Patient                               | Alert chỉ đọc/ghi khi Dentist có Appointment đang được gán cho Patient             |
 | `Appointment`                     | `tenant_id`, `branch_id`, `assigned_dentist_user_id`                | Chỉ dentist đang được gán mới bắt đầu/ghi clinical data                            |
-| `Visit`                           | `tenant_id`, `branch_id`, `appointment_id`, `opened_by_user_id`     | Phải cùng tenant/branch và bắt nguồn từ appointment hợp lệ                         |
+| `Visit`                           | `tenant_id`, `branch_id`, `appointment_id`, `opened_by_user_id`     | Unique theo appointment; phải cùng tenant/branch và bắt nguồn từ ca được gán       |
 | `TreatmentPlan` / `TreatmentItem` | `tenant_id`, `branch_id`, `visit_id`, `responsible_dentist_user_id` | Cần dentist role + branch scope + assignment ca phù hợp                            |
-| `PatientInvoice` / `Payment`      | `tenant_id`, `branch_id`, `recorded_by_user_id`                     | Receptionist/Branch Admin trong đúng branch; không có update/delete payment thường |
+| `PatientInvoice` / `Payment`      | `tenant_id`, `branch_id`, `recorded_by_user_id`                     | Receptionist ghi collection; Branch Admin correction có permission; không update/delete payment |
+| `FollowUpRecommendation`          | `tenant_id`, `branch_id`, `visit_id`/`treatment_plan_id`            | Dentist có ca tạo recommendation; Receptionist schedule lịch từ record nguồn        |
 
 Nếu sau này cần nhiều dentist/assistant trong một appointment hoặc cần lịch sử chuyển giao riêng, bổ sung `appointment_clinician_assignments` ở module Appointment, không mở rộng `role_assignments` để mang dữ liệu ca. Bảng đó phải mang `tenant_id`, `branch_id`, `appointment_id`, `clinician_user_id`, `assignment_kind`, `assigned_by_user_id`, `assigned_at`, `ended_at`, lý do và composite FK cùng tenant. Một partial unique index bảo đảm chỉ một `PRIMARY_DENTIST` active cho một appointment trong MVP.
 

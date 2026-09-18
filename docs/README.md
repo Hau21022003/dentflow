@@ -10,6 +10,7 @@ Thư mục này là nguồn thông tin sản phẩm và kỹ thuật chính củ
 | [03-role-workflows.md](./03-role-workflows.md)     | Phạm vi quyền, bàn giao công việc và luồng hằng ngày của từng vai trò                  |
 | [04-tenant-admin.md](./04-tenant-admin.md)         | Vận hành Tenant Admin: cấu hình tenant, chi nhánh, nhân sự, giám sát và SaaS billing   |
 | [05-audit-log.md](./05-audit-log.md)               | Audit nghiệp vụ append-only, payload an toàn, API đọc và retention                     |
+| [06-domain-workflows.md](./06-domain-workflows.md) | Contract MVP Patient, lịch hẹn, khám, điều trị, thu phí và tái khám                    |
 | [08-demo-and-testing.md](./08-demo-and-testing.md) | Tài khoản dữ liệu mẫu, browser E2E và môi trường test tách biệt                        |
 | [09-idempotency-implementation-plan.md](./09-idempotency-implementation-plan.md) | Quyết định kỹ thuật và lộ trình triển khai idempotency cho command backend |
 | [10-background-jobs-architecture.md](./10-background-jobs-architecture.md) | Kiến trúc BullMQ, worker và quy ước background job backend |
@@ -27,6 +28,5 @@ Thư mục này là nguồn thông tin sản phẩm và kỹ thuật chính củ
 
 ## Tài liệu sẽ bổ sung khi triển khai
 
-- `06-domain-workflows.md`: trạng thái chi tiết của lịch hẹn, visit, treatment plan và hoá đơn.
 - `07-architecture.md`: ranh giới frontend/API/database, tenant context, auth và deployment.
 - `11-api-contracts.md`: quy ước REST, lỗi, pagination và webhook; idempotency theo contract tại `09-idempotency-implementation-plan.md`.
