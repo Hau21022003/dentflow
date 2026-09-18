@@ -1,12 +1,13 @@
 import {
   FormDialog,
+  RHFCombobox,
   RHFSelect,
   RHFTextField,
+  RHFTextarea,
+  type RHFComboboxOption,
   type RHFSelectOption,
 } from "@/components/form";
 import { Alert } from "@/components/ui/alert";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   useCreateServiceMutation,
   useUpdateServiceMutation,
@@ -36,8 +37,8 @@ import {
 } from "@/shared/lib/idempotency";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle } from "lucide-react";
-import { useEffect, useId, useMemo, useState } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
@@ -215,7 +216,6 @@ export function ServiceFormDialog({
   const { i18n, t: tServices } = useTranslation("services");
   const { t: tValidation } = useTranslation("validation");
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "vi-VN";
-  const reasonId = useId();
   const isCreate = service === undefined;
   const validation = useMemo(
     () => createValidationMessages(tValidation),
@@ -287,7 +287,7 @@ export function ServiceFormDialog({
         .map((group) => ({
           label: group.name,
           value: group.id,
-        })) satisfies RHFSelectOption[],
+        })) satisfies RHFComboboxOption[],
     [service?.serviceGroup.id, serviceGroupsQuery.data?.items],
   );
 
@@ -386,16 +386,19 @@ export function ServiceFormDialog({
             required
           />
           <div className="sm:col-span-2">
-            <RHFSelect
+            <RHFCombobox
               control={control}
               disabled={
                 serviceGroupsQuery.isLoading || serviceGroupOptions.length === 0
               }
+              emptyMessage={tServices("form.serviceGroupEmpty")}
               fullWidth
               label={tServices("form.fields.groupName")}
               name="serviceGroupId"
               options={serviceGroupOptions}
+              placeholder={tServices("form.serviceGroupPlaceholder")}
               required
+              searchPlaceholder={tServices("form.serviceGroupSearchPlaceholder")}
             />
           </div>
           <RHFSelect
@@ -432,40 +435,14 @@ export function ServiceFormDialog({
               <AlertCircle aria-hidden="true" className="size-4" />
               {tServices("form.priceChangeReasonHint")}
             </Alert>
-            <Controller
+            <RHFTextarea
               control={control}
+              fullWidth
+              label={tServices("form.fields.reason")}
+              maxLength={500}
               name="reason"
-              render={({ field, fieldState }) => (
-                <div className="grid gap-2">
-                  <Label htmlFor={reasonId}>
-                    {tServices("form.fields.reason")}
-                    <span aria-hidden="true" className="text-destructive">
-                      *
-                    </span>
-                  </Label>
-                  <Textarea
-                    aria-describedby={
-                      fieldState.error ? `${reasonId}-message` : undefined
-                    }
-                    aria-invalid={Boolean(fieldState.error)}
-                    id={reasonId}
-                    maxLength={500}
-                    onBlur={field.onBlur}
-                    onChange={field.onChange}
-                    ref={field.ref}
-                    rows={3}
-                    value={field.value}
-                  />
-                  {fieldState.error?.message && (
-                    <p
-                      className="text-xs text-destructive"
-                      id={`${reasonId}-message`}
-                    >
-                      {fieldState.error.message}
-                    </p>
-                  )}
-                </div>
-              )}
+              required
+              rows={3}
             />
           </>
         )}

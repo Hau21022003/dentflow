@@ -85,6 +85,13 @@
       "discard": "Bỏ thay đổi"
     }
   },
+  "form": {
+    "combobox": {
+      "placeholder": "Chọn một lựa chọn",
+      "searchPlaceholder": "Tìm lựa chọn...",
+      "noResults": "Không có lựa chọn phù hợp."
+    }
+  },
   "dataTable": {
     "body": {
       "noResults": "Không có kết quả phù hợp."

@@ -85,6 +85,13 @@
       "discard": "Discard changes"
     }
   },
+  "form": {
+    "combobox": {
+      "placeholder": "Select an option",
+      "searchPlaceholder": "Search options...",
+      "noResults": "No matching options found."
+    }
+  },
   "dataTable": {
     "body": {
       "noResults": "No results"

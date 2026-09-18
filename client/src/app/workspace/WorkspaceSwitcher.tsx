@@ -199,8 +199,8 @@ export function WorkspaceSwitcher({
                           <CommandItem
                             className={
                               isCurrentBranch
-                                ? "bg-muted hover:bg-muted data-selected:bg-muted"
-                                : "bg-transparent hover:bg-muted data-selected:bg-transparent"
+                                ? "bg-muted hover:bg-muted data-[selected=true]:bg-muted"
+                                : "bg-transparent hover:bg-muted data-[selected=true]:bg-transparent"
                             }
                             data-checked={isCurrentBranch}
                             key={branch.slug}
@@ -236,8 +236,8 @@ export function WorkspaceSwitcher({
                   <CommandItem
                     className={
                       context.tenantSlug === tenant.slug
-                        ? "bg-muted hover:bg-muted data-selected:bg-muted [&>svg:last-child]:hidden"
-                        : "bg-transparent hover:bg-muted data-selected:bg-transparent [&>svg:last-child]:hidden"
+                        ? "bg-muted hover:bg-muted data-[selected=true]:bg-muted [&>svg:last-child]:hidden"
+                        : "bg-transparent hover:bg-muted data-[selected=true]:bg-transparent [&>svg:last-child]:hidden"
                     }
                     key={tenant.id}
                     onSelect={() => setFocusedTenantSlug(tenant.slug)}

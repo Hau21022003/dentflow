@@ -2,11 +2,10 @@ import {
   FormDialog,
   RHFSelect,
   RHFTextField,
+  RHFTextarea,
   type RHFSelectOption,
 } from "@/components/form";
 import { Alert } from "@/components/ui/alert";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   useCreatePatientMutation,
   useUpdatePatientMutation,
@@ -29,8 +28,8 @@ import {
   type IdempotencyIntent,
 } from "@/shared/lib/idempotency";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useId, useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
@@ -252,7 +251,6 @@ export function PatientFormDialog({
   const mutation = isCreate ? createMutation : updateMutation;
   const [idempotencyIntent, setIdempotencyIntent] =
     useState<IdempotencyIntent | null>(null);
-  const addressId = useId();
   const {
     control,
     formState: { errors, isDirty },
@@ -378,30 +376,13 @@ export function PatientFormDialog({
             type="date"
           />
           <div className="sm:col-span-2">
-            <Controller
+            <RHFTextarea
               control={control}
+              fullWidth
+              label={tPatients("form.fields.address")}
+              maxLength={500}
               name="address"
-              render={({ field, fieldState }) => (
-                <div className="grid gap-2">
-                  <Label htmlFor={addressId}>{tPatients("form.fields.address")}</Label>
-                  <Textarea
-                    aria-describedby={fieldState.error ? `${addressId}-message` : undefined}
-                    aria-invalid={Boolean(fieldState.error)}
-                    id={addressId}
-                    maxLength={500}
-                    onBlur={field.onBlur}
-                    onChange={field.onChange}
-                    ref={field.ref}
-                    rows={3}
-                    value={field.value}
-                  />
-                  {fieldState.error?.message && (
-                    <p className="text-xs text-destructive" id={`${addressId}-message`}>
-                      {fieldState.error.message}
-                    </p>
-                  )}
-                </div>
-              )}
+              rows={3}
             />
           </div>
         </div>

@@ -2,11 +2,10 @@ import {
   FormDialog,
   RHFSelect,
   RHFTextField,
+  RHFTextarea,
   type RHFSelectOption,
 } from "@/components/form";
 import { Alert } from "@/components/ui/alert";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
@@ -35,8 +34,8 @@ import {
   type IdempotencyIntent,
 } from "@/shared/lib/idempotency";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useId, useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 
@@ -386,7 +385,6 @@ export function SubscriptionPlanFormDialog({
 }: SubscriptionPlanFormDialogProps) {
   const { i18n, t: tPlans } = useTranslation("plans");
   const { t: tValidation } = useTranslation("validation");
-  const descriptionId = useId();
   const locale = localeForLanguage(i18n.resolvedLanguage);
   const isCreate = plan === undefined;
   const validation = useMemo(
@@ -564,37 +562,13 @@ export function SubscriptionPlanFormDialog({
             required
           />
           <div className="sm:col-span-2">
-            <Controller
+            <RHFTextarea
               control={control}
+              fullWidth
+              label={tPlans("form.fields.description")}
+              maxLength={1000}
               name="description"
-              render={({ field, fieldState }) => (
-                <div className="grid gap-2">
-                  <Label htmlFor={descriptionId}>
-                    {tPlans("form.fields.description")}
-                  </Label>
-                  <Textarea
-                    aria-describedby={
-                      fieldState.error ? `${descriptionId}-message` : undefined
-                    }
-                    aria-invalid={Boolean(fieldState.error)}
-                    id={descriptionId}
-                    maxLength={1000}
-                    onBlur={field.onBlur}
-                    onChange={field.onChange}
-                    ref={field.ref}
-                    rows={3}
-                    value={field.value}
-                  />
-                  {fieldState.error?.message && (
-                    <p
-                      className="text-xs text-destructive"
-                      id={`${descriptionId}-message`}
-                    >
-                      {fieldState.error.message}
-                    </p>
-                  )}
-                </div>
-              )}
+              rows={3}
             />
           </div>
           <RHFSelect

@@ -131,6 +131,32 @@ Không ghi đè component trong `src/components/ui` bằng lệnh registry nếu
 xem `--dry-run` và `--diff`, vì chúng là UI foundation đang được các page dùng
 chung.
 
+## React Hook Form fields
+
+Form dùng React Hook Form được ưu tiên các wrapper tại `src/components/form` để
+giữ nhất quán label, required marker, accessibility và hiển thị helper/validation
+message:
+
+```tsx
+import {
+  RHFCombobox,
+  RHFSelect,
+  RHFTextarea,
+  RHFTextField,
+} from "@/components/form";
+```
+
+- Dùng `RHFTextField` cho input native (bao gồm `type`, `inputMode`, `min`,
+  `max`); dùng `RHFTextarea` cho nội dung nhiều dòng.
+- Dùng `RHFSelect` cho tập option nhỏ, ổn định; dùng `RHFCombobox` khi người
+  dùng cần tìm trong danh sách option. `RHFCombobox` chỉ tìm local trong options
+  đã tải; danh sách phân trang hoặc có thể lớn phải dùng server-side search có
+  debounce.
+- Truyền placeholder, search placeholder và empty message qua i18n (ưu tiên
+  namespace domain khi text mang ngữ cảnh nghiệp vụ).
+- Chỉ dùng `Controller` trực tiếp khi control chưa có wrapper tại đây hoặc có
+  hành vi đặc thù không thể tạo thành component dùng chung.
+
 ## DataTable
 
 DataTable dùng chung nằm tại `src/components/shadcntable/data-table.tsx` và dựa
