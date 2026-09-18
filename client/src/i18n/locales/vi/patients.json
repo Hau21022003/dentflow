@@ -1,26 +1,60 @@
 {
-  "title": "Bệnh nhân",
-  "description": "Trang mẫu cho route danh sách bệnh nhân.",
+  "eyebrow": "Tiếp nhận · {{tenantName}} · {{branchName}}",
+  "title": "Quản lý bệnh nhân",
+  "description": "Tra cứu và cập nhật hồ sơ hành chính bệnh nhân trong tenant hiện tại.",
+  "loading": "Đang tải bệnh nhân…",
   "actions": {
-    "create": "Thêm bệnh nhân"
+    "create": "Thêm bệnh nhân",
+    "save": "Lưu thay đổi",
+    "edit": "Chỉnh sửa",
+    "retry": "Thử lại",
+    "openActions": "Mở thao tác cho {{name}}"
   },
-  "emptyState": {
-    "title": "Chưa có dữ liệu hiển thị",
-    "description": "Khi tích hợp API, danh sách bệnh nhân của tenant đã xác thực sẽ xuất hiện ở đây."
+  "genders": {
+    "MALE": "Nam",
+    "FEMALE": "Nữ",
+    "OTHER": "Khác"
   },
   "form": {
-    "title": "Thêm bệnh nhân",
-    "description": "Nhập thông tin hành chính để khởi tạo hồ sơ bệnh nhân.",
-    "submit": "Lưu mẫu",
+    "createTitle": "Thêm bệnh nhân",
+    "createDescription": "Nhập thông tin hành chính để khởi tạo hồ sơ bệnh nhân.",
+    "editTitle": "Chỉnh sửa hồ sơ bệnh nhân",
+    "editDescription": "Cập nhật thông tin hành chính của bệnh nhân.",
+    "dateOfBirthNotFuture": "Ngày sinh không được ở tương lai.",
+    "genderPlaceholder": "Chọn giới tính",
+    "emergencyContact": {
+      "title": "Người liên hệ khẩn cấp",
+      "description": "Nếu có thông tin liên hệ, cần nhập đầy đủ họ tên và số điện thoại."
+    },
     "fields": {
       "fullName": "họ và tên",
       "phone": "số điện thoại",
-      "gender": "giới tính"
-    },
-    "genderOptions": {
-      "male": "Nam",
-      "female": "Nữ",
-      "other": "Khác"
+      "gender": "giới tính",
+      "dateOfBirth": "ngày sinh",
+      "address": "địa chỉ",
+      "emergencyContactName": "họ tên người liên hệ",
+      "emergencyContactPhone": "số điện thoại người liên hệ",
+      "emergencyContactRelationship": "mối quan hệ",
+      "referralSource": "nguồn giới thiệu"
     }
+  },
+  "table": {
+    "title": "Danh sách bệnh nhân",
+    "description": "Danh sách hành chính dùng chung trong tenant, được truy cập từ branch hiện tại.",
+    "searchPlaceholder": "Tìm theo họ tên hoặc số điện thoại…",
+    "fullName": "Họ và tên",
+    "phone": "Số điện thoại",
+    "gender": "Giới tính",
+    "dateOfBirth": "Ngày sinh",
+    "createdAt": "Ngày tạo",
+    "notProvided": "Chưa có",
+    "actions": "Thao tác"
+  },
+  "empty": {
+    "title": "Chưa có bệnh nhân",
+    "description": "Tạo hồ sơ bệnh nhân đầu tiên cho tenant này."
+  },
+  "errors": {
+    "listTitle": "Không thể tải danh sách bệnh nhân"
   }
 }

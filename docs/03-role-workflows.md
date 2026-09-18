@@ -16,7 +16,7 @@ Tenant Admin → Branch Admin → Receptionist → Dental Assistant → Dentist 
 | Vai trò | Phạm vi mặc định | Trách nhiệm chính | Ranh giới bắt buộc |
 | --- | --- | --- | --- |
 | Tenant Admin | Toàn bộ branch trong tenant | Cấu hình chuỗi, người dùng, plan SaaS, báo cáo tổng hợp | Không ghi clinical note nếu không có thêm role Dentist |
-| Branch Admin | Một hoặc nhiều branch được gán | Điều phối vận hành và nhân sự tại branch | Không truy cập branch ngoài assignment |
+| Branch Admin | Một hoặc nhiều branch được gán | Điều phối vận hành, hồ sơ Patient hành chính và nhân sự tại branch | Không truy cập branch ngoài assignment hoặc dữ liệu clinical |
 | Receptionist | Một hoặc nhiều branch được gán | Tiếp nhận, lịch hẹn, invoice và thu tiền | Không chẩn đoán hay sửa clinical note |
 | Dentist | Một hoặc nhiều branch được gán, ca được phân công | Khám, chẩn đoán, điều trị và tái khám | Không chỉnh sửa payment hoặc ca không được gán |
 | Dental Assistant | Một hoặc nhiều branch được gán, ca được phân công | Chuẩn bị/ghi nhận hỗ trợ ghế nha khoa | Không kết luận chẩn đoán hoặc duyệt điều trị |
@@ -44,6 +44,7 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 ### Trong ngày
 
 - Hỗ trợ Receptionist xử lý lịch hủy, no-show, walk-in và chuyển ca.
+- Tìm, tạo và cập nhật hồ sơ Patient hành chính qua branch workspace được gán. Patient thuộc tenant nên có thể tìm hồ sơ toàn tenant để tránh trùng, nhưng Branch Admin không vì thế có quyền PatientAlert, chẩn đoán hay clinical note.
 - Quản lý roster tại branch được gán: mời, resend/revoke invitation, cấp/thu hồi `RECEPTIONIST` hoặc `DENTIST`, và gỡ toàn bộ các role này khỏi branch. API luôn resolve branch từ URL đã xác minh; không nhận branch ID/slug trong body.
 - Không disable/enable `TenantUserMembership`, không quản lý lời mời đa-branch, không cấp/thu hồi `TENANT_ADMIN`/`BRANCH_ADMIN`, và không thao tác lên user đang có active admin role. Tenant Admin vẫn quản lý mọi thay đổi liên-branch hoặc tenant-wide.
 - Theo dõi dashboard branch: lịch theo trạng thái, ca đang diễn ra, doanh thu đã thu trong ngày và treatment plan cần follow-up.
@@ -122,7 +123,7 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 
 - Receptionist tạo và check-in appointment trong branch được gán, nhưng nhận `403` khi tạo clinical note.
 - Dentist được phân công có thể tạo visit/treatment plan; Dentist không được phân công nhận `403` dù biết appointment ID.
-- Branch Admin có thể đổi lịch/gán Dentist đến `CHECKED_IN`, tạo adjustment/refund khi có permission riêng và quản lý staff giới hạn trong scope; không quản lý user, role assignment hoặc appointment của branch khác.
+- Branch Admin có thể đổi lịch/gán Dentist đến `CHECKED_IN`, quản lý hồ sơ Patient hành chính, tạo adjustment/refund khi có permission riêng và quản lý staff giới hạn trong scope; không quản lý user, role assignment hoặc appointment của branch khác.
 - Tenant Admin xem báo cáo tenant và billing SaaS, nhưng không có quyền clinical write nếu không có `DENTIST` role.
 - Một payment đã tạo không có endpoint update/delete thông thường; mọi adjustment/refund ghi actor, reason code và quan hệ payment gốc.
 - User có nhiều role được cấp hợp quyền của role trong đúng tenant/branch scope, không được hợp quyền qua tenant khác.
@@ -260,7 +261,7 @@ Migration `1786060800005-CreateAuthorizationRoleAssignments` và module `authori
 
 Permission đã được định nghĩa bằng policy map bất biến tại `modules/authorization/authorization.policy.ts`; không lưu thành entity/database enum và không có endpoint CRUD. Snapshot auth trả platform permission và effective permission theo tenant/branch để client ẩn/hiện UI, nhưng policy backend vẫn là nguồn quyết định quyền.
 
-Policy hiện có capability Platform (`platform.*`, gồm `platform.email-template.manage`), quản trị tenant (`tenant.settings.manage`, `branch.manage`, `service-catalog.manage`, `staff.manage`, reports/audit/billing/notification), Receptionist và Dentist theo ma trận role ở đầu tài liệu. Contract clinical bổ sung `patient-payment.adjust` cho `BRANCH_ADMIN` khi module được triển khai; các quyền clinical khác vẫn kết hợp fixed permission hiện có với case assignment ở service. Mỗi action mới phải được thêm có chủ đích vào policy, guard và test; mặc định không khớp permission là `403`. Không thêm direct user permission, tenant-custom role, wildcard (`*`) hay super-admin bypass cho dữ liệu tenant.
+Policy hiện có capability Platform (`platform.*`, gồm `platform.email-template.manage`), quản trị tenant (`tenant.settings.manage`, `branch.manage`, `service-catalog.manage`, `staff.manage`, reports/audit/billing/notification), Patient administrative (`patient.administrative.manage`) cho `RECEPTIONIST` và `BRANCH_ADMIN`, cùng capability Dentist theo ma trận role ở đầu tài liệu. Contract clinical bổ sung `patient-payment.adjust` cho `BRANCH_ADMIN` khi module được triển khai; các quyền clinical khác vẫn kết hợp fixed permission hiện có với case assignment ở service. Mỗi action mới phải được thêm có chủ đích vào policy, guard và test; mặc định không khớp permission là `403`. Không thêm direct user permission, tenant-custom role, wildcard (`*`) hay super-admin bypass cho dữ liệu tenant.
 
 ### 10.5 Entity nghiệp vụ dùng làm điều kiện quyền
 

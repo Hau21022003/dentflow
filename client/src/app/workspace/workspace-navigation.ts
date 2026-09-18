@@ -118,10 +118,24 @@ const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   {
     end: true,
     group: "work",
+    icon: UsersRound,
+    id: "patients",
+    labelKey: "navigation.patients",
+    order: 20,
+    permission: PERMISSIONS.patientAdministrativeManage,
+    scope: "branch",
+    to: (context) =>
+      context?.branchSlug
+        ? pathFor.workspaceReceptionPatients(context.tenantSlug, context.branchSlug)
+        : null,
+  },
+  {
+    end: true,
+    group: "work",
     icon: CalendarDays,
     id: "appointments",
     labelKey: "navigation.appointments",
-    order: 20,
+    order: 30,
     permission: PERMISSIONS.appointmentManage,
     scope: "branch",
     to: (context) =>
@@ -138,7 +152,7 @@ const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     icon: Stethoscope,
     id: "doctor-workspace",
     labelKey: "navigation.doctorWorkspace",
-    order: 30,
+    order: 40,
     permission: PERMISSIONS.appointmentAssignedRead,
     scope: "branch",
     to: (context) =>

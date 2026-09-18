@@ -1,26 +1,60 @@
 {
-  "title": "Patients",
-  "description": "Sample page for the patient-list route.",
+  "eyebrow": "Reception · {{tenantName}} · {{branchName}}",
+  "title": "Patient management",
+  "description": "Find and update administrative patient profiles in the current tenant.",
+  "loading": "Loading patients…",
   "actions": {
-    "create": "Add patient"
+    "create": "Add patient",
+    "save": "Save changes",
+    "edit": "Edit",
+    "retry": "Try again",
+    "openActions": "Open actions for {{name}}"
   },
-  "emptyState": {
-    "title": "No data to display",
-    "description": "When the API is integrated, patients from the authenticated tenant will appear here."
+  "genders": {
+    "MALE": "Male",
+    "FEMALE": "Female",
+    "OTHER": "Other"
   },
   "form": {
-    "title": "Add patient",
-    "description": "Enter administrative information to start a patient record.",
-    "submit": "Save sample",
+    "createTitle": "Add patient",
+    "createDescription": "Enter administrative information to start a patient profile.",
+    "editTitle": "Edit patient profile",
+    "editDescription": "Update the patient's administrative information.",
+    "dateOfBirthNotFuture": "Date of birth cannot be in the future.",
+    "genderPlaceholder": "Select gender",
+    "emergencyContact": {
+      "title": "Emergency contact",
+      "description": "When contact information is provided, both name and phone number are required."
+    },
     "fields": {
       "fullName": "full name",
       "phone": "phone number",
-      "gender": "gender"
-    },
-    "genderOptions": {
-      "male": "Male",
-      "female": "Female",
-      "other": "Other"
+      "gender": "gender",
+      "dateOfBirth": "date of birth",
+      "address": "address",
+      "emergencyContactName": "emergency contact name",
+      "emergencyContactPhone": "emergency contact phone",
+      "emergencyContactRelationship": "relationship",
+      "referralSource": "referral source"
     }
+  },
+  "table": {
+    "title": "Patient list",
+    "description": "Administrative profiles shared across the tenant and accessed from the current branch.",
+    "searchPlaceholder": "Search by name or phone number…",
+    "fullName": "Full name",
+    "phone": "Phone number",
+    "gender": "Gender",
+    "dateOfBirth": "Date of birth",
+    "createdAt": "Created",
+    "notProvided": "Not provided",
+    "actions": "Actions"
+  },
+  "empty": {
+    "title": "No patients yet",
+    "description": "Create the first patient profile for this tenant."
+  },
+  "errors": {
+    "listTitle": "We could not load the patient list"
   }
 }

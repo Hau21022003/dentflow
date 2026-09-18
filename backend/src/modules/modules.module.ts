@@ -13,6 +13,7 @@ import { StaffModule } from './staff/staff.module';
 import { ServicesModule } from './services/services.module';
 import { ServiceGroupsModule } from './service-groups/service-groups.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { PatientsModule } from './patients/patients.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UploadsModule } from './uploads/uploads.module';
     BranchesModule,
     ServiceGroupsModule,
     UploadsModule,
+    PatientsModule,
     ServicesModule,
     IdempotencyModule,
     EmailTemplatesModule,

@@ -3,7 +3,7 @@ import { PERMISSIONS } from "@/features/auth/auth.types";
 import { LoginPage } from "../../pages/auth/LoginPage";
 import { AcceptTenantOwnerInvitationPage } from "../../pages/auth/AcceptTenantOwnerInvitationPage";
 import { AcceptStaffInvitationPage } from "../../pages/auth/AcceptStaffInvitationPage";
-import { PatientsListPage } from "../../pages/patients/PatientsListPage";
+import { PatientManagementPage } from "../../pages/workspace/reception/PatientManagementPage";
 import { ProfilePage } from "../../pages/profile/ProfilePage";
 import { PlatformHomePage } from "../../pages/platform/PlatformHomePage";
 import { EmailTemplateDetailPage } from "../../pages/platform/EmailTemplateDetailPage";
@@ -193,6 +193,15 @@ export const routes: RouteObject[] = [
                         ],
                       },
                       {
+                        path: "reception/patients",
+                        element: (
+                          <RequireBranchPermission
+                            permission={PERMISSIONS.patientAdministrativeManage}
+                          />
+                        ),
+                        children: [{ index: true, element: <PatientManagementPage /> }],
+                      },
+                      {
                         path: "reception/appointments",
                         element: (
                           <RequireBranchPermission
@@ -220,7 +229,6 @@ export const routes: RouteObject[] = [
               },
             ],
           },
-          { path: PATHS.patients, element: <PatientsListPage /> },
         ],
       },
     ],

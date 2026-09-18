@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { CAT_AVATAR_PNG_FILE } from "./fixtures/images";
+import { CAT_AVATAR_JPEG_FILE } from "./fixtures/images";
 import { resetDatabase } from "./support/database";
 import { E2E_USERS, login } from "./support/login";
 
@@ -12,7 +12,7 @@ test.beforeEach(async ({ request }) => {
   await resetDatabase(request);
 });
 
-test("uploads the cat avatar PNG directly to MinIO using a presigned POST", async ({
+test("uploads the cat avatar JPEG directly to MinIO using a presigned POST", async ({
   page,
 }) => {
   await login(page, E2E_USERS.tenantAdmin);
@@ -24,7 +24,7 @@ test("uploads the cat avatar PNG directly to MinIO using a presigned POST", asyn
     page.getByRole("heading", { name: "Kiểm tra upload ảnh tạm" }),
   ).toBeVisible();
 
-  await page.getByLabel("Ảnh kiểm thử").setInputFiles(CAT_AVATAR_PNG_FILE);
+  await page.getByLabel("Ảnh kiểm thử").setInputFiles(CAT_AVATAR_JPEG_FILE);
 
   const storageResponse = page.waitForResponse((response) => {
     const request = response.request();
@@ -38,6 +38,6 @@ test("uploads the cat avatar PNG directly to MinIO using a presigned POST", asyn
   expect((await storageResponse).status()).toBe(204);
   await expect(page.getByText("Upload MinIO thành công.")).toBeVisible();
   await expect(page.getByTestId("upload-object-key")).toHaveText(
-    /^temp\/[0-9a-f-]+\/[0-9a-f-]+\/[0-9a-f-]{36}\.png$/i,
+    /^temp\/[0-9a-f-]+\/[0-9a-f-]+\/[0-9a-f-]{36}\.jpg$/i,
   );
 });

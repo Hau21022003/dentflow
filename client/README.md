@@ -73,6 +73,23 @@ và chạy `npm run lint`, `npm run build`.
 ## Quy ước frontend
 
 - Dùng alias `@/` cho `src/`; utilities là `@/shared/lib/utils`.
+- Icon mặc định là `lucide-react`. Khi Lucide không có icon phù hợp, dùng
+  `@tabler/icons-react`; cả hai đều dùng named export để Vite tree-shake những
+  icon không được sử dụng:
+
+  ```tsx
+  import { IconCalendar } from "@tabler/icons-react";
+
+  <IconCalendar aria-hidden="true" size={20} stroke={2} />
+  ```
+
+  Không import toàn bộ package, dùng icon font, hoặc tải SVG từ CDN lúc chạy.
+  Giữ cùng kích thước (thường `16`, `20`, hoặc `24`) và `stroke={2}` trong một
+  khu vực UI. Tabler Icons dùng MIT license. Nếu cả hai package đều chưa có
+  icon nghiệp vụ cần thiết, thêm SVG local vào `src/components/icons/`, dùng
+  `currentColor`, nhận SVG props, và ghi rõ URL nguồn cùng license trong
+  `src/components/icons/SOURCES.md`. Không lấy icon từ một trang tổng hợp nếu
+  chưa xác minh license của icon pack gốc.
 - API đi qua HTTP client tại `src/shared/lib/http.ts`. Tạo service và React
   Query hook trong feature phù hợp, thay vì gọi `fetch` trực tiếp trong page.
   Endpoint chỉ được một service/feature dùng thì khai báo trực tiếp tại service;

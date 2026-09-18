@@ -5,7 +5,6 @@ export const PATHS = {
   acceptStaffInvitation: "/accept-staff-invitation",
   forbidden: "/forbidden",
   profile: "/profile",
-  patients: "/patients",
   platform: "/platform",
   platformEmailTemplates: "/platform/email-templates",
   platformTenants: "/platform/tenants",
@@ -18,6 +17,8 @@ export const PATHS = {
   workspaceTenantStaff: "/workspace/:tenantSlug/tenant/staff",
   workspaceBranch: "/workspace/:tenantSlug/branches/:branchSlug",
   workspaceBranchStaff: "/workspace/:tenantSlug/branches/:branchSlug/staff",
+  workspaceReceptionPatients:
+    "/workspace/:tenantSlug/branches/:branchSlug/reception/patients",
   workspaceReceptionAppointments:
     "/workspace/:tenantSlug/branches/:branchSlug/reception/appointments",
   workspaceDoctor: "/workspace/:tenantSlug/branches/:branchSlug/doctor",
@@ -47,6 +48,8 @@ export const pathFor = {
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}`,
   workspaceBranchStaff: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/staff`,
+  workspaceReceptionPatients: (tenantSlug: string, branchSlug: string) =>
+    `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/reception/patients`,
   workspaceReceptionAppointments: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/reception/appointments`,
   workspaceDoctor: (tenantSlug: string, branchSlug: string) =>

@@ -65,6 +65,7 @@ export const tenantRolePermissions: Readonly<
   [TenantRoleCode.TENANT_ADMIN]: tenantAdminPermissions,
   [TenantRoleCode.BRANCH_ADMIN]: [
     Permission.STAFF_BRANCH_MANAGE,
+    Permission.PATIENT_ADMINISTRATIVE_MANAGE,
     Permission.APPOINTMENT_MANAGE,
     Permission.REPORT_READ,
     Permission.AUDIT_LOG_READ,

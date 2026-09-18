@@ -28,15 +28,24 @@ khi có contract attachment riêng.
 | `Appointment`, `Visit`, `TreatmentPlan`, `TreatmentItem`, `TreatmentNote`, `PatientInvoice`, `Payment`, `FollowUpRecommendation` | Tenant + branch | Mọi query/write mang cả `tenantId` và `branchId` đã resolve từ route context. |
 
 `Patient` được truy cập qua route branch-scoped dù bản ghi thuộc tenant. Cách
-này cho phép Receptionist tại branch đã được cấp quyền tìm Patient trên toàn
-tenant để tránh tạo trùng, nhưng không biến một route tenant-wide thành quyền
-cho mọi Receptionist. Route global `/patients` chỉ là placeholder UI hiện tại,
-không phải contract API hoặc route sản phẩm sau khi module được triển khai.
+này cho phép Receptionist hoặc Branch Admin tại branch đã được cấp quyền tìm
+Patient trên toàn tenant để tránh tạo trùng, nhưng không biến một route
+tenant-wide thành quyền cho mọi user. Route global `/patients` chỉ là
+placeholder UI hiện tại, không phải contract API hoặc route sản phẩm sau khi
+module được triển khai.
 
 Thông tin hành chính của Patient gồm họ tên, số liên lạc, ngày sinh, giới tính,
 địa chỉ, người liên hệ khẩn cấp và nguồn giới thiệu. `phoneNormalized` được
 chuẩn hóa server-side trước khi lưu; create trùng trong cùng tenant trả `409` và
 client phải chọn Patient có sẵn. V1 không hỗ trợ bypass duplicate bằng lý do.
+
+Phase Patient administrative yêu cầu `fullName`, `phone` và `gender` (`MALE`,
+`FEMALE` hoặc `OTHER`) khi tạo. Ngày sinh, địa chỉ, người liên hệ khẩn cấp và
+nguồn giới thiệu là optional; ngày sinh là `YYYY-MM-DD` không ở tương lai. Khi
+có người liên hệ khẩn cấp, phải có cả tên và số điện thoại, quan hệ là optional.
+Server giữ số người dùng nhập để hiển thị, đồng thời chuẩn hóa số hợp lệ về
+E.164 với `VN` là quốc gia mặc định cho input không có mã nước. `phoneNormalized`
+không được trả qua API, audit payload hay application log.
 
 Patient alert, triệu chứng, tiền sử, chẩn đoán và mọi clinical note là dữ liệu
 clinical-sensitive. Chúng không xuất hiện trong audit payload, log ứng dụng,
@@ -181,7 +190,7 @@ ID/slug trong body để chọn scope.
 
 | Capability | Contract route/command |
 | --- | --- |
-| Patient | `GET/POST /patients`, `GET/PATCH /patients/:patientId`; `GET/POST /patients/:patientId/alerts` và `PATCH /patients/:patientId/alerts/:alertId` cho Dentist có case assignment. |
+| Patient | `GET/POST /patients`, `GET/PATCH /patients/:patientId` cho `RECEPTIONIST` hoặc `BRANCH_ADMIN` có `patient.administrative.manage`; `POST`/`PATCH` cần `Idempotency-Key`. List phân trang tìm theo họ tên/số điện thoại và chỉ sort `fullName`, `dateOfBirth`, `createdAt`. `GET/POST /patients/:patientId/alerts` và `PATCH /patients/:patientId/alerts/:alertId` là module sau cho Dentist có case assignment. |
 | Appointment | `GET/POST /appointments`, `GET/PATCH /appointments/:appointmentId`, `POST .../:id/confirm`, `/check-in`, `/assign`, `/start`, `/complete`, `/cancel`, `/no-show`. |
 | Visit | `GET/PATCH /appointments/:appointmentId/visit`, `POST .../visit/complete`, `POST .../visit/addenda`. |
 | Treatment | `GET/POST /visits/:visitId/treatment-plans`, `PATCH /treatment-plans/:planId` khi `DRAFT`, `POST .../propose`, `/reopen`, `/accept`, `/cancel`; item command `/start`, `/complete`, `/cancel`. |
@@ -202,7 +211,7 @@ invoiced và transition không hợp lệ trả `409`; field không hợp lệ t
 | Actor | Quyền workflow |
 | --- | --- |
 | Receptionist | Patient hành chính, Appointment/create-confirm-check-in-cancel-no-show, accept Plan, create/issue Invoice và record Payment trong branch được gán. Không đọc/ghi alert, diagnosis hoặc note. |
-| Branch Admin | Điều phối Appointment, slot và Dentist assignment đến `CHECKED_IN`; refund/adjustment khi có `patient-payment.adjust`. Không ghi clinical content. |
+| Branch Admin | Patient hành chính và điều phối Appointment, slot và Dentist assignment đến `CHECKED_IN`; refund/adjustment khi có `patient-payment.adjust`. Không ghi clinical content. |
 | Dentist | Chỉ ca được gán: start/complete Appointment, Visit, PatientAlert, clinical note/addendum, Treatment Plan/Item và follow-up recommendation. |
 | Tenant Admin | Không tự có clinical hoặc financial-operational access; chỉ có khi có thêm role branch-scoped tương ứng. |
 

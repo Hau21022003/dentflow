@@ -60,6 +60,8 @@ Seed được tách theo môi trường và luôn nạp theo thứ tự `Tenant 
 
 Mỗi tenant ở cả hai môi trường có cùng catalog synthetic gồm sáu nhóm dịch vụ active và 39 dịch vụ nha khoa active, đều tenant-scoped: Khám & chẩn đoán, Phòng ngừa & nha chu, Phục hồi & nội nha, Nhổ răng & tiểu phẫu, Phục hình & implant, Chỉnh nha & thẩm mỹ. Giá là giá niêm yết tham chiếu bằng VND, còn thời lượng là thời gian ghế ước tính cho một lần hẹn. Vì vậy dev có 18 nhóm/117 dịch vụ và test có 12 nhóm/78 dịch vụ; mã dịch vụ được lặp lại giữa tenant nhưng unique trong từng tenant.
 
+Hai môi trường cũng nạp cùng 22 hồ sơ Patient synthetic vào tenant BrightSmile chính tương ứng (`brightsmile-dental` ở dev và `test-brightsmile` ở test). Dữ liệu có UUID, thời điểm tạo và số điện thoại giả cố định để kết quả tìm kiếm, sắp xếp và phân trang lặp lại được; Patient vẫn chỉ thuộc tenant, nên có thể được tìm thấy từ mọi branch active có quyền của tenant đó. Seed này chỉ có dữ liệu hành chính tối thiểu, không có alert hay dữ liệu clinical.
+
 Không đưa dữ liệu bệnh nhân thật vào seed hoặc test. Khi bổ sung luồng nghiệp vụ mới, chỉ thêm dữ liệu synthetic với tenant context đã được xác minh bởi backend.
 
 ## Storage dependency
