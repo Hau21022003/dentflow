@@ -61,7 +61,7 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 
 1. Tìm kiếm bệnh nhân theo số điện thoại chuẩn hóa trong tenant, qua branch workspace được gán; số trùng phải chọn hồ sơ có sẵn, không tạo bypass.
 2. Tạo hoặc cập nhật thông tin hành chính được phép: liên hệ, ngày sinh, địa chỉ, người liên hệ khẩn cấp và nguồn giới thiệu.
-3. Tạo appointment với branch, dịch vụ/lý do khám, Dentist tùy chọn, thời gian và ghi chú. Receptionist không chuyển Dentist đã gán.
+3. Tạo appointment với branch, dịch vụ/lý do khám, Dentist tùy chọn, thời gian và ghi chú. Receptionist chỉ được đặt Dentist ban đầu khi tạo mới; mọi gán, đổi hoặc bỏ gán sau đó thuộc `BRANCH_ADMIN`.
 4. Khi bệnh nhân đến, xác minh thông tin và chuyển appointment sang `CHECKED_IN`; ca chưa có Dentist vẫn được check-in nhưng chưa thể bắt đầu.
 5. Khi bác sĩ hoàn tất, lập `PatientInvoice` từ treatment plan/hạng mục được chấp nhận.
 6. Ghi nhận một hoặc nhiều payment tại quầy: `CASH`, `BANK_TRANSFER`, `CARD` hoặc `OTHER`; lưu mã tham chiếu và người thu.

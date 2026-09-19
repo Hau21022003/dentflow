@@ -14,6 +14,7 @@ import { ServicesModule } from './services/services.module';
 import { ServiceGroupsModule } from './service-groups/service-groups.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { PatientsModule } from './patients/patients.module';
+import { AppointmentsModule } from './appointments/appointments.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { PatientsModule } from './patients/patients.module';
     ServiceGroupsModule,
     UploadsModule,
     PatientsModule,
+    AppointmentsModule,
     ServicesModule,
     IdempotencyModule,
     EmailTemplatesModule,

@@ -61,15 +61,17 @@ không có override.
 ### Appointment
 
 Appointment mang Patient, branch, khoảng thời gian, nguồn/lý do đến khám, ghi
-chú vận hành và service tùy chọn. Nếu chọn Service, service phải `ACTIVE` trong
+chú vận hành và service tùy chọn. Nguồn V1 là `PHONE`, `WALK_IN`, `ONLINE` hoặc
+`OTHER`. Nếu chọn Service, service phải `ACTIVE` trong
 tenant đã resolve và Appointment snapshot mã, tên, giá, currency và thời lượng;
 snapshot lịch hẹn không tự tạo invoice. Nếu không chọn Service, lý do đến khám
 là bắt buộc.
 
 `assignedDentistUserId` có thể `null` lúc tạo để hỗ trợ walk-in/hàng đợi. Khi có
-giá trị, Dentist phải có active `DENTIST` grant trong đúng branch. Appointment
-chưa có Dentist được `CHECKED_IN`, nhưng không thể bắt đầu. Chỉ `BRANCH_ADMIN`
-được gán/đổi Dentist; Receptionist không tự chuyển ownership clinical.
+giá trị, Dentist phải có active `DENTIST` grant trong đúng branch. Receptionist
+được chọn Dentist **chỉ trong command tạo mới**; sau đó chỉ `BRANCH_ADMIN` được
+gán, đổi hoặc bỏ gán Dentist đến hết `CHECKED_IN`. Appointment chưa có Dentist
+được `CHECKED_IN`, nhưng không thể bắt đầu.
 
 Backend hard-block khoảng thời gian giao nhau của cùng Dentist trên các
 Appointment `BOOKED`, `CONFIRMED`, `CHECKED_IN` hoặc `IN_PROGRESS`. Hai khoảng
@@ -85,8 +87,11 @@ BOOKED → CONFIRMED → CHECKED_IN → IN_PROGRESS → COMPLETED
 ```
 
 - Receptionist tạo, xác nhận, check-in, hủy/no-show và đổi giờ trước
-  `IN_PROGRESS`; đổi giờ một Appointment `CONFIRMED` cần reason code và quay lại
-  `BOOKED` để xác nhận lại.
+  `IN_PROGRESS`; đổi giờ một Appointment `CONFIRMED` cần `PATIENT_REQUEST` hoặc
+  `CLINIC_RESCHEDULE` và quay lại `BOOKED` để xác nhận lại. Hủy chỉ nhận
+  `PATIENT_CANCELLED`, `CLINIC_CANCELLED` hoặc `DUPLICATE_BOOKING`; no-show chỉ
+  nhận `PATIENT_NO_SHOW`. `CANCELLED`/`NO_SHOW` chỉ đi từ `BOOKED` hoặc
+  `CONFIRMED` trong V1.
 - Branch Admin điều phối slot và gán/đổi Dentist đến hết `CHECKED_IN`; assignment
   bị khóa ở `IN_PROGRESS` để bảo vệ ownership ca.
 - `start` chỉ cho Dentist được gán, khi Appointment là `CHECKED_IN`; command chạy
@@ -191,7 +196,7 @@ ID/slug trong body để chọn scope.
 | Capability | Contract route/command |
 | --- | --- |
 | Patient | `GET/POST /patients`, `GET/PATCH /patients/:patientId` cho `RECEPTIONIST` hoặc `BRANCH_ADMIN` có `patient.administrative.manage`; `POST`/`PATCH` cần `Idempotency-Key`. List phân trang tìm theo họ tên/số điện thoại và chỉ sort `fullName`, `dateOfBirth`, `createdAt`. `GET/POST /patients/:patientId/alerts` và `PATCH /patients/:patientId/alerts/:alertId` là module sau cho Dentist có case assignment. |
-| Appointment | `GET/POST /appointments`, `GET/PATCH /appointments/:appointmentId`, `POST .../:id/confirm`, `/check-in`, `/assign`, `/start`, `/complete`, `/cancel`, `/no-show`. |
+| Appointment | V1 backend hiện có `GET/POST /appointments`, `GET/PATCH /appointments/:appointmentId`, `POST .../:id/confirm`, `/check-in`, `/assign`, `/cancel`, `/no-show` và `GET /appointments/assigned` cho Dentist. List bắt buộc `from`/`to` tối đa 31 ngày, phân trang và lọc `status`, `patientId`, `dentistUserId`; Dentist chỉ thấy ca do chính mình được gán cùng dữ liệu schedule an toàn. `start`/`complete` bị hoãn đến module Visit để bảo đảm tạo Visit atomically. |
 | Visit | `GET/PATCH /appointments/:appointmentId/visit`, `POST .../visit/complete`, `POST .../visit/addenda`. |
 | Treatment | `GET/POST /visits/:visitId/treatment-plans`, `PATCH /treatment-plans/:planId` khi `DRAFT`, `POST .../propose`, `/reopen`, `/accept`, `/cancel`; item command `/start`, `/complete`, `/cancel`. |
 | Financial | `GET/POST /patient-invoices`, `POST .../:invoiceId/issue`, `/void`, `/payments`, `/payments/:paymentId/refunds`, `/adjustments`. |
@@ -220,7 +225,7 @@ invoiced và transition không hợp lệ trả `409`; field không hợp lệ t
 Các command mới phải chạy business write và AuditLog trong cùng transaction.
 Khi module được triển khai, audit action registry được mở rộng tối thiểu với
 `PATIENT_ALERT_CREATED`, `PATIENT_ALERT_UPDATED`,
-`APPOINTMENT_ASSIGNMENT_CHANGED`, `VISIT_OPENED`, `VISIT_COMPLETED`,
+`APPOINTMENT_UPDATED`, `APPOINTMENT_ASSIGNMENT_CHANGED`, `VISIT_OPENED`, `VISIT_COMPLETED`,
 `TREATMENT_NOTE_ADDED`, `TREATMENT_PLAN_ACCEPTED`,
 `TREATMENT_PLAN_REOPENED`, `FOLLOW_UP_RECOMMENDED` và
 `FOLLOW_UP_SCHEDULED`. Action Invoice/Payment hiện có tiếp tục dùng cho issue,

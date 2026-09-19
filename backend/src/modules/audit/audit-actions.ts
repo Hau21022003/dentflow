@@ -47,6 +47,8 @@ export const AuditAction = {
   PATIENT_CREATED: 'PATIENT_CREATED',
   PATIENT_ADMINISTRATIVE_UPDATED: 'PATIENT_ADMINISTRATIVE_UPDATED',
   APPOINTMENT_CREATED: 'APPOINTMENT_CREATED',
+  APPOINTMENT_UPDATED: 'APPOINTMENT_UPDATED',
+  APPOINTMENT_ASSIGNMENT_CHANGED: 'APPOINTMENT_ASSIGNMENT_CHANGED',
   APPOINTMENT_STATE_CHANGED: 'APPOINTMENT_STATE_CHANGED',
   TREATMENT_PLAN_STATE_CHANGED: 'TREATMENT_PLAN_STATE_CHANGED',
   TREATMENT_ITEM_STATE_CHANGED: 'TREATMENT_ITEM_STATE_CHANGED',
@@ -181,8 +183,20 @@ const PATIENT_PAYLOAD: AuditPayloadPolicy = {
   metadata: ['changedFields', 'reasonCode'],
 };
 const APPOINTMENT_PAYLOAD: AuditPayloadPolicy = {
-  before: ['status', 'scheduledAt', 'assignedDentistUserId'],
-  after: ['status', 'scheduledAt', 'assignedDentistUserId'],
+  before: [
+    'status',
+    'startAt',
+    'endAt',
+    'assignedDentistUserId',
+    'changedFields',
+  ],
+  after: [
+    'status',
+    'startAt',
+    'endAt',
+    'assignedDentistUserId',
+    'changedFields',
+  ],
   metadata: ['reasonCode'],
 };
 const TREATMENT_PAYLOAD: AuditPayloadPolicy = {
@@ -484,6 +498,18 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     PATIENT_PAYLOAD,
   ),
   [AuditAction.APPOINTMENT_CREATED]: definition(
+    AuditDomain.CLINICAL,
+    'APPOINTMENT',
+    false,
+    APPOINTMENT_PAYLOAD,
+  ),
+  [AuditAction.APPOINTMENT_UPDATED]: definition(
+    AuditDomain.CLINICAL,
+    'APPOINTMENT',
+    false,
+    APPOINTMENT_PAYLOAD,
+  ),
+  [AuditAction.APPOINTMENT_ASSIGNMENT_CHANGED]: definition(
     AuditDomain.CLINICAL,
     'APPOINTMENT',
     false,
