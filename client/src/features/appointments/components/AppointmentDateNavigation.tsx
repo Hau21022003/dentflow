@@ -75,7 +75,7 @@ export function AppointmentDateNavigation({
   }
 
   return (
-    <div className="flex flex-col gap-4 border-b border-border/70 px-6 py-4 xl:flex-row xl:items-center xl:justify-between">
+    <div className="flex flex-col gap-4 border-b border-border/70 px-4 py-4 sm:px-6 xl:flex-row xl:items-center xl:justify-between">
       <div className="flex flex-wrap items-center gap-2">
         <Button
           aria-label={t("navigation.previous")}
@@ -131,27 +131,29 @@ export function AppointmentDateNavigation({
 
       <div
         aria-label={t("navigation.viewLabel")}
-        className="flex w-full overflow-hidden rounded-lg border bg-background [&>[data-slot=button]+[data-slot=button]]:border-l [&>[data-slot=button]+[data-slot=button]]:border-border xl:w-auto"
+        className="flex min-w-0 w-full overflow-hidden rounded-lg border bg-background [&>[data-slot=button]+[data-slot=button]]:border-l [&>[data-slot=button]+[data-slot=button]]:border-border xl:w-auto xl:shrink-0"
         role="group"
       >
         {(
           [
-            ["list", List, "views.list"],
-            ["timeline", Clock3, "views.timeline"],
-            ["month", CalendarDays, "views.month"],
+            ["list", List, "views.list", "views.compact.list"],
+            ["timeline", Clock3, "views.timeline", "views.compact.timeline"],
+            ["month", CalendarDays, "views.month", "views.compact.month"],
           ] as const
-        ).map(([value, Icon, labelKey]) => (
+        ).map(([value, Icon, labelKey, compactLabelKey]) => (
           <Button
+            aria-label={t(labelKey)}
             aria-pressed={view === value}
-            className="h-10 min-w-0 flex-1 rounded-none border-0 px-3 shadow-none first:rounded-l-md last:rounded-r-md xl:min-w-24"
+            className="h-10 min-w-0 flex-1 gap-1 rounded-none border-0 px-1.5 text-xs shadow-none first:rounded-l-md last:rounded-r-md sm:gap-2 sm:px-3 sm:text-sm xl:flex-none"
             key={value}
             onClick={() => onViewChange(value)}
             size="default"
             type="button"
             variant={view === value ? "secondary" : "ghost"}
           >
-            <Icon aria-hidden="true" />
-            {t(labelKey)}
+            <Icon aria-hidden="true" className="size-4 shrink-0" />
+            <span className="hidden whitespace-nowrap sm:inline">{t(labelKey)}</span>
+            <span className="whitespace-nowrap sm:hidden">{t(compactLabelKey)}</span>
           </Button>
         ))}
       </div>

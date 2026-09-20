@@ -13,6 +13,7 @@ import {
 import { AppointmentDetailDialog } from "@/features/appointments/components/AppointmentDetailDialog";
 import { AppointmentFormDialog } from "@/features/appointments/components/AppointmentFormDialog";
 import { AppointmentListView } from "@/features/appointments/components/AppointmentListView";
+import { AppointmentMonthView } from "@/features/appointments/components/AppointmentMonthView";
 import { AppointmentViewPlaceholder } from "@/features/appointments/components/AppointmentViewPlaceholder";
 import type { Appointment } from "@/features/appointments/appointments.types";
 import { localeForLanguage } from "@/shared/lib/money";
@@ -111,6 +112,18 @@ export function AppointmentsPage() {
               date={date}
               key={date}
               onViewAppointment={(appointment) => setDetailId(appointment.id)}
+              tenantSlug={tenantSlug}
+              timeZone={timeZone}
+            />
+          ) : view === "month" ? (
+            <AppointmentMonthView
+              branchSlug={branchSlug}
+              date={date}
+              locale={locale}
+              onDateChange={(nextDate) => updateSearchParams({ date: nextDate })}
+              onViewTimeline={(nextDate) =>
+                updateSearchParams({ date: nextDate, view: "timeline" })
+              }
               tenantSlug={tenantSlug}
               timeZone={timeZone}
             />

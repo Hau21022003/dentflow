@@ -6,8 +6,22 @@
   "doctorDescription": "Các ca được phân công cho bạn tại chi nhánh này. Thao tác lâm sàng sẽ có ở module Visit sau.",
   "agenda": { "today": "Hôm nay", "previousDay": "Ngày trước", "nextDay": "Ngày sau", "filterStatus": "Tất cả trạng thái", "filterDentist": "Tất cả bác sĩ", "emptyTitle": "Không có lịch hẹn trong ngày", "emptyDescription": "Chọn ngày khác hoặc tạo lịch hẹn.", "loadError": "Không thể tải lịch hẹn", "retry": "Thử lại" },
   "navigation": { "previous": "Trước", "next": "Tiếp", "today": "Hôm nay", "viewLabel": "Chế độ xem lịch hẹn" },
-  "views": { "list": "Danh sách", "timeline": "Dòng thời gian", "month": "Tháng" },
+  "views": {
+    "list": "Danh sách",
+    "timeline": "Dòng thời gian",
+    "month": "Tháng",
+    "compact": { "list": "Danh sách", "timeline": "Lịch ngày", "month": "Tháng" }
+  },
   "placeholders": { "timeline": "Lịch theo ngày sẽ được bổ sung trong không gian làm việc dùng chung này ở bước tiếp theo.", "month": "Lịch tháng sẽ được bổ sung trong không gian làm việc dùng chung này ở bước tiếp theo." },
+  "month": {
+    "calendarLabel": "Lịch hẹn theo tháng",
+    "count": "{{count}} lịch hẹn",
+    "emptyDay": "Không có lịch hẹn trong ngày này.",
+    "loadError": "Không thể tải tổng hợp lịch hẹn theo tháng.",
+    "selectDay": "Chọn ngày {{date}}, có {{count}} lịch hẹn",
+    "statusCount": "{{status}}: {{count}} lịch hẹn",
+    "viewDay": "Xem lịch trong ngày"
+  },
   "list": {
     "searchPlaceholder": "Tìm tên hoặc số điện thoại bệnh nhân...",
     "columns": { "time": "Thời gian", "patient": "Bệnh nhân", "dentist": "Bác sĩ", "service": "Dịch vụ", "status": "Trạng thái", "actions": "Thao tác" },

@@ -24,11 +24,21 @@
   "views": {
     "list": "List",
     "timeline": "Timeline",
-    "month": "Month"
+    "month": "Month",
+    "compact": { "list": "List", "timeline": "Day", "month": "Month" }
   },
   "placeholders": {
     "timeline": "The day timeline will be added to this shared workspace next.",
     "month": "The monthly calendar will be added to this shared workspace next."
+  },
+  "month": {
+    "calendarLabel": "Monthly appointment calendar",
+    "count": "{{count}} appointments",
+    "emptyDay": "No appointments scheduled for this day.",
+    "loadError": "Could not load the monthly appointment summary.",
+    "selectDay": "Select {{date}}, {{count}} appointments",
+    "statusCount": "{{status}}: {{count}} appointments",
+    "viewDay": "View day timeline"
   },
   "list": {
     "searchPlaceholder": "Search patient name or phone...",
