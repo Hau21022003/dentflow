@@ -71,6 +71,7 @@ export type AppointmentListQuery = {
   to: string;
   page: number;
   limit: number;
+  search?: string;
   status?: AppointmentStatus;
   patientId?: string;
   dentistUserId?: string;

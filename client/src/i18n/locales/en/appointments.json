@@ -15,6 +15,35 @@
     "loadError": "Could not load appointments",
     "retry": "Try again"
   },
+  "navigation": {
+    "previous": "Previous",
+    "next": "Next",
+    "today": "Today",
+    "viewLabel": "Appointment view"
+  },
+  "views": {
+    "list": "List",
+    "timeline": "Timeline",
+    "month": "Month"
+  },
+  "placeholders": {
+    "timeline": "The day timeline will be added to this shared workspace next.",
+    "month": "The monthly calendar will be added to this shared workspace next."
+  },
+  "list": {
+    "searchPlaceholder": "Search patient name or phone...",
+    "columns": {
+      "time": "Time",
+      "patient": "Patient",
+      "dentist": "Dentist",
+      "service": "Service",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "loadErrorTitle": "Could not load appointments",
+    "emptyTitle": "No appointments for this day",
+    "emptyDescription": "Choose another day, change the filters, or create an appointment."
+  },
   "actions": {
     "create": "Create appointment",
     "save": "Save changes",

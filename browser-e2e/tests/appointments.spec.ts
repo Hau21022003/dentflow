@@ -55,7 +55,7 @@ test("Branch Admin creates an appointment from the daily agenda and confirms it"
       && url.pathname === APPOINTMENTS_ROUTE
       && url.searchParams.get("from") === "2030-01-14T17:00:00.000Z";
   });
-  await page.locator('input[type="date"]').fill("2030-01-15");
+  await page.goto(`${WORKSPACE_ROUTE}?view=list&date=2030-01-15`);
   await agendaRequest;
   await expect(page.getByText("Synthetic Agenda Patient", { exact: true })).toBeVisible();
 
@@ -98,7 +98,7 @@ test("agenda uses the resolved branch time zone across the fall DST transition",
       && url.searchParams.get("from") === "2026-11-01T04:00:00.000Z"
       && url.searchParams.get("to") === "2026-11-02T05:00:00.000Z";
   });
-  await page.locator('input[type="date"]').fill("2026-11-01");
+  await page.goto(`${WORKSPACE_ROUTE}?view=list&date=2026-11-01`);
   await agendaRequest;
 });
 

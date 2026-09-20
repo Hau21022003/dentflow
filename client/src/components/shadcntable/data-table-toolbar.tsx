@@ -29,6 +29,8 @@ export function DataTableToolbar<TData>({
   const locale = useDataTableLocale();
   const { search = true, viewOptions = true } = config ?? {};
 
+  if (!search && !viewOptions) return null;
+
   return (
     <div className="flex items-center">
       {search && (

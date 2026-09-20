@@ -15,6 +15,8 @@ export const appointmentQueryKeys = {
     [...appointmentQueryKeys.all, "branch", tenantSlug, branchSlug] as const,
   agenda: (tenantSlug: string, branchSlug: string, query: AppointmentAgendaQuery) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "agenda", query] as const,
+  list: (tenantSlug: string, branchSlug: string, query: AppointmentListQuery) =>
+    [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "list", query] as const,
   assignedAgenda: (tenantSlug: string, branchSlug: string, query: AppointmentAgendaQuery) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "assigned-agenda", query] as const,
   calendarSummary: (tenantSlug: string, branchSlug: string, month: string) =>
@@ -57,6 +59,18 @@ export function useAppointmentsAgendaQuery(
         (pageQuery) => appointmentsService.list({ tenantSlug, branchSlug }, pageQuery),
         query,
       ),
+    enabled: Boolean(tenantSlug && branchSlug && query.from && query.to),
+  });
+}
+
+export function useAppointmentsListQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  query: AppointmentListQuery,
+) {
+  return useQuery({
+    queryKey: appointmentQueryKeys.list(tenantSlug, branchSlug, query),
+    queryFn: () => appointmentsService.list({ tenantSlug, branchSlug }, query),
     enabled: Boolean(tenantSlug && branchSlug && query.from && query.to),
   });
 }
