@@ -93,6 +93,22 @@ export interface AppointmentDentistOptionResponse {
   fullName: string;
 }
 
+export interface AppointmentCalendarSummaryResponse {
+  month: string;
+  timeZone: string;
+  days: Array<{
+    date: string;
+    total: number;
+    statuses: Record<AppointmentStatus, number>;
+  }>;
+}
+
+type AppointmentCalendarSummaryRow = {
+  date: string;
+  status: AppointmentStatus;
+  total: string;
+};
+
 export interface AppointmentServiceOptionResponse {
   id: string;
   code: string;
@@ -147,6 +163,10 @@ export class AppointmentsService {
         { dentistUserId: query.dentistUserId },
       );
     }
+    applyIlikeSearch(queryBuilder, query.search, [
+      'patient.fullName',
+      'patient.phone',
+    ]);
 
     queryBuilder
       .orderBy('appointment.start_at', 'ASC')
@@ -209,6 +229,67 @@ export class AppointmentsService {
       ),
       meta: toPageMeta({ page, limit }, total),
     };
+  }
+
+  async calendarSummary(
+    context: AuthorizationContext,
+    month: string,
+  ): Promise<AppointmentCalendarSummaryResponse> {
+    const timeZone = context.branch!.timezone;
+    const { monthStart, nextMonthStart } = this.parseCalendarMonth(month);
+    const rows = await this.appointmentsRepository.ormRepository
+      .createQueryBuilder('appointment')
+      .select(
+        `TO_CHAR(appointment.start_at AT TIME ZONE :timeZone, 'YYYY-MM-DD')`,
+        'date',
+      )
+      .addSelect('appointment.status', 'status')
+      .addSelect('COUNT(*)', 'total')
+      .where('appointment.tenantId = :tenantId', {
+        tenantId: context.tenant!.id,
+      })
+      .andWhere('appointment.branchId = :branchId', {
+        branchId: context.branch!.id,
+      })
+      .andWhere(
+        `appointment.start_at >= (CAST(:monthStart AS date)::timestamp AT TIME ZONE :timeZone)`,
+      )
+      .andWhere(
+        `appointment.start_at < (CAST(:nextMonthStart AS date)::timestamp AT TIME ZONE :timeZone)`,
+      )
+      .setParameters({ monthStart, nextMonthStart, timeZone })
+      .groupBy(
+        `TO_CHAR(appointment.start_at AT TIME ZONE :timeZone, 'YYYY-MM-DD')`,
+      )
+      .addGroupBy('appointment.status')
+      .orderBy(
+        `TO_CHAR(appointment.start_at AT TIME ZONE :timeZone, 'YYYY-MM-DD')`,
+        'ASC',
+      )
+      .addOrderBy('appointment.status', 'ASC')
+      .getRawMany<AppointmentCalendarSummaryRow>();
+
+    const days = new Map<
+      string,
+      {
+        date: string;
+        total: number;
+        statuses: Record<AppointmentStatus, number>;
+      }
+    >();
+    for (const row of rows) {
+      const day = days.get(row.date) ?? {
+        date: row.date,
+        total: 0,
+        statuses: this.emptyStatusCounts(),
+      };
+      const count = Number(row.total);
+      day.total += count;
+      day.statuses[row.status] = count;
+      days.set(row.date, day);
+    }
+
+    return { month, timeZone, days: [...days.values()] };
   }
 
   async get(
@@ -887,6 +968,31 @@ export class AppointmentsService {
       );
     }
     return { from, to };
+  }
+
+  private parseCalendarMonth(month: string): {
+    monthStart: string;
+    nextMonthStart: string;
+  } {
+    const [yearInput, monthInput] = month.split('-');
+    const year = Number(yearInput);
+    const monthNumber = Number(monthInput);
+    const nextYear = monthNumber === 12 ? year + 1 : year;
+    const nextMonth = monthNumber === 12 ? 1 : monthNumber + 1;
+    return {
+      monthStart: `${yearInput}-${monthInput}-01`,
+      nextMonthStart: `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`,
+    };
+  }
+
+  private emptyStatusCounts(): Record<AppointmentStatus, number> {
+    return Object.values(AppointmentStatus).reduce(
+      (counts, status) => {
+        counts[status] = 0;
+        return counts;
+      },
+      {} as Record<AppointmentStatus, number>,
+    );
   }
 
   private parseAppointmentRange(

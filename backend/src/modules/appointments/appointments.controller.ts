@@ -20,6 +20,7 @@ import { AppointmentsService } from './appointments.service';
 import { AssignAppointmentDto } from './dto/assign-appointment.dto';
 import { CancelAppointmentDto } from './dto/cancel-appointment.dto';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
+import { GetAppointmentCalendarSummaryQueryDto } from './dto/get-appointment-calendar-summary-query.dto';
 import { ListAppointmentsQueryDto } from './dto/list-appointments-query.dto';
 import { ListAppointmentBookingOptionsQueryDto } from './dto/list-appointment-booking-options-query.dto';
 import { NoShowAppointmentDto } from './dto/no-show-appointment.dto';
@@ -64,6 +65,15 @@ export class AppointmentsController {
     @Query() query: ListAppointmentBookingOptionsQueryDto,
   ) {
     return this.appointmentsService.listBookingServices(context, query);
+  }
+
+  @Get('calendar-summary')
+  @RequirePermissions(Permission.APPOINTMENT_MANAGE)
+  calendarSummary(
+    @RequestContext() context: AuthorizationContext,
+    @Query() query: GetAppointmentCalendarSummaryQueryDto,
+  ) {
+    return this.appointmentsService.calendarSummary(context, query.month);
   }
 
   @Get(':appointmentId')

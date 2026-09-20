@@ -404,6 +404,156 @@ describe('Appointment workflow (e2e)', () => {
       .expect(401);
   });
 
+  it('searches Appointment lists by Patient name or phone without crossing branch scope', async () => {
+    const fixture = await createFixture('appointment-list-search');
+    const matchingPatient = await createPatient(
+      fixture.tenant,
+      'Synthetic Search Needle',
+    );
+    const otherBranch = await authFixtures.createBranch(fixture.tenant, {
+      slug: 'other-branch',
+    });
+
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: matchingPatient,
+      startAt: '2026-10-14T02:00:00.000Z',
+      endAt: '2026-10-14T03:00:00.000Z',
+      status: AppointmentStatus.BOOKED,
+    });
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: otherBranch,
+      patient: matchingPatient,
+      startAt: '2026-10-14T04:00:00.000Z',
+      endAt: '2026-10-14T05:00:00.000Z',
+      status: AppointmentStatus.CONFIRMED,
+    });
+
+    const byName = await fixture.receptionist.agent
+      .get(`${fixture.route}?from=${WINDOW_FROM}&to=${WINDOW_TO}&search=needle`)
+      .expect(200);
+    expect(byName.body).toMatchObject({ meta: { total: 1 } });
+    expect(byName.body.items).toEqual([
+      expect.objectContaining({
+        patient: expect.objectContaining({ id: matchingPatient.id }),
+      }),
+    ]);
+
+    const byPhone = await fixture.receptionist.agent
+      .get(
+        `${fixture.route}?from=${WINDOW_FROM}&to=${WINDOW_TO}&search=${encodeURIComponent(matchingPatient.phone.slice(-6))}`,
+      )
+      .expect(200);
+    expect(byPhone.body).toMatchObject({ meta: { total: 1 } });
+    expect(byPhone.body.items[0]).toMatchObject({
+      patient: { id: matchingPatient.id, phone: matchingPatient.phone },
+    });
+  });
+
+  it('returns a branch-scoped monthly summary using the effective branch timezone', async () => {
+    const fixture = await createFixture('appointment-calendar-summary');
+    await fixture.receptionist.agent
+      .get(`${fixture.route}/calendar-summary?month=2026-11`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          timeZone: fixture.tenant.defaultTimezone,
+        });
+      });
+    await dataSource.getRepository(Branch).update(
+      { id: fixture.branch.id },
+      { timezone: 'America/New_York' },
+    );
+    fixture.branch.timezone = 'America/New_York';
+    const otherBranch = await authFixtures.createBranch(fixture.tenant, {
+      slug: 'other-branch',
+    });
+    const otherTenant = await authFixtures.createTenant({
+      slug: 'appointment-calendar-summary-other-tenant',
+    });
+    const otherTenantBranch = await authFixtures.createBranch(otherTenant, {
+      slug: 'main',
+    });
+
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: fixture.patient,
+      // October 31, 23:30 in America/New_York.
+      startAt: '2026-11-01T03:30:00.000Z',
+      endAt: '2026-11-01T04:00:00.000Z',
+      status: AppointmentStatus.BOOKED,
+    });
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: fixture.patient,
+      // November 1, 00:30 before the fall DST transition.
+      startAt: '2026-11-01T04:30:00.000Z',
+      endAt: '2026-11-01T05:00:00.000Z',
+      status: AppointmentStatus.CHECKED_IN,
+    });
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: fixture.patient,
+      // November 1, 01:30 after the fall DST transition.
+      startAt: '2026-11-01T06:30:00.000Z',
+      endAt: '2026-11-01T07:00:00.000Z',
+      status: AppointmentStatus.CANCELLED,
+    });
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: otherBranch,
+      patient: fixture.patient,
+      startAt: '2026-11-01T06:30:00.000Z',
+      endAt: '2026-11-01T07:00:00.000Z',
+      status: AppointmentStatus.COMPLETED,
+    });
+
+    const summary = await fixture.receptionist.agent
+      .get(`${fixture.route}/calendar-summary?month=2026-11`)
+      .expect(200);
+    expect(summary.body).toMatchObject({
+      month: '2026-11',
+      timeZone: 'America/New_York',
+    });
+    expect(summary.body.days).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          date: '2026-11-01',
+          total: 2,
+          statuses: expect.objectContaining({
+            CHECKED_IN: 1,
+            CANCELLED: 1,
+            COMPLETED: 0,
+          }),
+        }),
+      ]),
+    );
+    expect(summary.body.days).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ date: '2026-10-31' }),
+      ]),
+    );
+
+    await fixture.receptionist.agent
+      .get(`${fixture.route}/calendar-summary?month=2026-13`)
+      .expect(422);
+    await fixture.receptionist.agent
+      .get(
+        `/tenants/${fixture.tenant.slug}/branches/${otherBranch.slug}/appointments/calendar-summary?month=2026-11`,
+      )
+      .expect(403);
+    await fixture.receptionist.agent
+      .get(
+        `/tenants/${otherTenant.slug}/branches/${otherTenantBranch.slug}/appointments/calendar-summary?month=2026-11`,
+      )
+      .expect(403);
+  });
+
   async function createFixture(slug: string) {
     const tenant = await authFixtures.createTenant({ slug });
     const branch = await authFixtures.createBranch(tenant, { slug: 'main' });
@@ -479,6 +629,43 @@ describe('Appointment workflow (e2e)', () => {
         emergencyContactPhone: null,
         emergencyContactRelationship: null,
         referralSource: null,
+      }),
+    );
+  }
+
+  async function createStoredAppointment({
+    tenant,
+    branch,
+    patient,
+    startAt,
+    endAt,
+    status,
+  }: {
+    tenant: Tenant;
+    branch: Branch;
+    patient: Patient;
+    startAt: string;
+    endAt: string;
+    status: AppointmentStatus;
+  }): Promise<Appointment> {
+    return appointments.save(
+      appointments.create({
+        tenantId: tenant.id,
+        branchId: branch.id,
+        patientId: patient.id,
+        status,
+        source: AppointmentSource.PHONE,
+        startAt: new Date(startAt),
+        endAt: new Date(endAt),
+        assignedDentistUserId: null,
+        serviceId: null,
+        serviceCode: null,
+        serviceName: null,
+        serviceAmount: null,
+        serviceCurrency: null,
+        serviceDurationMinutes: null,
+        visitReason: 'Synthetic calendar summary appointment',
+        operationalNote: null,
       }),
     );
   }

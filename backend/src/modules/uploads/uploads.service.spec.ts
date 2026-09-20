@@ -120,6 +120,7 @@ function branchContext(): AuthorizationContext {
     branch: {
       id: 'branch-uuid',
       slug: 'central',
+      timezone: 'Asia/Ho_Chi_Minh',
       status: 'ACTIVE' as never,
     },
   };

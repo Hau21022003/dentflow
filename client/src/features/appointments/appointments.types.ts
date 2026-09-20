@@ -81,6 +81,16 @@ export type AppointmentAgendaQuery = Omit<
   "page" | "limit"
 >;
 
+export type AppointmentCalendarSummary = {
+  month: string;
+  timeZone: string;
+  days: Array<{
+    date: string;
+    total: number;
+    statuses: Record<AppointmentStatus, number>;
+  }>;
+};
+
 export type BookingOptionQuery = {
   page: number;
   limit: number;

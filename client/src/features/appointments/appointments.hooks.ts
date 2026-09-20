@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { appointmentsService } from "./appointments.service";
 import type {
   AppointmentAgendaQuery,
+  AppointmentCalendarSummary,
   AppointmentListQuery,
   BookingOptionQuery,
 } from "./appointments.types";
@@ -16,6 +17,8 @@ export const appointmentQueryKeys = {
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "agenda", query] as const,
   assignedAgenda: (tenantSlug: string, branchSlug: string, query: AppointmentAgendaQuery) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "assigned-agenda", query] as const,
+  calendarSummary: (tenantSlug: string, branchSlug: string, month: string) =>
+    [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "calendar-summary", month] as const,
   detail: (tenantSlug: string, branchSlug: string, appointmentId: string) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "detail", appointmentId] as const,
   dentists: (tenantSlug: string, branchSlug: string, query: BookingOptionQuery) =>
@@ -71,6 +74,19 @@ export function useAssignedAppointmentsAgendaQuery(
         query,
       ),
     enabled: Boolean(tenantSlug && branchSlug && query.from && query.to),
+  });
+}
+
+export function useAppointmentCalendarSummaryQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  month: string,
+) {
+  return useQuery<AppointmentCalendarSummary>({
+    queryKey: appointmentQueryKeys.calendarSummary(tenantSlug, branchSlug, month),
+    queryFn: () =>
+      appointmentsService.calendarSummary({ tenantSlug, branchSlug }, month),
+    enabled: Boolean(tenantSlug && branchSlug && month),
   });
 }
 

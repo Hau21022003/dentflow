@@ -10,6 +10,10 @@ function pad(value: number): string {
   return String(value).padStart(2, "0");
 }
 
+function formatDate(year: number, month: number, day: number): string {
+  return `${year}-${pad(month)}-${pad(day)}`;
+}
+
 export function todayInTimeZone(timeZone: string): string {
   const date = TZDate.tz(timeZone);
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -19,6 +23,31 @@ export function addDaysInTimeZone(dateInput: string, days: number, timeZone: str
   const [year, month, day] = parseDate(dateInput);
   const date = new TZDate(year, month - 1, day + days, timeZone);
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+export function monthForDate(dateInput: string): string {
+  const [year, month] = parseDate(dateInput);
+  return `${year}-${pad(month)}`;
+}
+
+export function startOfMonthInTimeZone(dateInput: string, timeZone: string): string {
+  const [year, month] = parseDate(dateInput);
+  const date = new TZDate(year, month - 1, 1, timeZone);
+  return formatDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
+}
+
+export function addMonthsInTimeZone(
+  dateInput: string,
+  months: number,
+  timeZone: string,
+): string {
+  const [year, month, day] = parseDate(dateInput);
+  const target = year * 12 + (month - 1) + months;
+  const targetYear = Math.floor(target / 12);
+  const targetMonth = (target % 12) + 1;
+  const lastDay = new TZDate(targetYear, targetMonth, 0, timeZone).getDate();
+  const date = new TZDate(targetYear, targetMonth - 1, Math.min(day, lastDay), timeZone);
+  return formatDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
 }
 
 export function agendaRange(dateInput: string, timeZone: string): { from: string; to: string } {
