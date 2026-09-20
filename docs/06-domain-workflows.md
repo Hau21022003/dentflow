@@ -196,7 +196,7 @@ ID/slug trong body để chọn scope.
 | Capability | Contract route/command |
 | --- | --- |
 | Patient | `GET/POST /patients`, `GET/PATCH /patients/:patientId` cho `RECEPTIONIST` hoặc `BRANCH_ADMIN` có `patient.administrative.manage`; `POST`/`PATCH` cần `Idempotency-Key`. List phân trang tìm theo họ tên/số điện thoại và chỉ sort `fullName`, `dateOfBirth`, `createdAt`. `GET/POST /patients/:patientId/alerts` và `PATCH /patients/:patientId/alerts/:alertId` là module sau cho Dentist có case assignment. |
-| Appointment | V1 backend hiện có `GET/POST /appointments`, `GET/PATCH /appointments/:appointmentId`, `POST .../:id/confirm`, `/check-in`, `/assign`, `/cancel`, `/no-show` và `GET /appointments/assigned` cho Dentist. List bắt buộc `from`/`to` tối đa 31 ngày, phân trang và lọc `status`, `patientId`, `dentistUserId`; Dentist chỉ thấy ca do chính mình được gán cùng dữ liệu schedule an toàn. `start`/`complete` bị hoãn đến module Visit để bảo đảm tạo Visit atomically. |
+| Appointment | V1 backend hiện có `GET/POST /appointments`, `GET/PATCH /appointments/:appointmentId`, `POST .../:id/confirm`, `/check-in`, `/assign`, `/cancel`, `/no-show` và `GET /appointments/assigned` cho Dentist. `GET /appointments/booking-options/dentists` và `/booking-options/services` chỉ cấp cho `appointment.manage`, phân trang/tìm kiếm server-side và chỉ trả Dentist active trong branch hoặc Service active trong tenant với trường tối thiểu để đặt lịch. List bắt buộc `from`/`to` tối đa 31 ngày, phân trang và lọc `status`, `patientId`, `dentistUserId`; Dentist chỉ thấy ca do chính mình được gán cùng dữ liệu schedule an toàn. `start`/`complete` bị hoãn đến module Visit để bảo đảm tạo Visit atomically. |
 | Visit | `GET/PATCH /appointments/:appointmentId/visit`, `POST .../visit/complete`, `POST .../visit/addenda`. |
 | Treatment | `GET/POST /visits/:visitId/treatment-plans`, `PATCH /treatment-plans/:planId` khi `DRAFT`, `POST .../propose`, `/reopen`, `/accept`, `/cancel`; item command `/start`, `/complete`, `/cancel`. |
 | Financial | `GET/POST /patient-invoices`, `POST .../:invoiceId/issue`, `/void`, `/payments`, `/payments/:paymentId/refunds`, `/adjustments`. |
@@ -206,6 +206,12 @@ Mọi command, gồm create, update, state transition và financial correction, 
 `Idempotency-Key` theo [09-idempotency-implementation-plan.md](./09-idempotency-implementation-plan.md).
 List API dùng pagination contract chung; detail/command response không trả
 clinical content cho role không được phép.
+
+Authorization snapshot trả `branch.timezone` là timezone vận hành **đã resolve**:
+timezone override của branch, hoặc `tenant.defaultTimezone` khi branch không có
+override. Frontend phải dùng giá trị này khi tạo `from`/`to`, nhập và hiển thị
+`timestamptz` của Appointment; không dùng timezone của thiết bị để suy ra giờ
+vận hành của chi nhánh.
 
 `@TenantScope('branch')`, Subscription Guard, Branch Activity Guard và
 Authorization Guard luôn chạy trước service. Service sau đó kiểm tra state và

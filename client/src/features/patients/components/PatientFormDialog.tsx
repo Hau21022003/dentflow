@@ -51,6 +51,7 @@ type PatientFormDialogProps = {
   branchSlug: string;
   onOpenChange: (open: boolean) => void;
   open: boolean;
+  onCreated?: (patient: Patient) => void;
   patient?: Patient;
   tenantSlug: string;
 };
@@ -222,6 +223,7 @@ function buildUpdateInput(
 export function PatientFormDialog({
   branchSlug,
   onOpenChange,
+  onCreated,
   open,
   patient,
   tenantSlug,
@@ -304,12 +306,13 @@ export function PatientFormDialog({
           input,
         });
         setIdempotencyIntent(nextIntent);
-        await createMutation.mutateAsync({
-          tenantSlug,
-          branchSlug,
-          input,
-          idempotencyKey: nextIntent.key,
-        });
+          const created = await createMutation.mutateAsync({
+            tenantSlug,
+            branchSlug,
+            input,
+            idempotencyKey: nextIntent.key,
+          });
+          onCreated?.(created);
       }
       handleOpenChange(false);
     } catch (error) {

@@ -92,6 +92,9 @@
       "noResults": "No matching options found."
     }
   },
+  "toast": {
+    "close": "Close notification"
+  },
   "dataTable": {
     "body": {
       "noResults": "No results"

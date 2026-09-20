@@ -7,6 +7,7 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager, QueryFailedError } from 'typeorm';
 import {
+  applyIlikeSearch,
   applyOffsetPagination,
   toPageMeta,
 } from '../../common/database/query-builder-list.util';
@@ -27,6 +28,7 @@ import { User } from '../users/entities/user.entity';
 import { AssignAppointmentDto } from './dto/assign-appointment.dto';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { ListAppointmentsQueryDto } from './dto/list-appointments-query.dto';
+import { ListAppointmentBookingOptionsQueryDto } from './dto/list-appointment-booking-options-query.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { Appointment, AppointmentStatus } from './entities/appointment.entity';
 import { AppointmentStatusTransition } from './entities/appointment-status-transition.entity';
@@ -84,6 +86,20 @@ export interface AssignedAppointmentResponse {
   endAt: Date;
   patient: { id: string; fullName: string };
   service: { id: string; code: string; name: string } | null;
+}
+
+export interface AppointmentDentistOptionResponse {
+  id: string;
+  fullName: string;
+}
+
+export interface AppointmentServiceOptionResponse {
+  id: string;
+  code: string;
+  name: string;
+  amount: number;
+  currency: string;
+  durationMinutes: number;
 }
 
 @Injectable()
@@ -209,6 +225,88 @@ export class AppointmentsService {
       throw new NotFoundException('Appointment was not found.');
     }
     return this.toManagementResponse(appointment);
+  }
+
+  async listBookingDentists(
+    context: AuthorizationContext,
+    query: ListAppointmentBookingOptionsQueryDto,
+  ): Promise<{
+    items: AppointmentDentistOptionResponse[];
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const queryBuilder = this.dataSource
+      .getRepository(RoleAssignment)
+      .createQueryBuilder('assignment')
+      .innerJoinAndSelect('assignment.user', 'user')
+      .innerJoin(
+        TenantUserMembership,
+        'membership',
+        'membership.user_id = assignment.user_id AND membership.tenant_id = assignment.tenant_id AND membership.status = :membershipStatus',
+        { membershipStatus: TenantUserMembershipStatus.ACTIVE },
+      )
+      .where('assignment.tenantId = :tenantId', {
+        tenantId: context.tenant!.id,
+      })
+      .andWhere('assignment.branchId = :branchId', {
+        branchId: context.branch!.id,
+      })
+      .andWhere('assignment.roleCode = :roleCode', {
+        roleCode: TenantRoleCode.DENTIST,
+      })
+      .andWhere('assignment.revokedAt IS NULL');
+
+    applyIlikeSearch(queryBuilder, query.search, ['user.fullName']);
+    queryBuilder.orderBy('user.fullName', 'ASC').addOrderBy('assignment.userId', 'ASC');
+    applyOffsetPagination(queryBuilder, { page, limit });
+
+    const [assignments, total] = await queryBuilder.getManyAndCount();
+    return {
+      items: assignments.map((assignment) => ({
+        id: assignment.userId,
+        fullName: assignment.user.fullName,
+      })),
+      meta: toPageMeta({ page, limit }, total),
+    };
+  }
+
+  async listBookingServices(
+    context: AuthorizationContext,
+    query: ListAppointmentBookingOptionsQueryDto,
+  ): Promise<{
+    items: AppointmentServiceOptionResponse[];
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const queryBuilder = this.dataSource
+      .getRepository(Service)
+      .createQueryBuilder('service')
+      .where('service.tenantId = :tenantId', {
+        tenantId: context.tenant!.id,
+      })
+      .andWhere('service.isActive = true');
+
+    applyIlikeSearch(queryBuilder, query.search, [
+      'service.code',
+      'service.name',
+    ]);
+    queryBuilder.orderBy('service.name', 'ASC').addOrderBy('service.id', 'ASC');
+    applyOffsetPagination(queryBuilder, { page, limit });
+
+    const [services, total] = await queryBuilder.getManyAndCount();
+    return {
+      items: services.map((service) => ({
+        id: service.id,
+        code: service.code,
+        name: service.name,
+        amount: service.amount,
+        currency: service.currency,
+        durationMinutes: service.durationMinutes,
+      })),
+      meta: toPageMeta({ page, limit }, total),
+    };
   }
 
   async create(

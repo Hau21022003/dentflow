@@ -92,6 +92,9 @@
       "noResults": "Không có lựa chọn phù hợp."
     }
   },
+  "toast": {
+    "close": "Đóng thông báo"
+  },
   "dataTable": {
     "body": {
       "noResults": "Không có kết quả phù hợp."

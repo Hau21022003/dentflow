@@ -62,6 +62,7 @@ export class AuthorizationService {
             id: branch.id,
             slug: branch.slug,
             name: branch.name,
+            timezone: branch.timezone ?? tenant.defaultTimezone,
             status: branch.status,
           },
           roles: [],

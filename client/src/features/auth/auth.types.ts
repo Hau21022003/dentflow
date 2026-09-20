@@ -57,6 +57,7 @@ export type TenantAuthorization = {
       id: string;
       slug: string;
       name: string;
+      timezone: string;
       status: BranchStatus;
     };
     roles: TenantRoleCode[];

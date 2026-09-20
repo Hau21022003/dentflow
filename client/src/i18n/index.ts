@@ -2,6 +2,7 @@ import i18n from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 import enBranches from "./locales/en/branches.json";
+import enAppointments from "./locales/en/appointments.json";
 import enCommon from "./locales/en/common.json";
 import enEmailTemplates from "./locales/en/email-templates.json";
 import enPatients from "./locales/en/patients.json";
@@ -14,6 +15,7 @@ import enTenants from "./locales/en/tenants.json";
 import enInvitations from "./locales/en/invitations.json";
 import enStaff from "./locales/en/staff.json";
 import viBranches from "./locales/vi/branches.json";
+import viAppointments from "./locales/vi/appointments.json";
 import viCommon from "./locales/vi/common.json";
 import viEmailTemplates from "./locales/vi/email-templates.json";
 import viPatients from "./locales/vi/patients.json";
@@ -37,6 +39,7 @@ i18n
     load: "languageOnly",
     ns: [
       "branches",
+      "appointments",
       "common",
       "emailTemplates",
       "invitations",
@@ -53,6 +56,7 @@ i18n
     resources: {
       en: {
         branches: enBranches,
+        appointments: enAppointments,
         common: enCommon,
         emailTemplates: enEmailTemplates,
         invitations: enInvitations,
@@ -67,6 +71,7 @@ i18n
       },
       vi: {
         branches: viBranches,
+        appointments: viAppointments,
         common: viCommon,
         emailTemplates: viEmailTemplates,
         invitations: viInvitations,

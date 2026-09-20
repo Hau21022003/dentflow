@@ -18,6 +18,10 @@ import {
 } from 'src/modules/patients/entities/patient.entity';
 import { ServiceGroup } from 'src/modules/service-groups/entities/service-group.entity';
 import { Service } from 'src/modules/services/entities/service.entity';
+import {
+  TenantUserMembership,
+  TenantUserMembershipStatus,
+} from 'src/modules/staff/entities/tenant-user-membership.entity';
 import { Tenant } from 'src/modules/tenants/entities/tenant.entity';
 import { User } from 'src/modules/users/entities/user.entity';
 import request from 'supertest';
@@ -153,6 +157,117 @@ describe('Appointment workflow (e2e)', () => {
         }),
       )
       .expect(201);
+  });
+
+  it('exposes only appointment-safe booking options and the resolved branch timezone', async () => {
+    const fixture = await createFixture('appointment-booking-options');
+    const inactiveDentist = await createActor(
+      fixture.branch,
+      TenantRoleCode.DENTIST,
+    );
+    await dataSource.getRepository(TenantUserMembership).update(
+      { tenantId: fixture.tenant.id, userId: inactiveDentist.user.id },
+      { status: TenantUserMembershipStatus.INACTIVE },
+    );
+    const otherBranch = await authFixtures.createBranch(fixture.tenant, {
+      slug: 'other-branch',
+    });
+    const otherBranchDentist = await createActor(
+      otherBranch,
+      TenantRoleCode.DENTIST,
+    );
+    const inactiveService = await dataSource.manager.save(
+      dataSource.manager.create(Service, {
+        tenantId: fixture.tenant.id,
+        serviceGroupId: fixture.service.serviceGroupId,
+        code: 'inactive-option',
+        name: 'Inactive synthetic service',
+        amount: 100000,
+        currency: 'VND',
+        durationMinutes: 30,
+        isActive: false,
+      }),
+    );
+    const otherTenant = await authFixtures.createTenant({
+      slug: 'appointment-options-other-tenant',
+    });
+    const otherTenantGroup = await dataSource.manager.save(
+      dataSource.manager.create(ServiceGroup, {
+        tenantId: otherTenant.id,
+        name: 'Other tenant services',
+        isActive: true,
+      }),
+    );
+    const otherTenantService = await dataSource.manager.save(
+      dataSource.manager.create(Service, {
+        tenantId: otherTenant.id,
+        serviceGroupId: otherTenantGroup.id,
+        code: 'other-tenant-service',
+        name: 'Other tenant synthetic service',
+        amount: 100000,
+        currency: 'VND',
+        durationMinutes: 30,
+        isActive: true,
+      }),
+    );
+
+    const dentistsResponse = await fixture.receptionist.agent
+      .get(`${fixture.route}/booking-options/dentists?search=Synthetic%20DENTIST`)
+      .expect(200);
+    expect(dentistsResponse.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: fixture.dentist.user.id,
+          fullName: fixture.dentist.user.fullName,
+        }),
+      ]),
+    );
+    expect(dentistsResponse.body.items).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: inactiveDentist.user.id }),
+        expect.objectContaining({ id: otherBranchDentist.user.id }),
+      ]),
+    );
+    expect(Object.keys(dentistsResponse.body.items[0]).sort()).toEqual([
+      'fullName',
+      'id',
+    ]);
+    expect(JSON.stringify(dentistsResponse.body.items)).not.toContain('email');
+
+    await fixture.branchAdmin.agent
+      .get(`${fixture.route}/booking-options/dentists`)
+      .expect(200);
+
+    const servicesResponse = await fixture.receptionist.agent
+      .get(`${fixture.route}/booking-options/services`)
+      .expect(200);
+    expect(servicesResponse.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: fixture.service.id, name: 'Synthetic Exam' }),
+      ]),
+    );
+    expect(servicesResponse.body.items).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: inactiveService.id }),
+        expect.objectContaining({ id: otherTenantService.id }),
+      ]),
+    );
+    expect(Object.keys(servicesResponse.body.items[0]).sort()).toEqual([
+      'amount',
+      'code',
+      'currency',
+      'durationMinutes',
+      'id',
+      'name',
+    ]);
+
+    const meResponse = await fixture.receptionist.agent.get('/auth/me').expect(200);
+    const branchSnapshot = meResponse.body.user.authorization.tenants[0].branches[0]
+      .branch;
+    expect(branchSnapshot).toMatchObject({
+      id: fixture.branch.id,
+      timezone: fixture.branch.timezone ?? fixture.tenant.defaultTimezone,
+    });
   });
 
   it('enforces scheduling roles, the confirmed reschedule rule, terminal transitions, and the Dentist-safe schedule', async () => {

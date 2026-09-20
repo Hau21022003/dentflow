@@ -21,6 +21,7 @@ import { AssignAppointmentDto } from './dto/assign-appointment.dto';
 import { CancelAppointmentDto } from './dto/cancel-appointment.dto';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { ListAppointmentsQueryDto } from './dto/list-appointments-query.dto';
+import { ListAppointmentBookingOptionsQueryDto } from './dto/list-appointment-booking-options-query.dto';
 import { NoShowAppointmentDto } from './dto/no-show-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 
@@ -45,6 +46,24 @@ export class AppointmentsController {
     @Query() query: ListAppointmentsQueryDto,
   ) {
     return this.appointmentsService.listAssigned(context, query);
+  }
+
+  @Get('booking-options/dentists')
+  @RequirePermissions(Permission.APPOINTMENT_MANAGE)
+  listBookingDentists(
+    @RequestContext() context: AuthorizationContext,
+    @Query() query: ListAppointmentBookingOptionsQueryDto,
+  ) {
+    return this.appointmentsService.listBookingDentists(context, query);
+  }
+
+  @Get('booking-options/services')
+  @RequirePermissions(Permission.APPOINTMENT_MANAGE)
+  listBookingServices(
+    @RequestContext() context: AuthorizationContext,
+    @Query() query: ListAppointmentBookingOptionsQueryDto,
+  ) {
+    return this.appointmentsService.listBookingServices(context, query);
   }
 
   @Get(':appointmentId')

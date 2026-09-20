@@ -25,10 +25,12 @@ export type RHFComboboxProps<TFieldValues extends FieldValues> = {
   label: ReactNode;
   name: FieldPath<TFieldValues>;
   options: readonly RHFComboboxOption[];
+  onSearchChange?: (value: string) => void;
   placeholder?: string;
   required?: boolean;
   rules?: RegisterOptions<TFieldValues, FieldPath<TFieldValues>>;
   searchPlaceholder?: string;
+  selectedLabel?: string;
 };
 
 export function RHFCombobox<TFieldValues extends FieldValues>({
@@ -41,10 +43,12 @@ export function RHFCombobox<TFieldValues extends FieldValues>({
   label,
   name,
   options,
+  onSearchChange,
   placeholder,
   required = false,
   rules,
   searchPlaceholder,
+  selectedLabel,
 }: RHFComboboxProps<TFieldValues>) {
   const { t } = useTranslation("common");
   const comboboxId = useId();
@@ -78,10 +82,12 @@ export function RHFCombobox<TFieldValues extends FieldValues>({
               onOpenChange={(open) => {
                 if (!open) field.onBlur();
               }}
+              onSearchChange={onSearchChange}
               onValueChange={field.onChange}
               options={options}
               placeholder={resolvedPlaceholder}
               searchPlaceholder={resolvedSearchPlaceholder}
+              selectedLabel={selectedLabel}
               value={field.value ?? ""}
             />
             {message && (

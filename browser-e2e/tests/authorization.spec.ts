@@ -121,7 +121,7 @@ test("dentist can open only its doctor workspace and receives 403 for other bran
     new RegExp(`/workspace/${harmonySlug}/branches/${harmonyCitySlug}$`),
   );
   await page.goto(`/workspace/${harmonySlug}/branches/${harmonyCitySlug}/doctor`);
-  await expect(page.getByRole("heading", { name: "Workspace bác sĩ" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Lịch hẹn của tôi" })).toBeVisible();
 
   await page.goto(
     `/workspace/${brightSmileSlug}/branches/${brightSmileCentralSlug}/reception/appointments`,

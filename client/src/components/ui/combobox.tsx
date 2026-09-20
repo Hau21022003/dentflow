@@ -31,10 +31,13 @@ export type ComboboxProps = {
   emptyMessage: ReactNode;
   id?: string;
   onOpenChange?: (open: boolean) => void;
+  onSearchChange?: (value: string) => void;
   onValueChange: (value: string) => void;
   options: readonly ComboboxOption[];
   placeholder: string;
   searchPlaceholder: string;
+  /** Renders a previously selected, now unavailable value without making it selectable. */
+  selectedLabel?: string;
   value?: string;
 };
 
@@ -47,10 +50,12 @@ export function Combobox({
   emptyMessage,
   id,
   onOpenChange,
+  onSearchChange,
   onValueChange,
   options,
   placeholder,
   searchPlaceholder,
+  selectedLabel,
   value,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
@@ -86,17 +91,17 @@ export function Combobox({
           <span
             className={cn(
               "min-w-0 flex-1 truncate text-left",
-              !selectedOption && "text-muted-foreground",
+              !selectedOption && !selectedLabel && "text-muted-foreground",
             )}
           >
-            {selectedOption?.label ?? placeholder}
+            {selectedOption?.label ?? selectedLabel ?? placeholder}
           </span>
           <ChevronsUpDown aria-hidden="true" className="size-4 shrink-0 opacity-50" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] gap-0 p-0">
         <Command defaultValue={value}>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput onValueChange={onSearchChange} placeholder={searchPlaceholder} />
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
