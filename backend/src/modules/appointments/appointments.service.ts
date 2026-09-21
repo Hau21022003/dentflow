@@ -79,6 +79,19 @@ export interface AppointmentResponse {
   updatedAt: Date;
 }
 
+export interface AppointmentDetailResponse extends Omit<
+  AppointmentResponse,
+  'patient'
+> {
+  patient: {
+    id: string;
+    fullName: string;
+    phone: string;
+    gender: Patient['gender'];
+    dateOfBirth: string | null;
+  };
+}
+
 export interface AssignedAppointmentResponse {
   id: string;
   status: AppointmentStatus;
@@ -295,7 +308,7 @@ export class AppointmentsService {
   async get(
     context: AuthorizationContext,
     appointmentId: string,
-  ): Promise<AppointmentResponse> {
+  ): Promise<AppointmentDetailResponse> {
     const appointment =
       await this.appointmentsRepository.findByTenantBranchAndId(
         context.tenant!.id,
@@ -305,7 +318,7 @@ export class AppointmentsService {
     if (!appointment) {
       throw new NotFoundException('Appointment was not found.');
     }
-    return this.toManagementResponse(appointment);
+    return this.toDetailResponse(appointment);
   }
 
   async listBookingDentists(
@@ -339,7 +352,9 @@ export class AppointmentsService {
       .andWhere('assignment.revokedAt IS NULL');
 
     applyIlikeSearch(queryBuilder, query.search, ['user.fullName']);
-    queryBuilder.orderBy('user.fullName', 'ASC').addOrderBy('assignment.userId', 'ASC');
+    queryBuilder
+      .orderBy('user.fullName', 'ASC')
+      .addOrderBy('assignment.userId', 'ASC');
     applyOffsetPagination(queryBuilder, { page, limit });
 
     const [assignments, total] = await queryBuilder.getManyAndCount();
@@ -1137,6 +1152,20 @@ export class AppointmentsService {
       operationalNote: appointment.operationalNote,
       createdAt: appointment.createdAt,
       updatedAt: appointment.updatedAt,
+    };
+  }
+
+  private toDetailResponse(
+    appointment: AppointmentDetails,
+  ): AppointmentDetailResponse {
+    const response = this.toManagementResponse(appointment);
+    return {
+      ...response,
+      patient: {
+        ...response.patient,
+        gender: appointment.patient.gender,
+        dateOfBirth: appointment.patient.dateOfBirth,
+      },
     };
   }
 

@@ -10,7 +10,7 @@ import {
   AppointmentDateNavigation,
   type AppointmentView,
 } from "@/features/appointments/components/AppointmentDateNavigation";
-import { AppointmentDetailDialog } from "@/features/appointments/components/AppointmentDetailDialog";
+import { AppointmentDetailSheet } from "@/features/appointments/components/AppointmentDetailSheet";
 import { AppointmentFormDialog } from "@/features/appointments/components/AppointmentFormDialog";
 import { AppointmentListView } from "@/features/appointments/components/AppointmentListView";
 import { AppointmentMonthView } from "@/features/appointments/components/AppointmentMonthView";
@@ -142,7 +142,7 @@ export function AppointmentsPage() {
         tenantSlug={tenantSlug}
         timeZone={timeZone}
       />
-      <AppointmentDetailDialog
+      <AppointmentDetailSheet
         appointmentId={detailId}
         branchSlug={branchSlug}
         canAssign={canAssign}

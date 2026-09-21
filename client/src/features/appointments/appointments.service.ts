@@ -4,6 +4,7 @@ import type {
   Appointment,
   AppointmentAgendaQuery,
   AppointmentCalendarSummary,
+  AppointmentDetail,
   AppointmentDentistOption,
   AppointmentListQuery,
   AppointmentPage,
@@ -61,8 +62,8 @@ export const appointmentsService = {
     return payload;
   },
 
-  async get(scope: AppointmentScope, appointmentId: string): Promise<Appointment> {
-    const { payload } = await http.get<Appointment>(appointmentRoute(scope, appointmentId));
+  async get(scope: AppointmentScope, appointmentId: string): Promise<AppointmentDetail> {
+    const { payload } = await http.get<AppointmentDetail>(appointmentRoute(scope, appointmentId));
     return payload;
   },
 

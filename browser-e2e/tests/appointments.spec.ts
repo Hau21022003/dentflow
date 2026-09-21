@@ -27,6 +27,7 @@ test("Branch Admin creates an appointment from the daily agenda and confirms it"
   await patientDialog.getByLabel("Phone number").fill("0909999999");
   await patientDialog.getByLabel("Gender").click();
   await page.getByRole("option", { name: "Female", exact: true }).click();
+  await patientDialog.getByLabel("Date of birth").fill("2000-01-15");
   await patientDialog.getByRole("button", { name: "Add patient" }).click();
   await expect(patientDialog).toHaveCount(0);
 
@@ -60,8 +61,20 @@ test("Branch Admin creates an appointment from the daily agenda and confirms it"
   await expect(page.getByText("Synthetic Agenda Patient", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "View details" }).click();
-  const detailDialog = page.getByRole("dialog", { name: "Appointment details" });
-  await detailDialog.getByRole("button", { name: "Confirm" }).click();
+  const detailSheet = page.getByRole("dialog", { name: "Appointment details" });
+  await expect(detailSheet).toHaveAttribute("data-side", "right");
+  await expect(detailSheet).toContainText("0909999999");
+  await expect(detailSheet).toContainText(/Female.*years old/);
+  await expect(detailSheet.getByRole("button", { name: "Edit appointment" })).toBeVisible();
+  await expect(detailSheet.getByRole("button", { name: "More options" })).toBeVisible();
+  await expect(detailSheet.getByRole("link", { name: "View patient profile" })).toHaveAttribute("href", "/");
+  await detailSheet.getByRole("button", { name: "More options" }).click();
+  await expect(page.getByRole("menuitem", { name: "Assign dentist" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Mark no-show" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Cancel appointment" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await detailSheet.getByRole("button", { name: "Confirm" }).click();
+  await expect(detailSheet).toHaveCount(0);
   const confirmDialog = page.getByRole("dialog", { name: "Confirm appointment?" });
   const confirmRequest = page.waitForRequest(
     (request) => request.method() === "POST" && /\/confirm$/.test(request.url()),
@@ -88,6 +101,34 @@ test("Branch Admin creates an appointment from the daily agenda and confirms it"
 
   await page.getByRole("button", { name: "View day timeline" }).click();
   await expect(page).toHaveURL(/view=timeline.*date=2030-01-16/);
+});
+
+test("appointment detail omits age when the patient has no date of birth", async ({ page }) => {
+  await login(page, E2E_USERS.branchAdminReceptionist);
+  await switchToEnglish(page);
+  await page.goto(WORKSPACE_ROUTE);
+
+  await page.getByRole("button", { name: "Create appointment" }).click();
+  const appointmentDialog = page.getByRole("dialog", { name: "Create appointment" });
+  await appointmentDialog.getByRole("button", { name: "Add patient" }).click();
+  const patientDialog = page.getByRole("dialog", { name: "Add patient" });
+  await patientDialog.getByLabel("Full name").fill("Synthetic Patient Without DOB");
+  await patientDialog.getByLabel("Phone number").fill("0909999998");
+  await patientDialog.getByLabel("Gender").click();
+  await page.getByRole("option", { name: "Female", exact: true }).click();
+  await patientDialog.getByRole("button", { name: "Add patient" }).click();
+  await expect(patientDialog).toHaveCount(0);
+
+  await appointmentDialog.getByLabel("Start time").fill("2030-01-16T09:00");
+  await appointmentDialog.getByLabel("End time").fill("2030-01-16T09:30");
+  await appointmentDialog.getByRole("button", { name: "Create appointment" }).click();
+  await expect(appointmentDialog).toHaveCount(0);
+
+  await page.goto(`${WORKSPACE_ROUTE}?view=list&date=2030-01-16`);
+  await page.getByRole("button", { name: "View details" }).click();
+  const detailSheet = page.getByRole("dialog", { name: "Appointment details" });
+  await expect(detailSheet).toContainText("Female");
+  await expect(detailSheet).not.toContainText(/years old/);
 });
 
 test("agenda uses the resolved branch time zone across the fall DST transition", async ({ page, request }) => {
@@ -167,6 +208,19 @@ test("appointment view switcher keeps localized labels within its bounds", async
     await expect(page).toHaveURL(/view=timeline/);
     await expect(buttons[1]).toHaveAttribute("aria-pressed", "true");
   }
+});
+
+test("mobile navigation keeps its left-side Sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 852 });
+  await login(page, E2E_USERS.branchAdminReceptionist);
+  await switchToEnglish(page);
+  await page.goto(`${WORKSPACE_ROUTE}?view=list&date=2026-09-19`);
+
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  const navigationSheet = page.getByRole("dialog", { name: "Primary navigation" });
+  await expect(navigationSheet).toHaveAttribute("data-side", "left");
+  await navigationSheet.getByRole("button", { name: "Close navigation" }).click();
+  await expect(navigationSheet).toHaveCount(0);
 });
 
 async function switchToEnglish(page: Page): Promise<void> {

@@ -452,6 +452,62 @@ describe('Appointment workflow (e2e)', () => {
     });
   });
 
+  it('returns only administrative gender and date of birth in Appointment detail', async () => {
+    const fixture = await createFixture('appointment-detail-patient');
+    await dataSource.getRepository(Patient).update(
+      { id: fixture.patient.id },
+      {
+        gender: PatientGender.FEMALE,
+        dateOfBirth: '2000-01-15',
+      },
+    );
+    const appointment = await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: fixture.patient,
+      startAt: '2026-10-14T02:00:00.000Z',
+      endAt: '2026-10-14T03:00:00.000Z',
+      status: AppointmentStatus.BOOKED,
+    });
+
+    const detail = await fixture.receptionist.agent
+      .get(`${fixture.route}/${appointment.id}`)
+      .expect(200);
+    const detailBody = detail.body as {
+      patient: {
+        id: string;
+        fullName: string;
+        phone: string;
+        gender: PatientGender;
+        dateOfBirth: string | null;
+      };
+    };
+    expect(detailBody.patient).toEqual({
+      id: fixture.patient.id,
+      fullName: fixture.patient.fullName,
+      phone: fixture.patient.phone,
+      gender: PatientGender.FEMALE,
+      dateOfBirth: '2000-01-15',
+    });
+    expect(detailBody.patient).not.toHaveProperty('phoneNormalized');
+    expect(detailBody.patient).not.toHaveProperty('address');
+    expect(detailBody.patient).not.toHaveProperty('emergencyContact');
+
+    const list = await fixture.receptionist.agent
+      .get(`${fixture.route}?from=${WINDOW_FROM}&to=${WINDOW_TO}`)
+      .expect(200);
+    const listBody = list.body as {
+      items: Array<{
+        patient: { id: string; fullName: string; phone: string };
+      }>;
+    };
+    expect(listBody.items[0]?.patient).toEqual({
+      id: fixture.patient.id,
+      fullName: fixture.patient.fullName,
+      phone: fixture.patient.phone,
+    });
+  });
+
   it('returns a branch-scoped monthly summary using the effective branch timezone', async () => {
     const fixture = await createFixture('appointment-calendar-summary');
     await fixture.receptionist.agent

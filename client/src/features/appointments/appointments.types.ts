@@ -41,6 +41,15 @@ export type Appointment = {
   updatedAt: string;
 };
 
+export type PatientGender = "MALE" | "FEMALE" | "OTHER";
+
+export type AppointmentDetail = Omit<Appointment, "patient"> & {
+  patient: Appointment["patient"] & {
+    gender: PatientGender;
+    dateOfBirth: string | null;
+  };
+};
+
 export type AssignedAppointment = {
   id: string;
   status: AppointmentStatus;
