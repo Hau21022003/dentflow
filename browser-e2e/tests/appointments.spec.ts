@@ -131,6 +131,105 @@ test("appointment detail omits age when the patient has no date of birth", async
   await expect(detailSheet).not.toContainText(/years old/);
 });
 
+test("timeline keeps the selected day, filters a dentist column, opens its desktop detail panel, and refreshes after an action", async ({ page }) => {
+  await login(page, E2E_USERS.tenantAdmin);
+  await switchToEnglish(page);
+  await page.goto(`/workspace/${TENANT_SLUG}/tenant/staff`);
+  const staffRow = page.getByRole("row").filter({ hasText: E2E_USERS.branchAdminReceptionist.email });
+  await staffRow.getByRole("button", { name: /Open actions for/ }).click();
+  await page.getByRole("menuitem", { name: "Grant roles" }).click();
+  const grantDialog = page.getByRole("dialog", { name: "Grant roles" });
+  await grantDialog.getByLabel("Role").click();
+  await page.getByRole("option", { name: "Dentist", exact: true }).click();
+  await grantDialog.getByText("BrightSmile Test Central", { exact: true }).click();
+  await grantDialog.getByRole("button", { name: "Grant roles" }).click();
+  await expect(grantDialog).toHaveCount(0);
+
+  await page.evaluate(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
+  await page.context().clearCookies();
+  await login(page, E2E_USERS.branchAdminReceptionist);
+  await switchToEnglish(page);
+  await page.goto(`${WORKSPACE_ROUTE}?view=list&date=2030-01-16`);
+
+  await page.getByRole("button", { name: "Create appointment" }).click();
+  const appointmentDialog = page.getByRole("dialog", { name: "Create appointment" });
+  await appointmentDialog.getByRole("button", { name: "Add patient" }).click();
+  const patientDialog = page.getByRole("dialog", { name: "Add patient" });
+  await patientDialog.getByLabel("Full name").fill("Synthetic Timeline Patient");
+  await patientDialog.getByLabel("Phone number").fill("0909999997");
+  await patientDialog.getByLabel("Gender").click();
+  await page.getByRole("option", { name: "Other", exact: true }).click();
+  await patientDialog.getByRole("button", { name: "Add patient" }).click();
+  await expect(patientDialog).toHaveCount(0);
+
+  await appointmentDialog.getByLabel("Start time").fill("2030-01-16T09:00");
+  await appointmentDialog.getByLabel("End time").fill("2030-01-16T09:30");
+  await appointmentDialog.getByLabel("Visit reason").fill("Synthetic timeline reason");
+  await appointmentDialog.getByRole("combobox", { name: "Dentist" }).click();
+  await page.getByRole("option", { name: "Synthetic Branch Administrator", exact: true }).click();
+  await appointmentDialog.getByRole("button", { name: "Create appointment" }).click();
+  await expect(appointmentDialog).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Create appointment" }).click();
+  const shortAppointmentDialog = page.getByRole("dialog", { name: "Create appointment" });
+  await shortAppointmentDialog.getByRole("button", { name: "Add patient" }).click();
+  const shortPatientDialog = page.getByRole("dialog", { name: "Add patient" });
+  await shortPatientDialog.getByLabel("Full name").fill("Synthetic Short Timeline Patient");
+  await shortPatientDialog.getByLabel("Phone number").fill("0909999996");
+  await shortPatientDialog.getByLabel("Gender").click();
+  await page.getByRole("option", { name: "Other", exact: true }).click();
+  await shortPatientDialog.getByRole("button", { name: "Add patient" }).click();
+  await expect(shortPatientDialog).toHaveCount(0);
+  await shortAppointmentDialog.getByLabel("Start time").fill("2030-01-16T09:30");
+  await shortAppointmentDialog.getByLabel("End time").fill("2030-01-16T09:45");
+  await shortAppointmentDialog.getByLabel("Visit reason").fill("Synthetic short timeline reason");
+  await shortAppointmentDialog.getByRole("combobox", { name: "Dentist" }).click();
+  await page.getByRole("option", { name: "Synthetic Branch Administrator", exact: true }).click();
+  await shortAppointmentDialog.getByRole("button", { name: "Create appointment" }).click();
+  await expect(shortAppointmentDialog).toHaveCount(0);
+
+  await page.goto(`${WORKSPACE_ROUTE}?view=timeline&date=2030-01-17`);
+  await page.getByRole("button", { name: "Previous" }).click();
+  await expect(page).toHaveURL(/view=timeline.*date=2030-01-16/);
+  const timeline = page.getByTestId("appointment-timeline");
+  await expect(timeline).toBeVisible();
+  await expect(timeline.getByText("Synthetic Branch Administrator", { exact: true })).toBeVisible();
+  await page.getByLabel("All dentists").click();
+  await page.getByRole("option", { name: "Synthetic Branch Administrator", exact: true }).click();
+
+  const timelineAppointment = timeline
+    .locator('[data-appointment-id]')
+    .filter({ hasText: "Synthetic Timeline Patient" });
+  const shortTimelineAppointment = timeline
+    .locator('[data-appointment-id]')
+    .filter({ hasText: "Synthetic Short Timeline Patient" });
+  await expect(timelineAppointment).toHaveClass(/bg-sky-100/);
+  await expect(timelineAppointment).toContainText(/09:00/);
+  await expect(shortTimelineAppointment).toContainText("Synthetic Short Timeline Patient");
+  await expect(shortTimelineAppointment).not.toContainText(/09:30|09:45/);
+  await timelineAppointment.click();
+  const detailPanel = page.getByLabel("Appointment detail panel");
+  await expect(detailPanel).toBeVisible();
+  await expect(detailPanel).toContainText("Synthetic Timeline Patient");
+  await expect(page.getByRole("dialog", { name: "Appointment details" })).toHaveCount(0);
+
+  await detailPanel.getByRole("button", { name: "Confirm" }).click();
+  await expect(detailPanel).toHaveCount(0);
+  const confirmDialog = page.getByRole("dialog", { name: "Confirm appointment?" });
+  const confirmRequest = page.waitForRequest(
+    (request) => request.method() === "POST" && /\/confirm$/.test(request.url()),
+  );
+  await confirmDialog.getByRole("button", { name: "Confirm action" }).click();
+  await confirmRequest;
+  await expect(confirmDialog).toHaveCount(0);
+
+  await timelineAppointment.click();
+  await expect(detailPanel.getByText("Confirmed", { exact: true })).toBeVisible();
+});
+
 test("agenda uses the resolved branch time zone across the fall DST transition", async ({ page, request }) => {
   const loginResponse = await request.post(`${API_URL}/auth/login`, {
     data: E2E_USERS.tenantAdmin,

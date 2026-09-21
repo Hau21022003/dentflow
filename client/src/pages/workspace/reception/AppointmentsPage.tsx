@@ -11,10 +11,11 @@ import {
   type AppointmentView,
 } from "@/features/appointments/components/AppointmentDateNavigation";
 import { AppointmentDetailSheet } from "@/features/appointments/components/AppointmentDetailSheet";
+import { AppointmentDetailPanel } from "@/features/appointments/components/AppointmentDetailPanel";
 import { AppointmentFormDialog } from "@/features/appointments/components/AppointmentFormDialog";
 import { AppointmentListView } from "@/features/appointments/components/AppointmentListView";
 import { AppointmentMonthView } from "@/features/appointments/components/AppointmentMonthView";
-import { AppointmentViewPlaceholder } from "@/features/appointments/components/AppointmentViewPlaceholder";
+import { AppointmentTimelineView } from "@/features/appointments/components/AppointmentTimelineView";
 import type { Appointment } from "@/features/appointments/appointments.types";
 import { localeForLanguage } from "@/shared/lib/money";
 import { Plus } from "lucide-react";
@@ -32,6 +33,22 @@ function viewFromSearchParam(value: string | null): AppointmentView {
   return value === "timeline" || value === "month" ? value : "list";
 }
 
+function useDesktopTimeline() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches,
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  return isDesktop;
+}
+
 export function AppointmentsPage() {
   const { branch, branchSlug, tenant, tenantSlug } = useRouteWorkspaceContext();
   const { i18n, t } = useTranslation("appointments");
@@ -47,6 +64,7 @@ export function AppointmentsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | undefined>();
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [timelineDetailId, setTimelineDetailId] = useState<string | null>(null);
   const [assigning, setAssigning] = useState<Appointment | null>(null);
   const [actionSelection, setActionSelection] = useState<{
     action: AppointmentAction;
@@ -55,6 +73,7 @@ export function AppointmentsPage() {
   const canAssign = branch?.roles.includes("BRANCH_ADMIN") ?? false;
   const tenantName = tenant?.tenant.displayName ?? tenantSlug;
   const branchName = branch?.branch.name ?? branchSlug;
+  const isDesktopTimeline = useDesktopTimeline();
 
   useEffect(() => {
     if (isValidDate(dateParam) && viewParam === view) return;
@@ -71,11 +90,21 @@ export function AppointmentsPage() {
     setSearchParams(params);
   }
 
+  function changeDate(nextDate: string) {
+    if (nextDate !== date) setTimelineDetailId(null);
+    updateSearchParams({ date: nextDate });
+  }
+
   function closeForm(open: boolean) {
     if (!open) {
       setCreateOpen(false);
       setEditing(undefined);
     }
+  }
+
+  function closeTimelinePanelThen(callback: () => void) {
+    setTimelineDetailId(null);
+    callback();
   }
 
   return (
@@ -96,16 +125,16 @@ export function AppointmentsPage() {
         </Button>
       </div>
 
-      <Card>
+      <Card className={view === "timeline" && timelineDetailId && isDesktopTimeline ? "overflow-hidden" : undefined}>
         <AppointmentDateNavigation
           date={date}
           locale={locale}
-          onDateChange={(nextDate) => updateSearchParams({ date: nextDate })}
+          onDateChange={changeDate}
           onViewChange={(nextView) => updateSearchParams({ view: nextView })}
           timeZone={timeZone}
           view={view}
         />
-        <CardContent className="p-0">
+        <CardContent className={view === "timeline" && timelineDetailId && isDesktopTimeline ? "grid min-h-[38rem] grid-cols-[minmax(0,1fr)_28rem] p-0" : "p-0"}>
           {view === "list" ? (
             <AppointmentListView
               branchSlug={branchSlug}
@@ -120,15 +149,37 @@ export function AppointmentsPage() {
               branchSlug={branchSlug}
               date={date}
               locale={locale}
-              onDateChange={(nextDate) => updateSearchParams({ date: nextDate })}
-              onViewTimeline={(nextDate) =>
-                updateSearchParams({ date: nextDate, view: "timeline" })
-              }
+              onDateChange={changeDate}
+              onViewTimeline={(nextDate) => {
+                setTimelineDetailId(null);
+                updateSearchParams({ date: nextDate, view: "timeline" });
+              }}
               tenantSlug={tenantSlug}
               timeZone={timeZone}
             />
           ) : (
-            <AppointmentViewPlaceholder view={view} />
+            <AppointmentTimelineView
+              branchSlug={branchSlug}
+              date={date}
+              onViewAppointment={(appointment) => setTimelineDetailId(appointment.id)}
+              tenantSlug={tenantSlug}
+              timeZone={timeZone}
+            />
+          )}
+          {view === "timeline" && timelineDetailId && isDesktopTimeline && (
+            <AppointmentDetailPanel
+              appointmentId={timelineDetailId}
+              branchSlug={branchSlug}
+              canAssign={canAssign}
+              onAction={(action, appointment) =>
+                closeTimelinePanelThen(() => setActionSelection({ action, appointment }))
+              }
+              onAssign={(appointment) => closeTimelinePanelThen(() => setAssigning(appointment))}
+              onClose={() => setTimelineDetailId(null)}
+              onEdit={(appointment) => closeTimelinePanelThen(() => setEditing(appointment))}
+              tenantSlug={tenantSlug}
+              timeZone={timeZone}
+            />
           )}
         </CardContent>
       </Card>
@@ -151,6 +202,27 @@ export function AppointmentsPage() {
         onEdit={setEditing}
         onOpenChange={(open) => !open && setDetailId(null)}
         open={Boolean(detailId)}
+        tenantSlug={tenantSlug}
+        timeZone={timeZone}
+      />
+      <AppointmentDetailSheet
+        appointmentId={isDesktopTimeline ? null : timelineDetailId}
+        branchSlug={branchSlug}
+        canAssign={canAssign}
+        onAction={(action, appointment) => {
+          setTimelineDetailId(null);
+          setActionSelection({ action, appointment });
+        }}
+        onAssign={(appointment) => {
+          setTimelineDetailId(null);
+          setAssigning(appointment);
+        }}
+        onEdit={(appointment) => {
+          setTimelineDetailId(null);
+          setEditing(appointment);
+        }}
+        onOpenChange={(open) => !open && setTimelineDetailId(null)}
+        open={view === "timeline" && Boolean(timelineDetailId) && !isDesktopTimeline}
         tenantSlug={tenantSlug}
         timeZone={timeZone}
       />

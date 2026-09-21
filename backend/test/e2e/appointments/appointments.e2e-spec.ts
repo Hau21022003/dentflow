@@ -229,10 +229,22 @@ describe('Appointment workflow (e2e)', () => {
       ]),
     );
     expect(Object.keys(dentistsResponse.body.items[0]).sort()).toEqual([
+      'avatarUrl',
       'fullName',
       'id',
     ]);
     expect(JSON.stringify(dentistsResponse.body.items)).not.toContain('email');
+    expect(JSON.stringify(dentistsResponse.body.items)).not.toContain(
+      'avatarObjectKey',
+    );
+    expect(dentistsResponse.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: fixture.dentist.user.id,
+          avatarUrl: null,
+        }),
+      ]),
+    );
 
     await fixture.branchAdmin.agent
       .get(`${fixture.route}/booking-options/dentists`)

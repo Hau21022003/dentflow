@@ -88,6 +88,34 @@ export function formatAppointmentTime(
   }).format(new Date(isoTimestamp));
 }
 
+/**
+ * Returns the position within the operational day in the branch time zone.
+ * This deliberately does not use the browser's local time zone.
+ */
+export function minutesSinceStartOfDay(isoTimestamp: string, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+  }).formatToParts(new Date(isoTimestamp));
+  const value = (type: "hour" | "minute") =>
+    Number(parts.find((part) => part.type === type)?.value ?? "0");
+  return value("hour") * 60 + value("minute");
+}
+
+export function dateInTimeZone(isoTimestamp: string, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(isoTimestamp));
+  const value = (type: "year" | "month" | "day") =>
+    parts.find((part) => part.type === type)?.value ?? "01";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
 export function formatAppointmentDate(
   dateInput: string,
   timeZone: string,

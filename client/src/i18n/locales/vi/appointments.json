@@ -29,6 +29,19 @@
     "emptyTitle": "Không có lịch hẹn trong ngày",
     "emptyDescription": "Chọn ngày khác, thay đổi bộ lọc hoặc tạo lịch hẹn."
   },
+  "timeline": {
+    "gridLabel": "Lịch hẹn theo ngày",
+    "time": "Giờ",
+    "searchPlaceholder": "Tìm tên hoặc số điện thoại bệnh nhân...",
+    "unassigned": "Chưa phân công",
+    "emptyColumn": "Không có lịch hẹn",
+    "emptyDay": "Không có lịch hẹn phù hợp với bộ lọc trong ngày này.",
+    "noDentistsTitle": "Chưa có bác sĩ khả dụng",
+    "noDentistsDescription": "Không có bác sĩ đang hoạt động để hiển thị tại chi nhánh này.",
+    "loadError": "Không thể tải lịch theo ngày.",
+    "detailPanelLabel": "Bảng chi tiết lịch hẹn",
+    "viewAppointment": "Xem lịch của {{patient}} lúc {{start}}"
+  },
   "actions": { "create": "Tạo lịch hẹn", "save": "Lưu thay đổi", "edit": "Sửa lịch hẹn", "view": "Xem chi tiết", "confirm": "Xác nhận", "checkIn": "Check-in", "cancel": "Hủy lịch hẹn", "noShow": "Đánh dấu vắng mặt", "assign": "Phân công bác sĩ", "addPatient": "Thêm bệnh nhân", "close": "Đóng" },
   "form": {
     "createTitle": "Tạo lịch hẹn", "createDescription": "Đặt lịch theo múi giờ của chi nhánh đang chọn.", "editTitle": "Sửa lịch hẹn", "editDescription": "Cập nhật thông tin vận hành của lịch hẹn.",

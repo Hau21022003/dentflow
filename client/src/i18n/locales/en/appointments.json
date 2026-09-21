@@ -54,6 +54,19 @@
     "emptyTitle": "No appointments for this day",
     "emptyDescription": "Choose another day, change the filters, or create an appointment."
   },
+  "timeline": {
+    "gridLabel": "Daily appointment timeline",
+    "time": "Time",
+    "searchPlaceholder": "Search patient name or phone...",
+    "unassigned": "Unassigned",
+    "emptyColumn": "No appointments",
+    "emptyDay": "No appointments match the selected filters for this day.",
+    "noDentistsTitle": "No dentists available",
+    "noDentistsDescription": "There are no active dentists to show in this branch.",
+    "loadError": "Could not load the daily timeline.",
+    "detailPanelLabel": "Appointment detail panel",
+    "viewAppointment": "View {{patient}} at {{start}}"
+  },
   "actions": {
     "create": "Create appointment",
     "save": "Save changes",

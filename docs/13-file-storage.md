@@ -18,7 +18,7 @@ Backend lấy tenant/branch từ route context đã guard xác minh, không từ
 
 `POST /uploads/image-intents` là route chung chỉ yêu cầu JWT cho ảnh user-owned. Body thêm `folder`; V1 chỉ có enum `AVATAR`, không nhận path/folder tự do, tenant ID hoặc user ID. Policy map trong Uploads module lấy actor từ JWT và sinh key `temp/users/{userId}/avatar/{uuid}.{extension}`. Thêm user-owned purpose sau này bằng enum/policy map, không thêm endpoint.
 
-Khi `PATCH /users/me` nhận temporary avatar key hợp lệ của chính actor, backend `HeadObject` đối chiếu MIME/dung lượng và exact prefix, copy object sang `avatars/users/{userId}/{uuid}.{extension}`, rồi mới lưu `avatar_object_key`. Sau commit, backend best-effort xóa source temp và avatar cũ. Response nghiệp vụ không trả object key; safe user/staff response chỉ trả `avatarUrl` signed ngắn hạn. `null` xóa avatar hiện hữu. Client không được dùng temp key sau khi save.
+Khi `PATCH /users/me` nhận temporary avatar key hợp lệ của chính actor, backend `HeadObject` đối chiếu MIME/dung lượng và exact prefix, copy object sang `avatars/users/{userId}/{uuid}.{extension}`, rồi mới lưu `avatar_object_key`. Sau commit, backend best-effort xóa source temp và avatar cũ. Response nghiệp vụ không trả object key; safe user/staff response và dentist booking option đã được phân quyền chỉ trả `avatarUrl` signed ngắn hạn. `null` xóa avatar hiện hữu. Client không được dùng temp key sau khi save.
 
 Policy được ký khóa đúng bucket, key, MIME và content-length từ 1 byte đến 2 MiB. `objectKey` chỉ là tham chiếu tạm; tính ngẫu nhiên của key không thay thế kiểm tra authorization. Module gắn attachment sau này phải `HeadObject`/đối chiếu exact prefix tenant-branch trước khi copy sang key lâu dài hoặc tạo quan hệ nghiệp vụ.
 

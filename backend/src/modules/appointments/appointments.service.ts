@@ -25,6 +25,7 @@ import {
   TenantUserMembershipStatus,
 } from '../staff/entities/tenant-user-membership.entity';
 import { User } from '../users/entities/user.entity';
+import { UsersService } from '../users/users.service';
 import { AssignAppointmentDto } from './dto/assign-appointment.dto';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { ListAppointmentsQueryDto } from './dto/list-appointments-query.dto';
@@ -104,6 +105,7 @@ export interface AssignedAppointmentResponse {
 export interface AppointmentDentistOptionResponse {
   id: string;
   fullName: string;
+  avatarUrl: string | null;
 }
 
 export interface AppointmentCalendarSummaryResponse {
@@ -137,6 +139,7 @@ export class AppointmentsService {
     private readonly appointmentsRepository: AppointmentsRepository,
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly auditLogService: AuditLogService,
+    private readonly usersService: UsersService,
   ) {}
 
   async list(
@@ -358,10 +361,22 @@ export class AppointmentsService {
     applyOffsetPagination(queryBuilder, { page, limit });
 
     const [assignments, total] = await queryBuilder.getManyAndCount();
+    const dentistsById = new Map<
+      string,
+      Pick<User, 'id' | 'avatarObjectKey'>
+    >();
+    for (const assignment of assignments) {
+      dentistsById.set(assignment.userId, assignment.user);
+    }
+    const avatarUrls = await this.usersService.avatarUrlsFor(
+      dentistsById.values(),
+    );
+
     return {
       items: assignments.map((assignment) => ({
         id: assignment.userId,
         fullName: assignment.user.fullName,
+        avatarUrl: avatarUrls.get(assignment.userId) ?? null,
       })),
       meta: toPageMeta({ page, limit }, total),
     };

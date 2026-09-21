@@ -59,7 +59,11 @@ export type AssignedAppointment = {
   service: { id: string; code: string; name: string } | null;
 };
 
-export type AppointmentDentistOption = { id: string; fullName: string };
+export type AppointmentDentistOption = {
+  id: string;
+  fullName: string;
+  avatarUrl: string | null;
+};
 
 export type AppointmentServiceOption = {
   id: string;

@@ -125,12 +125,30 @@ export class UsersService {
   }
 
   async toProfile(user: User): Promise<UserProfileResponse> {
+    const avatarUrls = await this.avatarUrlsFor([user]);
     return {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      avatarUrl: await this.avatarUrlFor(user.avatarObjectKey),
+      avatarUrl: avatarUrls.get(user.id) ?? null,
     };
+  }
+
+  async avatarUrlsFor(
+    users: Iterable<Pick<User, 'id' | 'avatarObjectKey'>>,
+  ): Promise<Map<string, string | null>> {
+    const uniqueUsers = new Map<string, Pick<User, 'id' | 'avatarObjectKey'>>();
+    for (const user of users) {
+      uniqueUsers.set(user.id, user);
+    }
+
+    const entries = await Promise.all(
+      [...uniqueUsers.values()].map(
+        async (user) =>
+          [user.id, await this.avatarUrlFor(user.avatarObjectKey)] as const,
+      ),
+    );
+    return new Map(entries);
   }
 
   private avatarTempExtension(userId: string, objectKey: string): string {
