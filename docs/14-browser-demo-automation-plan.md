@@ -1,7 +1,8 @@
 # Kế hoạch Browser Demo Automation
 
-> Trạng thái: **chỉ là kế hoạch**. Tài liệu này chưa thêm script, dependency,
-> cấu hình Playwright hay test nào vào source code.
+> Trạng thái: **nền đã triển khai**. Config riêng, helper pace/caption/cursor,
+> smoke demo, script npm và artifact isolation đã có trong source. Flow trình
+> diễn nghiệp vụ cho nhà tuyển dụng vẫn là hạng mục kế tiếp, chưa được thêm.
 
 ## Mục tiêu
 
@@ -33,12 +34,12 @@ trạng thái mong đợi.
 - Không đưa demo vào CI bắt buộc ở giai đoạn đầu. Video là artifact để xem
   thủ công; CI regression hiện tại vẫn chỉ chạy `npm run test`.
 
-## Cấu trúc sẽ thêm
+## Cấu trúc nền đã thêm
 
 ```text
 browser-e2e/
   demo/
-    receptionist-appointment.demo.spec.ts
+    foundation.demo.spec.ts     # smoke: login, caption, marker cursor
     support/
       demo.fixture.ts          # reset fixture, cài overlay, chọn pace
       demo-narrator.ts         # caption và các pause có chủ đích
@@ -49,11 +50,10 @@ browser-e2e/
   demo-report/                 # HTML report; gitignored
 ```
 
-`playwright.config.ts` và `playwright.demo.config.ts` sẽ dùng chung các phần
-an toàn để tránh lệch môi trường: Chromium desktop, `global-setup.ts`, hai
-web server test, base URL, secrets test-only và một worker. Khi triển khai,
-trích các phần này vào một module config dùng chung; config E2E thường vẫn giữ
-`testDir: "./tests"` và các reporter/artifact path hiện tại.
+`playwright.config.ts` và `playwright.demo.config.ts` đã dùng chung các phần
+an toàn trong `playwright.shared.ts`: Chromium desktop, `global-setup.ts`, hai
+web server test, base URL, secrets test-only và một worker. Config E2E thường
+vẫn giữ `testDir: "./tests"` và các reporter/artifact path hiện tại.
 
 Config demo sẽ có các khác biệt sau:
 
@@ -143,12 +143,12 @@ riêng theo vai trò, ví dụ `tenant-admin-staff.demo.spec.ts` hoặc
 module visits hiện tại hoàn chỉnh và có E2E regression ổn định; không ghép nó
 vào video đầu tiên.
 
-## Script `package.json` dự kiến
+## Script `package.json` đã thêm
 
 Để biến môi trường hoạt động giống nhau trên PowerShell, cmd và shell CI,
-thêm `cross-env` vào `devDependencies` của `browser-e2e` (và cập nhật đúng
-`package-lock.json` bằng npm). Giữ nguyên toàn bộ script `test:*` hiện tại;
-chỉ thêm các script sau:
+đã thêm `cross-env` vào `devDependencies` của `browser-e2e` và cập nhật
+`package-lock.json` bằng npm. Toàn bộ script `test:*` được giữ nguyên; các
+script demo hiện có là:
 
 ```json
 {
@@ -156,7 +156,7 @@ chỉ thêm các script sau:
     "demo": "cross-env DEMO_PACE=medium playwright test --config=playwright.demo.config.ts",
     "demo:low": "cross-env DEMO_PACE=low playwright test --config=playwright.demo.config.ts",
     "demo:headed": "cross-env DEMO_PACE=medium playwright test --config=playwright.demo.config.ts --headed",
-    "demo:receptionist": "cross-env DEMO_PACE=medium playwright test --config=playwright.demo.config.ts --grep @receptionist",
+    "demo:foundation": "cross-env DEMO_PACE=medium playwright test --config=playwright.demo.config.ts --grep @foundation",
     "demo:report": "playwright show-report demo-report"
   }
 }
@@ -166,29 +166,28 @@ chỉ thêm các script sau:
 vì browser ở headed mode. `demo:headed` dùng khi người quay cần xem trực tiếp
 và tinh chỉnh pacing/caption. File video WebM sẽ nằm bên dưới
 `browser-e2e/demo-results/`; HTML report mở bằng `npm run demo:report`.
+`demo:receptionist` sẽ chỉ được thêm cùng flow lễ tân thực tế để tránh tồn tại
+một script lọc test chưa có.
 
 ## Trình tự triển khai lần sau
 
-1. Đọc lại `docs/08-demo-and-testing.md`, xác nhận PostgreSQL, Redis, Docker
-   Desktop/MinIO và `backend/.env.test` đang là môi trường test riêng.
-2. Thêm shared Playwright config, demo config, include TypeScript và ignore
-   artifact; chạy một lệnh demo rỗng để xác nhận nó không discover `tests/`.
-3. Cài `cross-env`, thêm script dự kiến và cập nhật lockfile.
-4. Viết helper pace/narrator/cursor, sau đó một test nhỏ kiểm tra overlay không
-   chặn click và vẫn tồn tại sau điều hướng.
-5. Viết flow lễ tân theo từng bước, với assertion/network wait trước mọi hold;
+1. Đã đọc lại `docs/08-demo-and-testing.md`, thêm shared Playwright config,
+   demo config, TypeScript include, artifact ignore, `cross-env` và smoke
+   `@foundation` để xác nhận config không discover `tests/`.
+2. Đã viết helper pace/narrator/cursor và smoke xác nhận caption/marker xuất
+   hiện trên trang login. Một assertion click qua overlay và assertion sau điều
+   hướng sẽ được thêm cùng flow đầu tiên.
+3. Viết flow lễ tân theo từng bước, với assertion/network wait trước mọi hold;
    dùng duy nhất dữ liệu synthetic.
-6. Quay `medium` và `low`, kiểm tra thủ công video ở kích thước phát hành rồi
+4. Quay `medium` và `low`, kiểm tra thủ công video ở kích thước phát hành rồi
    điều chỉnh bảng thời gian nếu caption không đủ dễ đọc.
-7. Bổ sung hướng dẫn chạy demo vào `docs/08-demo-and-testing.md` sau khi lệnh
-   và đường dẫn artifact đã tồn tại thực tế. Cập nhật tài liệu này nếu có quyết
-   định khác với kế hoạch.
+5. Cập nhật tài liệu này nếu có quyết định khác với kế hoạch.
 
 ## Tiêu chí nghiệm thu
 
 - `npm run test` chỉ discover `browser-e2e/tests/` và vẫn qua như trước.
-- `npm run demo:receptionist` chỉ discover demo được gắn tag lễ tân, reset
-  fixture test và sinh video/report ở đường dẫn demo riêng.
+- `npm run demo:foundation` chỉ discover smoke demo được gắn tag foundation,
+  reset fixture test và sinh video/report ở đường dẫn demo riêng.
 - Video `low` lẫn `medium` thể hiện caption đúng thứ tự, marker con trỏ trước
   click/nhập, kết quả thao tác thật và không có overlay che/cướp click.
 - Không có artifact demo được git track; không có source production, route,

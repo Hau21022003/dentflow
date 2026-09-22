@@ -4,7 +4,7 @@
 
 Browser E2E nằm trong `browser-e2e/` và chạy bằng Playwright Chromium. Bộ test kiểm tra luồng giao diện thực tế, hiện bắt đầu với đăng nhập bằng tài khoản synthetic.
 
-Mỗi file spec phải gọi `GET /testing/reset-db` trong `beforeAll` thông qua helper dùng chung. Endpoint này chỉ hoạt động khi backend chạy với `NODE_ENV=test`; không có JWT nhưng bị `TestingGuard` chặn ở mọi môi trường khác.
+Mỗi test browser phải gọi `GET /testing/reset-db` trước khi chạy thông qua helper dùng chung hoặc fixture tự động. Endpoint này chỉ hoạt động khi backend chạy với `NODE_ENV=test`; không có JWT nhưng bị `TestingGuard` chặn ở mọi môi trường khác.
 
 ## Môi trường test
 
@@ -38,6 +38,43 @@ npm run report
 ```
 
 Playwright tự chạy backend ở `http://127.0.0.1:3001` và frontend ở `http://127.0.0.1:5174`; không tái sử dụng các process đang chạy để luôn dùng đúng môi trường test.
+
+## Browser demo quay video
+
+Demo Playwright tách hoàn toàn khỏi regression E2E: file nằm trong
+`browser-e2e/demo/` và chỉ được discover bởi `playwright.demo.config.ts`.
+`npm run test` vẫn chỉ quét `browser-e2e/tests/`. Demo dùng cùng môi trường
+test-only, fixture synthetic và endpoint reset; không chạy nó đồng thời với
+`npm run test` vì cùng dùng database reset và port `3001`/`5174`.
+
+Nền demo tự inject caption và marker con trỏ vào browser test. Hai thành phần
+này có `pointer-events: none` và chỉ tồn tại trong document Playwright, không
+thay đổi client production. `DEMO_PACE` có hai mức: `low` nhanh hơn và
+`medium` (mặc định) dễ đọc hơn khi quay video. Mọi pause của demo nằm trong
+helper; spec vẫn phải chờ UI/network state thật trước khi giữ hình cho người
+xem.
+
+Sau khi đã cài dependency trong `browser-e2e/`, dùng các lệnh sau:
+
+```powershell
+# Smoke video: login page, caption và marker cursor; chưa phải flow nghiệp vụ.
+npm run demo
+
+# Cùng smoke demo với nhịp nhanh hơn.
+npm run demo:low
+
+# Chỉ chạy smoke foundation hoặc xem browser trong lúc quay/tinh chỉnh.
+npm run demo:foundation
+npm run demo:headed
+
+# Mở HTML report; video/trace/screenshot nằm ở demo-results/.
+npm run demo:report
+```
+
+Artifact demo được ghi vào `demo-results/` và `demo-report/`, đều không được
+git track. Flow trình diễn theo vai trò sẽ được thêm thành file demo riêng sau
+khi được duyệt; xem `14-browser-demo-automation-plan.md` để biết phạm vi và
+quy tắc mở rộng.
 
 ## Dữ liệu synthetic
 
@@ -88,4 +125,4 @@ Browser E2E tự chạy `docker compose -f docker-compose.minio.yml up -d` và c
 
 ## CI
 
-Workflow `browser-e2e/.github/workflows/playwright.yml` tạo PostgreSQL và Redis sạch, sinh `.env.test` từ mẫu; Playwright khởi động MinIO Compose, chạy browser E2E và lưu Playwright HTML report làm artifact.
+Workflow `.github/workflows/browser-e2e.yml` tạo PostgreSQL và Redis sạch, sinh `.env.test` từ mẫu; Playwright khởi động MinIO Compose, chạy browser E2E và lưu Playwright HTML report làm artifact. Browser demo chưa là job CI bắt buộc vì video được xem thủ công.
