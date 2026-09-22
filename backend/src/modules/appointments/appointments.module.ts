@@ -18,5 +18,6 @@ import { AppointmentStatusTransition } from './entities/appointment-status-trans
   ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService, AppointmentsRepository],
+  exports: [AppointmentsRepository],
 })
 export class AppointmentsModule {}

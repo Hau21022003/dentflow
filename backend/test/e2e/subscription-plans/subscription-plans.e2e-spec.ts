@@ -48,7 +48,7 @@ describe('Subscription plans (e2e)', () => {
     await closeApp();
   });
 
-  it('requires platform plan permission and lists the empty global catalog', async () => {
+  it('requires platform plan permission and lists the seeded global catalog', async () => {
     await request(app.getHttpServer()).get('/platform/plans').expect(401);
 
     const regularUser = await authFixtures.createUser({
@@ -58,7 +58,23 @@ describe('Subscription plans (e2e)', () => {
     await regularAgent.get('/platform/plans').expect(403);
 
     const { agent } = await createPlatformAdmin();
-    await agent.get('/platform/plans').expect(200).expect([]);
+    await agent
+      .get('/platform/plans')
+      .expect(200)
+      .expect(({ body }: { body: unknown }) => {
+        expect(body).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              code: 'basic-monthly',
+              isActive: true,
+            }),
+            expect.objectContaining({
+              code: 'enterprise-yearly',
+              isActive: true,
+            }),
+          ]),
+        );
+      });
   });
 
   it('creates plans, records a platform audit event, and returns inactive plans in the catalog', async () => {
@@ -119,11 +135,14 @@ describe('Subscription plans (e2e)', () => {
 
     const catalog = await agent.get('/platform/plans').expect(200);
     const catalogPlans = catalog.body as SubscriptionPlanResponse[];
-    expect(catalogPlans).toHaveLength(1);
-    expect(catalogPlans[0]).toMatchObject({
-      id: createdPlan.id,
-      isActive: false,
-    });
+    expect(catalogPlans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: createdPlan.id,
+          isActive: false,
+        }),
+      ]),
+    );
   });
 
   it('validates plan inputs and maps unique catalog conflicts', async () => {

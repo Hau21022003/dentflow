@@ -56,6 +56,28 @@ describe('AuditLogService', () => {
       },
     );
   });
+
+  it('accepts Visit changed-field identifiers without clinical content', async () => {
+    const manager = createManager();
+
+    const saved = await service.record(manager, {
+      action: AuditAction.VISIT_UPDATED,
+      actor: { type: AuditActorType.SYSTEM },
+      tenantId: '11111111-1111-4111-8111-111111111111',
+      branchId: '22222222-2222-4222-8222-222222222222',
+      resourceId: '33333333-3333-4333-8333-333333333333',
+      before: { status: 'OPEN' },
+      after: {
+        status: 'OPEN',
+        changedFields: ['diagnosis', 'clinicalNote'],
+      },
+    });
+
+    expect(saved.after).toEqual({
+      status: 'OPEN',
+      changedFields: ['diagnosis', 'clinicalNote'],
+    });
+  });
 });
 
 function createManager(): EntityManager {

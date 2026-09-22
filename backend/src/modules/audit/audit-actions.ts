@@ -50,6 +50,10 @@ export const AuditAction = {
   APPOINTMENT_UPDATED: 'APPOINTMENT_UPDATED',
   APPOINTMENT_ASSIGNMENT_CHANGED: 'APPOINTMENT_ASSIGNMENT_CHANGED',
   APPOINTMENT_STATE_CHANGED: 'APPOINTMENT_STATE_CHANGED',
+  VISIT_OPENED: 'VISIT_OPENED',
+  VISIT_UPDATED: 'VISIT_UPDATED',
+  VISIT_COMPLETED: 'VISIT_COMPLETED',
+  TREATMENT_NOTE_ADDED: 'TREATMENT_NOTE_ADDED',
   TREATMENT_PLAN_STATE_CHANGED: 'TREATMENT_PLAN_STATE_CHANGED',
   TREATMENT_ITEM_STATE_CHANGED: 'TREATMENT_ITEM_STATE_CHANGED',
   PATIENT_INVOICE_ISSUED: 'PATIENT_INVOICE_ISSUED',
@@ -78,6 +82,8 @@ export type AuditResourceType =
   | 'SERVICE_GROUP'
   | 'PATIENT'
   | 'APPOINTMENT'
+  | 'VISIT'
+  | 'TREATMENT_NOTE'
   | 'TREATMENT_PLAN'
   | 'TREATMENT_ITEM'
   | 'PATIENT_INVOICE'
@@ -203,6 +209,16 @@ const TREATMENT_PAYLOAD: AuditPayloadPolicy = {
   before: ['status'],
   after: ['status'],
   metadata: ['reasonCode'],
+};
+const VISIT_PAYLOAD: AuditPayloadPolicy = {
+  before: ['status'],
+  after: ['status', 'changedFields'],
+  metadata: [],
+};
+const TREATMENT_NOTE_PAYLOAD: AuditPayloadPolicy = {
+  before: [],
+  after: ['visitId', 'createdAt'],
+  metadata: [],
 };
 const INVOICE_PAYLOAD: AuditPayloadPolicy = {
   before: ['status', 'totalAmount', 'currency'],
@@ -520,6 +536,30 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     'APPOINTMENT',
     false,
     APPOINTMENT_PAYLOAD,
+  ),
+  [AuditAction.VISIT_OPENED]: definition(
+    AuditDomain.CLINICAL,
+    'VISIT',
+    false,
+    VISIT_PAYLOAD,
+  ),
+  [AuditAction.VISIT_UPDATED]: definition(
+    AuditDomain.CLINICAL,
+    'VISIT',
+    false,
+    VISIT_PAYLOAD,
+  ),
+  [AuditAction.VISIT_COMPLETED]: definition(
+    AuditDomain.CLINICAL,
+    'VISIT',
+    false,
+    VISIT_PAYLOAD,
+  ),
+  [AuditAction.TREATMENT_NOTE_ADDED]: definition(
+    AuditDomain.CLINICAL,
+    'TREATMENT_NOTE',
+    false,
+    TREATMENT_NOTE_PAYLOAD,
   ),
   [AuditAction.TREATMENT_PLAN_STATE_CHANGED]: definition(
     AuditDomain.CLINICAL,
