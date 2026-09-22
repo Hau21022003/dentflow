@@ -3,7 +3,7 @@
   "title": "Quản lý lịch hẹn",
   "description": "Điều phối lịch chi nhánh, tiếp nhận bệnh nhân và bàn giao cho bác sĩ.",
   "doctorTitle": "Lịch hẹn của tôi",
-  "doctorDescription": "Các ca được phân công cho bạn tại chi nhánh này. Thao tác lâm sàng sẽ có ở module Visit sau.",
+  "doctorDescription": "Các ca được phân công cho bạn tại chi nhánh này. Mở ca đủ điều kiện để ghi nhận phiếu khám.",
   "agenda": { "today": "Hôm nay", "previousDay": "Ngày trước", "nextDay": "Ngày sau", "filterStatus": "Tất cả trạng thái", "filterDentist": "Tất cả bác sĩ", "emptyTitle": "Không có lịch hẹn trong ngày", "emptyDescription": "Chọn ngày khác hoặc tạo lịch hẹn.", "loadError": "Không thể tải lịch hẹn", "retry": "Thử lại" },
   "navigation": { "previous": "Trước", "next": "Tiếp", "today": "Hôm nay", "viewLabel": "Chế độ xem lịch hẹn" },
   "views": {

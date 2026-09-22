@@ -3,7 +3,7 @@
   "title": "Appointments",
   "description": "Coordinate the branch schedule, patient arrivals, and dentist handoff.",
   "doctorTitle": "My schedule",
-  "doctorDescription": "Appointments assigned to you in this branch. Clinical work opens in a later Visit module.",
+  "doctorDescription": "Appointments assigned to you in this branch. Open eligible appointments to record the Visit.",
   "agenda": {
     "today": "Today",
     "previousDay": "Previous day",

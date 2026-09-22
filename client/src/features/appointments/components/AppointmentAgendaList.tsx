@@ -19,6 +19,7 @@ type AppointmentAgendaListProps = {
   isLoading: boolean;
   locale: string;
   onView?: (appointment: Appointment) => void;
+  onOpenVisit?: (appointment: AssignedAppointment) => void;
   timeZone: string;
 };
 
@@ -31,10 +32,12 @@ export function AppointmentAgendaList({
   appointments,
   isLoading,
   locale,
+  onOpenVisit,
   onView,
   timeZone,
 }: AppointmentAgendaListProps) {
   const { t } = useTranslation("appointments");
+  const { t: tVisits } = useTranslation("visits");
   if (isLoading) {
     return (
       <div className="grid gap-3">
@@ -57,6 +60,11 @@ export function AppointmentAgendaList({
     <div className="grid gap-3">
       {appointments.map((appointment) => {
         const management = isManagementAppointment(appointment);
+        const canOpenVisit =
+          !management &&
+          (appointment.status === "CHECKED_IN" ||
+            appointment.status === "IN_PROGRESS" ||
+            appointment.status === "COMPLETED");
         return (
           <Card key={appointment.id}>
             <CardContent className="flex items-center gap-4 p-4">
@@ -82,6 +90,17 @@ export function AppointmentAgendaList({
               {management && onView && (
                 <Button aria-label={t("actions.view")} onClick={() => onView(appointment)} size="icon-sm" type="button" variant="ghost">
                   <ChevronRight aria-hidden="true" />
+                </Button>
+              )}
+              {canOpenVisit && onOpenVisit && (
+                <Button
+                  onClick={() => onOpenVisit(appointment)}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <Stethoscope aria-hidden="true" />
+                  {tVisits("actions.open")}
                 </Button>
               )}
             </CardContent>

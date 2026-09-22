@@ -14,6 +14,7 @@ import enValidation from "./locales/en/validation.json";
 import enTenants from "./locales/en/tenants.json";
 import enInvitations from "./locales/en/invitations.json";
 import enStaff from "./locales/en/staff.json";
+import enVisits from "./locales/en/visits.json";
 import viBranches from "./locales/vi/branches.json";
 import viAppointments from "./locales/vi/appointments.json";
 import viCommon from "./locales/vi/common.json";
@@ -27,6 +28,7 @@ import viValidation from "./locales/vi/validation.json";
 import viTenants from "./locales/vi/tenants.json";
 import viInvitations from "./locales/vi/invitations.json";
 import viStaff from "./locales/vi/staff.json";
+import viVisits from "./locales/vi/visits.json";
 
 export const supportedLanguages = ["vi", "en"] as const;
 
@@ -51,6 +53,7 @@ i18n
       "staff",
       "tenants",
       "validation",
+      "visits",
     ],
     defaultNS: "common",
     resources: {
@@ -68,6 +71,7 @@ i18n
         staff: enStaff,
         tenants: enTenants,
         validation: enValidation,
+        visits: enVisits,
       },
       vi: {
         branches: viBranches,
@@ -83,6 +87,7 @@ i18n
         staff: viStaff,
         tenants: viTenants,
         validation: viValidation,
+        visits: viVisits,
       },
     },
     detection: {

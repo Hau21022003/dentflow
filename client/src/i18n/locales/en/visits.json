@@ -1,0 +1,84 @@
+{
+  "title": "Visit",
+  "description": "Record the clinical findings for this assigned appointment.",
+  "statuses": {
+    "OPEN": "Open",
+    "COMPLETED": "Completed"
+  },
+  "actions": {
+    "open": "Open Visit",
+    "backToSchedule": "Back to my schedule",
+    "retry": "Try again",
+    "start": "Start visit",
+    "starting": "Starting visit",
+    "saveDraft": "Save draft",
+    "saving": "Saving",
+    "complete": "Complete Visit",
+    "completing": "Completing Visit",
+    "confirmComplete": "Complete Visit",
+    "cancel": "Cancel",
+    "addAddendum": "Add addendum"
+  },
+  "appointment": {
+    "patient": "Patient",
+    "date": "Appointment date",
+    "time": "Appointment time",
+    "service": "Service",
+    "noService": "No service recorded"
+  },
+  "start": {
+    "title": "Ready to start?",
+    "description": "Starting the Visit changes the appointment to In progress."
+  },
+  "open": {
+    "title": "Clinical record",
+    "description": "Save a draft whenever you need to retain clinical findings.",
+    "completeRequiresContent": "Save content in at least one clinical field before completing this Visit.",
+    "saveBeforeComplete": "Save the current changes before completing this Visit."
+  },
+  "fields": {
+    "symptoms": "Symptoms",
+    "relevantHistory": "Relevant history",
+    "examination": "Examination",
+    "diagnosis": "Diagnosis",
+    "clinicalNote": "Clinical note"
+  },
+  "completeDialog": {
+    "title": "Complete this Visit?",
+    "description": "The original clinical record will be locked. Further corrections must be added as an addendum."
+  },
+  "completed": {
+    "originalContent": "Original clinical record",
+    "originalContentDescription": "This content was locked when the Visit was completed."
+  },
+  "addendum": {
+    "title": "Addenda",
+    "description": "Addenda preserve the original clinical record and are shown in the order they were added.",
+    "empty": "No addenda have been added.",
+    "createTitle": "Add an addendum",
+    "createDescription": "Record a correction or follow-up note without changing the original Visit.",
+    "content": "Addendum"
+  },
+  "validation": {
+    "maxLength": "Must be 10,000 characters or fewer.",
+    "addendumRequired": "Enter an addendum."
+  },
+  "errors": {
+    "appointmentLoad": "Could not load the assigned appointment.",
+    "visitLoad": "Could not load this Visit."
+  },
+  "states": {
+    "invalidLinkTitle": "Visit link is incomplete",
+    "invalidLinkDescription": "Open the Visit from an appointment in your schedule.",
+    "notFoundTitle": "Assigned appointment not found",
+    "notFoundDescription": "This appointment may not belong to you or may not be scheduled on the selected date.",
+    "unavailableTitle": "Visit is not available yet",
+    "unavailableDescription": "The patient must be checked in before the Visit can start."
+  },
+  "feedback": {
+    "started": "Visit started",
+    "saved": "Visit draft saved",
+    "completed": "Visit completed",
+    "addendumAdded": "Addendum added"
+  }
+}

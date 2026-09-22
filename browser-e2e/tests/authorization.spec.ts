@@ -61,7 +61,14 @@ test("combined branch-admin and receptionist roles receive branch-only staff man
   await page.goto(
     `/workspace/${brightSmileSlug}/branches/${brightSmileCentralSlug}/reception/appointments`,
   );
-  await expect(page.getByRole("heading", { name: "Quản lý lịch hẹn" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Quản lý lịch hẹn|Appointments/ }),
+  ).toBeVisible();
+
+  await page.goto(
+    `/workspace/${brightSmileSlug}/branches/${brightSmileCentralSlug}/doctor/appointments/00000000-0000-4000-8000-000000000000/visit?date=2030-01-15`,
+  );
+  await expect(page.getByText("403 · Không có quyền truy cập")).toBeVisible();
 });
 
 test("app shell shows granted navigation, switches branch, and adapts for mobile", async ({ page }) => {
@@ -121,7 +128,9 @@ test("dentist can open only its doctor workspace and receives 403 for other bran
     new RegExp(`/workspace/${harmonySlug}/branches/${harmonyCitySlug}$`),
   );
   await page.goto(`/workspace/${harmonySlug}/branches/${harmonyCitySlug}/doctor`);
-  await expect(page.getByRole("heading", { name: "Lịch hẹn của tôi" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Lịch hẹn của tôi|My schedule/ }),
+  ).toBeVisible();
 
   await page.goto(
     `/workspace/${brightSmileSlug}/branches/${brightSmileCentralSlug}/reception/appointments`,

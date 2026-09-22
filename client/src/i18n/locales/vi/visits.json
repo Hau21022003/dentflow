@@ -1,0 +1,84 @@
+{
+  "title": "Phiếu khám",
+  "description": "Ghi nhận thông tin lâm sàng cho lịch hẹn được phân công.",
+  "statuses": {
+    "OPEN": "Đang khám",
+    "COMPLETED": "Đã hoàn tất"
+  },
+  "actions": {
+    "open": "Mở phiếu khám",
+    "backToSchedule": "Quay lại lịch hẹn của tôi",
+    "retry": "Thử lại",
+    "start": "Bắt đầu khám",
+    "starting": "Đang bắt đầu khám",
+    "saveDraft": "Lưu nháp",
+    "saving": "Đang lưu",
+    "complete": "Hoàn tất phiếu khám",
+    "completing": "Đang hoàn tất phiếu khám",
+    "confirmComplete": "Hoàn tất phiếu khám",
+    "cancel": "Hủy",
+    "addAddendum": "Thêm bổ sung"
+  },
+  "appointment": {
+    "patient": "Bệnh nhân",
+    "date": "Ngày hẹn",
+    "time": "Thời gian hẹn",
+    "service": "Dịch vụ",
+    "noService": "Chưa ghi nhận dịch vụ"
+  },
+  "start": {
+    "title": "Sẵn sàng bắt đầu?",
+    "description": "Bắt đầu khám sẽ chuyển lịch hẹn sang trạng thái Đang khám."
+  },
+  "open": {
+    "title": "Hồ sơ lâm sàng",
+    "description": "Lưu nháp khi cần lưu lại các nhận định lâm sàng.",
+    "completeRequiresContent": "Hãy lưu nội dung ở ít nhất một trường lâm sàng trước khi hoàn tất phiếu khám.",
+    "saveBeforeComplete": "Hãy lưu các thay đổi hiện tại trước khi hoàn tất phiếu khám."
+  },
+  "fields": {
+    "symptoms": "Triệu chứng",
+    "relevantHistory": "Tiền sử liên quan",
+    "examination": "Khám lâm sàng",
+    "diagnosis": "Chẩn đoán",
+    "clinicalNote": "Ghi chú lâm sàng"
+  },
+  "completeDialog": {
+    "title": "Hoàn tất phiếu khám?",
+    "description": "Nội dung lâm sàng gốc sẽ bị khóa. Mọi hiệu chỉnh sau đó phải được thêm dưới dạng bổ sung."
+  },
+  "completed": {
+    "originalContent": "Nội dung lâm sàng gốc",
+    "originalContentDescription": "Nội dung này đã được khóa khi phiếu khám hoàn tất."
+  },
+  "addendum": {
+    "title": "Nội dung bổ sung",
+    "description": "Nội dung bổ sung giữ nguyên hồ sơ lâm sàng gốc và hiển thị theo thứ tự được thêm.",
+    "empty": "Chưa có nội dung bổ sung.",
+    "createTitle": "Thêm nội dung bổ sung",
+    "createDescription": "Ghi nhận hiệu chỉnh hoặc ghi chú theo dõi mà không thay đổi phiếu khám gốc.",
+    "content": "Nội dung bổ sung"
+  },
+  "validation": {
+    "maxLength": "Không được quá 10.000 ký tự.",
+    "addendumRequired": "Hãy nhập nội dung bổ sung."
+  },
+  "errors": {
+    "appointmentLoad": "Không thể tải lịch hẹn được phân công.",
+    "visitLoad": "Không thể tải phiếu khám này."
+  },
+  "states": {
+    "invalidLinkTitle": "Liên kết phiếu khám chưa đầy đủ",
+    "invalidLinkDescription": "Hãy mở phiếu khám từ một lịch hẹn trong lịch làm việc của bạn.",
+    "notFoundTitle": "Không tìm thấy lịch hẹn được phân công",
+    "notFoundDescription": "Lịch hẹn có thể không được phân công cho bạn hoặc không thuộc ngày đã chọn.",
+    "unavailableTitle": "Chưa thể mở phiếu khám",
+    "unavailableDescription": "Bệnh nhân cần được check-in trước khi có thể bắt đầu khám."
+  },
+  "feedback": {
+    "started": "Đã bắt đầu khám",
+    "saved": "Đã lưu nháp phiếu khám",
+    "completed": "Đã hoàn tất phiếu khám",
+    "addendumAdded": "Đã thêm nội dung bổ sung"
+  }
+}

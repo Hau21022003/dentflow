@@ -16,6 +16,7 @@ Thư mục này là nguồn thông tin sản phẩm và kỹ thuật chính củ
 | [10-background-jobs-architecture.md](./10-background-jobs-architecture.md) | Kiến trúc BullMQ, worker và quy ước background job backend |
 | [12-email-template-management.md](./12-email-template-management.md) | Template email hệ thống, publish revision và tích hợp delivery |
 | [13-file-storage.md](./13-file-storage.md) | Direct upload ảnh tạm qua S3/MinIO, tenant isolation và vận hành bucket |
+| [14-browser-demo-automation-plan.md](./14-browser-demo-automation-plan.md) | Kế hoạch Playwright demo có caption, con trỏ và nhịp quay video riêng |
 | [flows/README.md](./flows/README.md)               | Sơ đồ Mermaid đọc nhanh cho developer; không thay thế tài liệu domain chuẩn            |
 
 ## Quy ước làm việc với Codex
