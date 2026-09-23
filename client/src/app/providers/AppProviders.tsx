@@ -2,7 +2,7 @@ import { useEffect, type PropsWithChildren } from "react";
 import { useTranslation } from "react-i18next";
 import { AuthSessionBootstrap } from "./AuthSessionBootstrap";
 import { ReactQueryProvider } from "./ReactQueryProvider";
-import { ToastProvider } from "@/shared/components/ToastProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 export function AppProviders({ children }: PropsWithChildren) {
   const { i18n } = useTranslation();
@@ -14,10 +14,9 @@ export function AppProviders({ children }: PropsWithChildren) {
 
   return (
     <ReactQueryProvider>
-      <ToastProvider>
-        <AuthSessionBootstrap />
-        {children}
-      </ToastProvider>
+      <AuthSessionBootstrap />
+      {children}
+      <Toaster closeButton duration={4500} position="bottom-right" />
     </ReactQueryProvider>
   );
 }

@@ -1,3 +1,4 @@
+import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -14,29 +15,18 @@ import {
 import { useLogoutMutation } from "@/features/auth/auth.hooks";
 import { useAuthStore } from "@/features/auth/auth.store";
 import { cn } from "@/shared/lib/utils";
-import { UserAvatar } from "@/shared/components/UserAvatar";
-import {
-  Bell,
-  Menu,
-  Stethoscope,
-  UserRoundCog,
-} from "lucide-react";
+import { Bell, Menu, Stethoscope, UserRoundCog } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Link,
-  NavLink,
-  Outlet,
-  useNavigate,
-} from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { PATHS, pathFor } from "../router/paths";
 import { WorkspaceSwitcher } from "../workspace/WorkspaceSwitcher";
-import type { WorkspaceSelection } from "../workspace/workspace-context";
 import { useNavigationWorkspaceContext } from "../workspace/use-navigation-workspace-context";
+import type { WorkspaceSelection } from "../workspace/workspace-context";
 import {
   resolveNavigationSections,
   type NavigationSection,
 } from "../workspace/workspace-navigation";
-import { PATHS, pathFor } from "../router/paths";
 
 function LanguageFlag({ language }: { language: "en" | "vi" }) {
   return (

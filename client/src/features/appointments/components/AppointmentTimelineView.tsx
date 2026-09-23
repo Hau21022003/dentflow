@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   agendaRange,
   dateInTimeZone,
@@ -30,7 +31,6 @@ import {
   type Appointment,
   type AppointmentStatus,
 } from "@/features/appointments/appointments.types";
-import { UserAvatar } from "@/shared/components/UserAvatar";
 import { cn } from "@/shared/lib/utils";
 import { RefreshCw, Search, Stethoscope } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -417,7 +417,10 @@ export function AppointmentTimelineView({
                           onClick={() => onViewAppointment(appointment)}
                           style={{
                             top: (top / 60) * HOUR_HEIGHT + 2,
-                            height: Math.max(28, (height / 60) * HOUR_HEIGHT - 4),
+                            height: Math.max(
+                              28,
+                              (height / 60) * HOUR_HEIGHT - 4,
+                            ),
                             left: `calc(${(lane / lanes) * 100}% + 3px)`,
                             width: `calc(${100 / lanes}% - 6px)`,
                           }}
@@ -427,17 +430,17 @@ export function AppointmentTimelineView({
                             {appointment.patient.fullName}
                           </span>
                           <span className="block truncate text-[11px] tabular-nums text-slate-700">
-                              {formatAppointmentTime(
-                                appointment.startAt,
-                                timeZone,
-                                locale,
-                              )}{" "}
-                              –{" "}
-                              {formatAppointmentTime(
-                                appointment.endAt,
-                                timeZone,
-                                locale,
-                              )}
+                            {formatAppointmentTime(
+                              appointment.startAt,
+                              timeZone,
+                              locale,
+                            )}{" "}
+                            –{" "}
+                            {formatAppointmentTime(
+                              appointment.endAt,
+                              timeZone,
+                              locale,
+                            )}
                           </span>
                         </button>
                       );

@@ -27,8 +27,8 @@ import {
   useVisitQuery,
 } from "@/features/visits/visits.hooks";
 import type { Visit } from "@/features/visits/visits.types";
-import { useToast } from "@/shared/components/ToastProvider";
 import { handleApiError } from "@/shared/lib/error";
+import { toast } from "sonner";
 import {
   idempotencyKeyForIntent,
   type IdempotencyIntent,
@@ -156,7 +156,6 @@ export function DoctorVisitPage() {
   const [searchParams] = useSearchParams();
   const { branch, branchSlug, tenantSlug } = useRouteWorkspaceContext();
   const { i18n, t } = useTranslation("visits");
-  const { success } = useToast();
   const date = searchParams.get("date");
   const validDate = isValidDate(date);
   const timeZone = branch?.branch.timezone ?? "Asia/Ho_Chi_Minh";
@@ -202,7 +201,7 @@ export function DoctorVisitPage() {
       });
       setStartIntent(null);
       setStartedVisit(created);
-      success(t("feedback.started"));
+      toast.success(t("feedback.started"));
     } catch (error) {
       handleApiError({ error, onMessage: setStartError });
     }

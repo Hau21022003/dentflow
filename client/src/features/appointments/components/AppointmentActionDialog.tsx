@@ -17,8 +17,8 @@ import {
 import type { Appointment, CancellationReasonCode, NoShowReasonCode } from "@/features/appointments/appointments.types";
 import { handleApiError } from "@/shared/lib/error";
 import { idempotencyKeyForIntent, type IdempotencyIntent } from "@/shared/lib/idempotency";
-import { useToast } from "@/shared/components/ToastProvider";
 import { useState } from "react";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -27,7 +27,6 @@ type Props = { action: AppointmentAction; appointment: Appointment; branchSlug: 
 
 export function AppointmentActionDialog({ action, appointment, branchSlug, open, onOpenChange, tenantSlug }: Props) {
   const { t } = useTranslation("appointments");
-  const { success } = useToast();
   const [reasonCode, setReasonCode] = useState<CancellationReasonCode>("PATIENT_CANCELLED");
   const [noShowReasonCode, setNoShowReasonCode] = useState<NoShowReasonCode>("PATIENT_NO_SHOW");
   const [errorMessage, setErrorMessage] = useState("");
@@ -51,7 +50,7 @@ export function AppointmentActionDialog({ action, appointment, branchSlug, open,
       if (action === "cancel") await cancel.mutateAsync({ tenantSlug, branchSlug, appointmentId: appointment.id, input: { reasonCode }, idempotencyKey: nextIntent.key });
       if (action === "noShow") await noShow.mutateAsync({ tenantSlug, branchSlug, appointmentId: appointment.id, input: { reasonCode: noShowReasonCode }, idempotencyKey: nextIntent.key });
       onOpenChange(false);
-      success(
+      toast.success(
         t(
           `feedback.${
             action === "checkIn"

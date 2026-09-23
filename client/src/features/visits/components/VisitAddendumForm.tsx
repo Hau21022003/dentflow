@@ -3,8 +3,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useCreateVisitAddendumMutation } from "@/features/visits/visits.hooks";
-import { useToast } from "@/shared/components/ToastProvider";
 import { handleApiError } from "@/shared/lib/error";
+import { toast } from "sonner";
 import {
   idempotencyKeyForIntent,
   type IdempotencyIntent,
@@ -31,7 +31,6 @@ export function VisitAddendumForm({
   tenantSlug,
 }: VisitAddendumFormProps) {
   const { t } = useTranslation("visits");
-  const { success } = useToast();
   const mutation = useCreateVisitAddendumMutation();
   const [intent, setIntent] = useState<IdempotencyIntent | null>(null);
   const schema = useMemo(
@@ -79,7 +78,7 @@ export function VisitAddendumForm({
       });
       setIntent(null);
       reset({ content: "" });
-      success(t("feedback.addendumAdded"));
+      toast.success(t("feedback.addendumAdded"));
     } catch (error) {
       handleApiError<AddendumFormValues>({ error, setError });
     }
