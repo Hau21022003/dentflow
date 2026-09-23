@@ -80,7 +80,7 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 1. Xem danh sách appointment được phân công tại branch của mình.
 2. Khi bệnh nhân đã check-in, bắt đầu appointment và mở `Visit`.
 3. Ghi triệu chứng, thông tin khám, chẩn đoán, PatientAlert và clinical note; có thể đọc lịch sử clinical cùng branch của Patient, nhưng không đọc clinical branch khác.
-4. Tạo `TreatmentPlan` gồm hạng mục, dịch vụ, vị trí/răng, số lượng, đơn giá dự kiến, chỉ định và bác sĩ thực hiện.
+4. Tạo `TreatmentPlan` Draft rỗng từ Visit hiện tại, đồng bộ hạng mục với snapshot dịch vụ, vị trí/răng, số lượng, giảm giá, chỉ định và bác sĩ dự kiến; Plan vẫn thuộc Patient + Tenant + Branch nên có thể được tiếp tục ở Visit sau cùng branch.
 5. Chuyển kế hoạch sang `PROPOSED`; Receptionist ghi nhận sự chấp thuận của bệnh nhân trước khi tạo invoice.
 6. Thực hiện từng treatment item, cập nhật tiến độ và ghi diễn biến điều trị.
 7. Hoàn tất visit để khóa nội dung gốc; nếu cần sửa sau đó chỉ thêm addendum. Đề xuất tái khám hoặc chuyển chuyên khoa để Receptionist tạo appointment tái khám.
@@ -272,7 +272,7 @@ Role và branch scope chỉ trả lời "người này có thể làm loại tha
 | `Patient` / `PatientAlert`        | `tenant_id`; Alert tham chiếu Patient                               | Alert chỉ đọc/ghi khi Dentist có Appointment đang được gán cho Patient             |
 | `Appointment`                     | `tenant_id`, `branch_id`, `assigned_dentist_user_id`                | Chỉ dentist đang được gán mới bắt đầu/ghi clinical data                            |
 | `Visit`                           | `tenant_id`, `branch_id`, `appointment_id`, `opened_by_user_id`     | Unique theo appointment; phải cùng tenant/branch và bắt nguồn từ ca được gán       |
-| `TreatmentPlan` / `TreatmentItem` | `tenant_id`, `branch_id`, `visit_id`, `responsible_dentist_user_id` | Cần dentist role + branch scope + assignment ca phù hợp                            |
+| `TreatmentPlan` / `TreatmentItem` / `TreatmentItemEvent` | Plan có `tenant_id`, `branch_id`, `patient_id`, `origin_visit_id`; Event có current `visit_id`, Dentist thực hiện | Cần Dentist role + branch scope + assignment current Visit; không có cross-branch handoff |
 | `PatientInvoice` / `Payment`      | `tenant_id`, `branch_id`, `recorded_by_user_id`                     | Receptionist ghi collection; Branch Admin correction có permission; không update/delete payment |
 | `FollowUpRecommendation`          | `tenant_id`, `branch_id`, `visit_id`/`treatment_plan_id`            | Dentist có ca tạo recommendation; Receptionist schedule lịch từ record nguồn        |
 

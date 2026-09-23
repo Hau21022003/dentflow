@@ -67,7 +67,7 @@ BOOKED → CONFIRMED → CHECKED_IN → IN_PROGRESS → COMPLETED
 
 Sau khi bệnh nhân check-in, Dentist được gán bắt đầu một **visit** duy nhất gắn với lịch hẹn. Visit có triệu chứng, tiền sử liên quan, chẩn đoán và ghi chú lâm sàng; khi hoàn tất, nội dung gốc bị khóa và chỉ thêm addendum có tác giả/thời điểm. Tệp đính kèm là giai đoạn sau.
 
-Bác sĩ tạo **treatment plan** gồm các hạng mục điều trị: dịch vụ, răng/vị trí (mã FDI hoặc mô tả), bác sĩ thực hiện, số lượng, đơn giá, giảm giá và ghi chú. Kế hoạch có trạng thái `DRAFT`, `PROPOSED`, `ACCEPTED`, `PARTIALLY_COMPLETED`, `COMPLETED`, `CANCELLED`.
+Bác sĩ tạo **treatment plan** dài hạn thuộc Patient + Tenant + Branch, với `originVisitId` bất biến để ghi nhận lần khởi tạo. Một Dentist được gán một Visit `OPEN` khác của cùng Patient/Branch vẫn có thể xem, chỉnh Draft hoặc thực hiện Plan đó sau khi origin Visit đã hoàn tất. Plan gồm các hạng mục điều trị: snapshot dịch vụ, răng/vị trí, bác sĩ dự kiến, số lượng, đơn giá, giảm giá và chỉ định. Kế hoạch có trạng thái `DRAFT`, `PROPOSED`, `ACCEPTED`, `PARTIALLY_COMPLETED`, `COMPLETED`, `CANCELLED`.
 
 - Bệnh nhân xác nhận kế hoạch tại quầy; lễ tân ghi lại người xác nhận và thời điểm. Dentist muốn sửa plan `PROPOSED` phải reopen về `DRAFT`, làm acceptance cũ mất hiệu lực rồi đề xuất/xác nhận lại.
 - Mỗi hạng mục điều trị tiến triển độc lập: `PENDING`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`.
@@ -120,7 +120,7 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 | Danh mục  | ServiceGroup, Service                            | Nhóm dịch vụ tenant-scoped và Service có mã bất biến, giá hiện hành theo ISO currency, thời lượng và trạng thái hoạt động |
 | Bệnh nhân | Patient, PatientAlert                            | Patient thuộc tenant, không bị giới hạn branch; alert clinical-only                                                       |
 | Điều phối | Appointment, Visit, FollowUpRecommendation       | Appointment/Visit thuộc branch; start tạo Visit duy nhất; follow-up tạo lịch tái khám có nguồn                            |
-| Điều trị  | TreatmentPlan, TreatmentItem, TreatmentNote      | Dentist được gán, item snapshot Service; Visit hoàn tất chỉ nhận addendum                                                |
+| Điều trị  | TreatmentPlan, TreatmentItem, TreatmentItemEvent, TreatmentNote | Plan thuộc Patient + Tenant + Branch với origin Visit bất biến; event giữ Visit/Dentist thực hiện, item snapshot Service |
 | Thu phí   | PatientInvoice, PatientInvoiceItem, Payment      | Tách biệt với hóa đơn SaaS; payment/refund/adjustment là immutable ledger records                                         |
 | Tuân thủ  | AuditLog                                         | Ai làm gì, trên bản ghi nào, khi nào                                                                                      |
 

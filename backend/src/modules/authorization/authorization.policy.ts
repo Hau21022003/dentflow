@@ -26,7 +26,8 @@ export enum Permission {
   APPOINTMENT_ASSIGNED_READ = 'appointment.assigned.read',
   CLINICAL_VISIT_WRITE = 'clinical.visit.write',
   TREATMENT_PLAN_WRITE = 'treatment-plan.write',
-  TREATMENT_ITEM_COMPLETE = 'treatment-item.complete',
+  TREATMENT_ITEM_EXECUTE = 'treatment-item.execute',
+  TREATMENT_PLAN_ACCEPT = 'treatment-plan.accept',
   FOLLOW_UP_RECOMMEND = 'follow-up.recommend',
 }
 
@@ -76,13 +77,14 @@ export const tenantRolePermissions: Readonly<
     Permission.APPOINTMENT_MANAGE,
     Permission.PATIENT_INVOICE_CREATE,
     Permission.PATIENT_PAYMENT_RECORD,
+    Permission.TREATMENT_PLAN_ACCEPT,
     Permission.FILE_UPLOAD,
   ],
   [TenantRoleCode.DENTIST]: [
     Permission.APPOINTMENT_ASSIGNED_READ,
     Permission.CLINICAL_VISIT_WRITE,
     Permission.TREATMENT_PLAN_WRITE,
-    Permission.TREATMENT_ITEM_COMPLETE,
+    Permission.TREATMENT_ITEM_EXECUTE,
     Permission.FOLLOW_UP_RECOMMEND,
     Permission.FILE_UPLOAD,
   ],
