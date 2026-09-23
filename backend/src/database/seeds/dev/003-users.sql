@@ -90,5 +90,35 @@ VALUES
     '$2b$12$OFMsdYjCNgdKETLPShvBzunCfOVlqDxCpQp2Rw0J4YTTjb3RHFu3K',
     NOW(),
     NOW()
+  ),
+  (
+    '30000000-0000-4000-8000-000000000009',
+    'nguyen.minh.tuan@dentflow.local',
+    'nguyen.minh.tuan@dentflow.local',
+    'BS. Nguyễn Minh Tuấn',
+    'ACTIVE',
+    '$2b$12$OFMsdYjCNgdKETLPShvBzunCfOVlqDxCpQp2Rw0J4YTTjb3RHFu3K',
+    NOW(),
+    NOW()
+  ),
+  (
+    '30000000-0000-4000-8000-000000000010',
+    'tran.ngoc.mai@dentflow.local',
+    'tran.ngoc.mai@dentflow.local',
+    'BS. Trần Ngọc Mai',
+    'ACTIVE',
+    '$2b$12$OFMsdYjCNgdKETLPShvBzunCfOVlqDxCpQp2Rw0J4YTTjb3RHFu3K',
+    NOW(),
+    NOW()
+  ),
+  (
+    '30000000-0000-4000-8000-000000000011',
+    'le.hoang.phuc@dentflow.local',
+    'le.hoang.phuc@dentflow.local',
+    'BS. Lê Hoàng Phúc',
+    'ACTIVE',
+    '$2b$12$OFMsdYjCNgdKETLPShvBzunCfOVlqDxCpQp2Rw0J4YTTjb3RHFu3K',
+    NOW(),
+    NOW()
   )
 ON CONFLICT ("id") DO NOTHING;

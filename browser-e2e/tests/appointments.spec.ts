@@ -54,10 +54,12 @@ test("Branch Admin creates an appointment from the daily agenda and confirms it"
     const url = new URL(response.url());
     return response.request().method() === "GET"
       && url.pathname === APPOINTMENTS_ROUTE
-      && url.searchParams.get("from") === "2030-01-14T17:00:00.000Z";
+      && url.searchParams.get("from") === "2030-01-15T00:00:00.000+07:00";
   });
-  await page.goto(`${WORKSPACE_ROUTE}?view=list&date=2030-01-15`);
-  await agendaRequest;
+  await Promise.all([
+    agendaRequest,
+    page.goto(`${WORKSPACE_ROUTE}?view=list&date=2030-01-15`),
+  ]);
   await expect(page.getByText("Synthetic Agenda Patient", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "View details" }).click();
@@ -94,7 +96,7 @@ test("Branch Admin creates an appointment from the daily agenda and confirms it"
   });
   await page.getByRole("button", { name: "Month", exact: true }).click();
   await monthSummaryRequest;
-  await expect(page.getByText("1 appointments", { exact: true })).toBeVisible();
+  await expect(page.locator('button[data-date="2030-01-15"]')).toContainText("1 appointments");
 
   await page.locator('button[data-date="2030-01-16"]').click();
   await expect(page).toHaveURL(/view=month.*date=2030-01-16/);
@@ -121,6 +123,7 @@ test("appointment detail omits age when the patient has no date of birth", async
 
   await appointmentDialog.getByLabel("Start time").fill("2030-01-16T09:00");
   await appointmentDialog.getByLabel("End time").fill("2030-01-16T09:30");
+  await appointmentDialog.getByLabel("Visit reason").fill("Synthetic appointment without date of birth");
   await appointmentDialog.getByRole("button", { name: "Create appointment" }).click();
   await expect(appointmentDialog).toHaveCount(0);
 
@@ -129,6 +132,37 @@ test("appointment detail omits age when the patient has no date of birth", async
   const detailSheet = page.getByRole("dialog", { name: "Appointment details" });
   await expect(detailSheet).toContainText("Female");
   await expect(detailSheet).not.toContainText(/years old/);
+});
+
+test("synthetic seed populates the current month and day timeline", async ({ page }) => {
+  await login(page, E2E_USERS.branchAdminReceptionist);
+  await switchToEnglish(page);
+  const today = await page.evaluate(() => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      day: "2-digit",
+      month: "2-digit",
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+    }).formatToParts(new Date());
+    const value = Object.fromEntries(
+      parts
+        .filter((part) => part.type !== "literal")
+        .map((part) => [part.type, part.value]),
+    );
+    return `${value.year}-${value.month}-${value.day}`;
+  });
+
+  await page.goto(`${WORKSPACE_ROUTE}?view=month&date=${today}`);
+  await expect(page.getByLabel("Monthly appointment calendar")).toBeVisible();
+  await expect(page.locator(`button[data-date="${today}"]`)).toContainText("13 appointments");
+
+  await page.getByRole("button", { name: "View day timeline" }).click();
+  const timeline = page.getByTestId("appointment-timeline");
+  await expect(timeline).toBeVisible();
+  await expect(timeline.getByText("BS. Nguyễn Minh Tuấn", { exact: true })).toBeVisible();
+  await expect(timeline.getByText("BS. Trần Ngọc Mai", { exact: true })).toBeVisible();
+  await expect(timeline.getByText("BS. Lê Hoàng Phúc", { exact: true })).toBeVisible();
+  await expect(timeline.locator("[data-appointment-id]")).toHaveCount(13);
 });
 
 test("timeline keeps the selected day, filters a dentist column, opens its desktop detail panel, and refreshes after an action", async ({ page }) => {
@@ -169,7 +203,7 @@ test("timeline keeps the selected day, filters a dentist column, opens its deskt
   await appointmentDialog.getByLabel("End time").fill("2030-01-16T09:30");
   await appointmentDialog.getByLabel("Visit reason").fill("Synthetic timeline reason");
   await appointmentDialog.getByRole("combobox", { name: "Dentist" }).click();
-  await page.getByRole("option", { name: "Synthetic Branch Administrator", exact: true }).click();
+  await page.getByRole("option", { name: "Synthetic Test Branch Admin", exact: true }).click();
   await appointmentDialog.getByRole("button", { name: "Create appointment" }).click();
   await expect(appointmentDialog).toHaveCount(0);
 
@@ -187,7 +221,7 @@ test("timeline keeps the selected day, filters a dentist column, opens its deskt
   await shortAppointmentDialog.getByLabel("End time").fill("2030-01-16T09:45");
   await shortAppointmentDialog.getByLabel("Visit reason").fill("Synthetic short timeline reason");
   await shortAppointmentDialog.getByRole("combobox", { name: "Dentist" }).click();
-  await page.getByRole("option", { name: "Synthetic Branch Administrator", exact: true }).click();
+  await page.getByRole("option", { name: "Synthetic Test Branch Admin", exact: true }).click();
   await shortAppointmentDialog.getByRole("button", { name: "Create appointment" }).click();
   await expect(shortAppointmentDialog).toHaveCount(0);
 
@@ -196,9 +230,9 @@ test("timeline keeps the selected day, filters a dentist column, opens its deskt
   await expect(page).toHaveURL(/view=timeline.*date=2030-01-16/);
   const timeline = page.getByTestId("appointment-timeline");
   await expect(timeline).toBeVisible();
-  await expect(timeline.getByText("Synthetic Branch Administrator", { exact: true })).toBeVisible();
+  await expect(timeline.getByText("Synthetic Test Branch Admin", { exact: true })).toBeVisible();
   await page.getByLabel("All dentists").click();
-  await page.getByRole("option", { name: "Synthetic Branch Administrator", exact: true }).click();
+  await page.getByRole("option", { name: "Synthetic Test Branch Admin", exact: true }).click();
 
   const timelineAppointment = timeline
     .locator('[data-appointment-id]')
@@ -209,7 +243,8 @@ test("timeline keeps the selected day, filters a dentist column, opens its deskt
   await expect(timelineAppointment).toHaveClass(/bg-sky-100/);
   await expect(timelineAppointment).toContainText(/09:00/);
   await expect(shortTimelineAppointment).toContainText("Synthetic Short Timeline Patient");
-  await expect(shortTimelineAppointment).not.toContainText(/09:30|09:45/);
+  await expect(shortTimelineAppointment).toContainText(/09:30/);
+  await expect(shortTimelineAppointment).toContainText(/09:45/);
   await timelineAppointment.click();
   const detailPanel = page.getByLabel("Appointment detail panel");
   await expect(detailPanel).toBeVisible();
@@ -251,11 +286,13 @@ test("agenda uses the resolved branch time zone across the fall DST transition",
     if (request.method() !== "GET") return false;
     const url = new URL(request.url());
     return url.pathname === APPOINTMENTS_ROUTE
-      && url.searchParams.get("from") === "2026-11-01T04:00:00.000Z"
-      && url.searchParams.get("to") === "2026-11-02T05:00:00.000Z";
+      && url.searchParams.get("from") === "2026-11-01T00:00:00.000-04:00"
+      && url.searchParams.get("to") === "2026-11-02T00:00:00.000-05:00";
   });
-  await page.goto(`${WORKSPACE_ROUTE}?view=list&date=2026-11-01`);
-  await agendaRequest;
+  await Promise.all([
+    agendaRequest,
+    page.goto(`${WORKSPACE_ROUTE}?view=list&date=2026-11-01`),
+  ]);
 });
 
 test("appointment view switcher keeps localized labels within its bounds", async ({ page }) => {

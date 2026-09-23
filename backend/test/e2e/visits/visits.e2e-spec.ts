@@ -88,7 +88,9 @@ describe('Visit workflow (e2e)', () => {
       .expect('Idempotency-Replayed', 'true');
 
     const visitId = (started.body as { id: string }).id;
-    await expect(visits.count()).resolves.toBe(1);
+    await expect(
+      visits.countBy({ tenantId: fixture.tenant.id }),
+    ).resolves.toBe(1);
     await expect(
       appointments.findOneByOrFail({ id: appointment.id }),
     ).resolves.toMatchObject({

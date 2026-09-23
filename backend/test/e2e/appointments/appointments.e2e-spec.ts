@@ -102,7 +102,9 @@ describe('Appointment workflow (e2e)', () => {
       .expect(201)
       .expect('Idempotency-Replayed', 'true');
 
-    await expect(appointments.count()).resolves.toBe(1);
+    await expect(
+      appointments.countBy({ tenantId: fixture.tenant.id }),
+    ).resolves.toBe(1);
     await expect(
       transitions.findBy({ appointmentId: body.id }),
     ).resolves.toEqual([
