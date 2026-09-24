@@ -57,6 +57,7 @@
   "timeline": {
     "gridLabel": "Daily appointment timeline",
     "time": "Time",
+    "hourLabel": "{{hour}}",
     "searchPlaceholder": "Search patient name or phone...",
     "unassigned": "Unassigned",
     "emptyColumn": "No appointments",

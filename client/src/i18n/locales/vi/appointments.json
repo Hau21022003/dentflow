@@ -32,6 +32,7 @@
   "timeline": {
     "gridLabel": "Lịch hẹn theo ngày",
     "time": "Giờ",
+    "hourLabel": "{{hour}} giờ",
     "searchPlaceholder": "Tìm tên hoặc số điện thoại bệnh nhân...",
     "unassigned": "Chưa phân công",
     "emptyColumn": "Không có lịch hẹn",
