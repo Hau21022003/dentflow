@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Building2,
   CalendarDays,
+  ClipboardCheck,
   LayoutDashboard,
   Mail,
   ShieldCheck,
@@ -149,10 +150,27 @@ const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   {
     end: true,
     group: "work",
+    icon: ClipboardCheck,
+    id: "treatment-plan-acceptances",
+    labelKey: "navigation.treatmentPlanAcceptances",
+    order: 40,
+    permission: PERMISSIONS.treatmentPlanAccept,
+    scope: "branch",
+    to: (context) =>
+      context?.branchSlug
+        ? pathFor.workspaceReceptionTreatmentPlanAcceptances(
+            context.tenantSlug,
+            context.branchSlug,
+          )
+        : null,
+  },
+  {
+    end: true,
+    group: "work",
     icon: Stethoscope,
     id: "doctor-workspace",
     labelKey: "navigation.doctorWorkspace",
-    order: 40,
+    order: 50,
     permission: PERMISSIONS.appointmentAssignedRead,
     scope: "branch",
     to: (context) =>

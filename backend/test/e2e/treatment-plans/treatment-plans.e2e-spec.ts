@@ -156,9 +156,61 @@ describe('Treatment plan V1 (e2e)', () => {
       .post(`${root}/visits/${visit.id}/treatment-plans/${planId}/propose`)
       .set('Idempotency-Key', randomUUID())
       .expect(200);
+    await dentist.agent
+      .post(`${root}/visits/${visit.id}/treatment-plans`)
+      .set('Idempotency-Key', randomUUID())
+      .expect(201);
+    await dentist.agent
+      .get(`${root}/treatment-plan-acceptances`)
+      .expect(403);
+    const queue = await receptionist.agent
+      .get(`${root}/treatment-plan-acceptances?page=1&limit=10`)
+      .expect(200);
+    expect(queue.body.meta).toMatchObject({ page: 1, limit: 10, total: 1 });
+    expect(queue.body.items).toEqual([
+      expect.objectContaining({
+        id: planId,
+        patient: { fullName: patient.fullName, phone: patient.phone },
+        status: TreatmentPlanStatus.PROPOSED,
+      }),
+    ]);
+    const queuePayload = JSON.stringify(queue.body);
+    [
+      'Synthetic indication',
+      service.name,
+      service.code,
+      '100000',
+      'toothPosition',
+      'plannedDentistUserId',
+    ].forEach((forbidden) => expect(queuePayload).not.toContain(forbidden));
+    expect(queue.body.items[0]).not.toHaveProperty('items');
+    const otherBranch = await fixtures.createBranch(tenant, { slug: 'other' });
+    const otherBranchReceptionist = await actor(
+      otherBranch,
+      TenantRoleCode.RECEPTIONIST,
+    );
+    await otherBranchReceptionist.agent
+      .get(`/tenants/${tenant.slug}/branches/${otherBranch.slug}/treatment-plan-acceptances`)
+      .expect(200)
+      .expect((response) => expect(response.body.items).toHaveLength(0));
+    const otherTenant = await fixtures.createTenant({
+      slug: `other-${randomUUID().slice(0, 8)}`,
+    });
+    const otherTenantBranch = await fixtures.createBranch(otherTenant, {
+      slug: 'main',
+    });
+    const otherTenantReceptionist = await actor(
+      otherTenantBranch,
+      TenantRoleCode.RECEPTIONIST,
+    );
+    await otherTenantReceptionist.agent
+      .get(`/tenants/${otherTenant.slug}/branches/${otherTenantBranch.slug}/treatment-plan-acceptances`)
+      .expect(200)
+      .expect((response) => expect(response.body.items).toHaveLength(0));
+    const acceptKey = randomUUID();
     const receipt = await receptionist.agent
       .post(`${root}/treatment-plans/${planId}/accept`)
-      .set('Idempotency-Key', randomUUID())
+      .set('Idempotency-Key', acceptKey)
       .expect(200);
     expect(receipt.body).toEqual(
       expect.objectContaining({
@@ -169,6 +221,15 @@ describe('Treatment plan V1 (e2e)', () => {
     );
     expect(JSON.stringify(receipt.body)).not.toContain('Synthetic indication');
     expect(JSON.stringify(receipt.body)).not.toContain(service.name);
+    await receptionist.agent
+      .post(`${root}/treatment-plans/${planId}/accept`)
+      .set('Idempotency-Key', acceptKey)
+      .expect(200)
+      .expect((response) => expect(response.body).toEqual(receipt.body));
+    await receptionist.agent
+      .get(`${root}/treatment-plan-acceptances`)
+      .expect(200)
+      .expect((response) => expect(response.body.items).toHaveLength(0));
     const detail = await dentist.agent
       .get(`${root}/visits/${visit.id}/treatment-plans/${planId}`)
       .expect(200);

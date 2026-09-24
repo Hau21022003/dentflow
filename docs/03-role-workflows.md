@@ -63,13 +63,13 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 2. Tạo hoặc cập nhật thông tin hành chính được phép: liên hệ, ngày sinh, địa chỉ, người liên hệ khẩn cấp và nguồn giới thiệu.
 3. Tạo appointment với branch, dịch vụ/lý do khám, Dentist tùy chọn, thời gian và ghi chú. Receptionist chỉ được đặt Dentist ban đầu khi tạo mới; mọi gán, đổi hoặc bỏ gán sau đó thuộc `BRANCH_ADMIN`.
 4. Khi bệnh nhân đến, xác minh thông tin và chuyển appointment sang `CHECKED_IN`; ca chưa có Dentist vẫn được check-in nhưng chưa thể bắt đầu.
-5. Khi bác sĩ hoàn tất, lập `PatientInvoice` từ treatment plan/hạng mục được chấp nhận.
+5. Mở Acceptance Queue của branch để ghi nhận bệnh nhân chấp thuận Plan `PROPOSED`; queue chỉ hiện họ tên, số điện thoại, mã Plan, trạng thái và thời điểm, không hiển thị hạng mục, dịch vụ, giá hoặc nội dung clinical. Khi bác sĩ hoàn tất, lập `PatientInvoice` từ treatment plan/hạng mục được chấp nhận.
 6. Ghi nhận một hoặc nhiều payment tại quầy: `CASH`, `BANK_TRANSFER`, `CARD` hoặc `OTHER`; lưu mã tham chiếu và người thu.
 7. Tạo appointment tái khám từ recommendation của Dentist, chuyển appointment sang `COMPLETED` khi Visit đã hoàn tất hoặc ghi `NO_SHOW`/`CANCELLED` kèm reason code.
 
 ### Ranh giới bắt buộc
 
-- Không tạo/xem/sửa PatientAlert, chẩn đoán, treatment plan hoặc clinical note.
+- Không tạo/xem/sửa PatientAlert, chẩn đoán, treatment plan hoặc clinical note. Receptionist chỉ có queue redacted và receipt acceptance, không có endpoint đọc Plan detail.
 - Không xóa/sửa payment đã ghi nhận, cũng không tạo refund/adjustment; các record bù trừ thuộc Branch Admin có permission riêng.
 - Không xem/sửa appointment, payment hoặc patient thuộc branch ngoài scope, trừ patient profile tenant-wide ở mức thông tin hành chính được cho phép.
 
@@ -113,7 +113,7 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 | --- | --- | --- | --- |
 | Appointment `BOOKED` | Receptionist | Branch Admin, Dentist | Có branch; Dentist có thể chưa được gán |
 | Appointment `CHECKED_IN` | Receptionist | Dentist/Dental Assistant | Có thể chưa gán Dentist, nhưng phải gán trước khi start/Visit |
-| Treatment plan `PROPOSED` | Dentist | Receptionist, bệnh nhân | Receptionist không sửa nội dung chuyên môn |
+| Treatment plan `PROPOSED` | Dentist | Receptionist, bệnh nhân | Receptionist dùng queue branch-scoped redacted để xác nhận, không sửa hay xem nội dung chuyên môn |
 | Treatment plan `ACCEPTED` | Receptionist ghi xác nhận | Dentist | Lưu thời điểm và người xác nhận |
 | Treatment plan `REOPENED` | Dentist | Receptionist, bệnh nhân | Acceptance cũ hết hiệu lực; phải đề xuất/xác nhận lại |
 | Treatment plan `ACCEPTED` / item eligible | Receptionist ghi xác nhận Plan | Receptionist | Mỗi item được đưa vào tối đa một invoice còn hiệu lực, dù chưa completed |

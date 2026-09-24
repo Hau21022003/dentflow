@@ -19,7 +19,8 @@
     "tenantStaff": "Nhân sự phòng khám",
     "branchStaff": "Nhân sự chi nhánh",
     "appointments": "Lịch hẹn",
-    "doctorWorkspace": "Workspace bác sĩ"
+    "doctorWorkspace": "Workspace bác sĩ",
+    "treatmentPlanAcceptances": "Xác nhận kế hoạch"
   },
   "language": {
     "switchToEnglish": "Chuyển sang tiếng Anh",

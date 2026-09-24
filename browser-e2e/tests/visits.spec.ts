@@ -6,6 +6,7 @@ const TENANT_SLUG = "test-brightsmile";
 const BRANCH_SLUG = "central";
 const APPOINTMENTS_WORKSPACE = `/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/reception/appointments`;
 const DOCTOR_WORKSPACE = `/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/doctor`;
+const ACCEPTANCE_WORKSPACE = `/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/reception/treatment-plan-acceptances`;
 const APPOINTMENT_DATE = "2030-01-15";
 const DENTIST_NAME = "Synthetic Test Branch Admin";
 
@@ -137,20 +138,31 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
 
   const planId = propose.url().split("/").at(-2);
   expect(planId).toBeTruthy();
-  const acceptance = await page.evaluate(async ({ branchSlug, planId, tenantSlug }) => {
-    const response = await fetch(
-      `http://127.0.0.1:3001/tenants/${tenantSlug}/branches/${branchSlug}/treatment-plans/${planId}/accept`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { "Idempotency-Key": crypto.randomUUID() },
-      },
-    );
-    return { body: await response.json(), status: response.status };
-  }, { branchSlug: BRANCH_SLUG, planId: planId!, tenantSlug: TENANT_SLUG });
-  expect(acceptance.status).toBe(200);
-  expect(acceptance.body.status).toBe("ACCEPTED");
+  await page.goto(ACCEPTANCE_WORKSPACE);
+  await expect(page.getByRole("heading", { name: "Treatment plan acceptances" })).toBeVisible();
+  const queueRow = page.getByRole("row").filter({ hasText: "Synthetic Visit Patient" });
+  await expect(queueRow).toContainText(planId!.slice(0, 8));
+  await expect(page.getByText("Synthetic indication", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/synthetic-cleaning/i)).toHaveCount(0);
+  await expect(page.getByText("Service", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Tooth position", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Indication", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Discount amount", { exact: true })).toHaveCount(0);
+  const acceptanceRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname.endsWith(`/treatment-plans/${planId}/accept`),
+  );
+  await queueRow.getByRole("button", { name: "Accept" }).click();
+  const acceptanceDialog = page.getByRole("alertdialog", {
+    name: "Confirm treatment plan acceptance",
+  });
+  await acceptanceDialog.getByRole("button", { name: "Accept", exact: true }).click();
+  expectIdempotencyKey((await acceptanceRequest).headers()["idempotency-key"]);
+  await expect(queueRow).toHaveCount(0);
   await page.reload();
+  await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
+  await page.getByRole("button", { name: "Open Visit" }).click();
   await treatmentPlans.getByRole("button", { name: /Treatment plan/ }).click();
 
   const startEventResponse = page.waitForResponse((response) =>

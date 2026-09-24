@@ -90,10 +90,3 @@ export type RecordTreatmentItemEventResponse = TreatmentItemEvent & {
   itemStatus: TreatmentItemStatus;
   planStatus: TreatmentPlanStatus;
 };
-
-export type TreatmentPlanAcceptanceReceipt = {
-  id: string;
-  status: "ACCEPTED";
-  acceptedByUserId: string;
-  acceptedAt: string;
-};

@@ -22,6 +22,8 @@ import { RecordTreatmentItemEventDto } from './dto/record-treatment-item-event.d
 import { SyncTreatmentPlanDto } from './dto/sync-treatment-plan.dto';
 import { TreatmentReasonDto } from './dto/treatment-reason.dto';
 import { TreatmentPlansService } from './treatment-plans.service';
+import { ListTreatmentPlanAcceptancesQueryDto } from './dto/list-treatment-plan-acceptances-query.dto';
+import { TreatmentPlanAcceptanceService } from './treatment-plan-acceptance.service';
 
 @Controller(
   'tenants/:tenantSlug/branches/:branchSlug/visits/:visitId/treatment-plans',
@@ -117,12 +119,19 @@ export class TreatmentPlansController {
   }
 }
 
-@Controller('tenants/:tenantSlug/branches/:branchSlug/treatment-plans')
+@Controller('tenants/:tenantSlug/branches/:branchSlug')
 @TenantScope('branch')
 @RequirePermissions(Permission.TREATMENT_PLAN_ACCEPT)
 export class TreatmentPlanAcceptanceController {
-  constructor(private readonly service: TreatmentPlansService) {}
-  @Post(':planId/accept')
+  constructor(private readonly service: TreatmentPlanAcceptanceService) {}
+  @Get('treatment-plan-acceptances')
+  list(
+    @RequestContext() context: AuthorizationContext,
+    @Query() query: ListTreatmentPlanAcceptancesQueryDto,
+  ) {
+    return this.service.list(context, query);
+  }
+  @Post('treatment-plans/:planId/accept')
   @HttpCode(HttpStatus.OK)
   @Idempotent('clinical.treatment-plan.accept')
   accept(

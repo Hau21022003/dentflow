@@ -220,6 +220,16 @@ invoiced và transition không hợp lệ trả `409`; field không hợp lệ t
 
 ## 7. Audit và acceptance contract
 
+Receptionist có `treatment-plan.accept` trong branch đã xác minh có thể đọc
+`GET /tenants/:tenantSlug/branches/:branchSlug/treatment-plan-acceptances`.
+Queue chỉ có Plan ID, `patient.fullName`, `patient.phone`, trạng thái `PROPOSED`,
+`createdAt` và `updatedAt`, theo pagination chuẩn; không có endpoint Receptionist
+đọc Plan detail và không được trả Item, Service, giá, quantity, discount,
+tooth position, indication, planned dentist, diagnosis, clinical note hoặc snapshot
+clinical. `POST .../treatment-plans/:planId/accept` vẫn idempotent, chỉ chuyển
+`PROPOSED` sang `ACCEPTED` và chỉ trả receipt redacted gồm Plan ID, state, actor,
+timestamp. Tenant/branch luôn được resolve từ verified route context.
+
 Các command mới phải chạy business write và AuditLog trong cùng transaction.
 Khi module được triển khai, audit action registry được mở rộng tối thiểu với
 `PATIENT_ALERT_CREATED`, `PATIENT_ALERT_UPDATED`,

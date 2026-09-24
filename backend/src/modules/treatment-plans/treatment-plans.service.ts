@@ -331,40 +331,6 @@ export class TreatmentPlansService {
       return this.toResponse(plan, items);
     });
   }
-  async accept(context: AuthorizationContext, planId: string) {
-    return this.dataSource.transaction(async (manager) => {
-      const plan = await this.repository.findPlanForUpdate(
-        manager,
-        context.tenant!.id,
-        context.branch!.id,
-        planId,
-      );
-      if (!plan) throw new NotFoundException('Treatment Plan was not found.');
-      if (plan.status !== TreatmentPlanStatus.PROPOSED)
-        throw new ConflictException(
-          'Only Proposed Treatment Plans may be accepted.',
-        );
-      const before = plan.status;
-      plan.status = TreatmentPlanStatus.ACCEPTED;
-      plan.acceptedByUserId = context.actor.userId;
-      plan.acceptedAt = new Date();
-      await manager.save(plan);
-      await this.recordPlanState(manager, context, plan, before, undefined);
-      await this.record(
-        manager,
-        context,
-        AuditAction.TREATMENT_PLAN_ACCEPTED,
-        plan.id,
-        { after: { status: plan.status } },
-      );
-      return {
-        id: plan.id,
-        status: plan.status,
-        acceptedByUserId: plan.acceptedByUserId,
-        acceptedAt: plan.acceptedAt,
-      };
-    });
-  }
   async listEvents(
     context: AuthorizationContext,
     visitId: string,

@@ -6,7 +6,6 @@ import type {
   TreatmentItemEventPage,
   TreatmentItemEventType,
   TreatmentPlan,
-  TreatmentPlanAcceptanceReceipt,
   TreatmentPlanPage,
   TreatmentReasonInput,
 } from "./treatment-plans.types";
@@ -74,15 +73,6 @@ export const treatmentPlansService = {
     const { payload } = await http.post<RecordTreatmentItemEventResponse>(
       `${planRoute(scope, planId)}/items/${encodeURIComponent(itemId)}/events`,
       input,
-      { idempotencyKey },
-    );
-    return payload;
-  },
-  async accept(command: Omit<TreatmentPlanScope, "visitId"> & IdempotentCommand & { planId: string }): Promise<TreatmentPlanAcceptanceReceipt> {
-    const { tenantSlug, branchSlug, planId, idempotencyKey } = command;
-    const { payload } = await http.post<TreatmentPlanAcceptanceReceipt>(
-      `/tenants/${encodeURIComponent(tenantSlug)}/branches/${encodeURIComponent(branchSlug)}/treatment-plans/${encodeURIComponent(planId)}/accept`,
-      {},
       { idempotencyKey },
     );
     return payload;

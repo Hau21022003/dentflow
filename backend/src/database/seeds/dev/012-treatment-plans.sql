@@ -1,0 +1,49 @@
+-- Representative synthetic treatment-plan lifecycle data. Execution events use a later OPEN visit for the same patient.
+WITH "seed_plans" ("plan_key", "origin_n", "status", "accepted") AS (
+  VALUES ('draft', 21, 'DRAFT', false), ('cancelled', 21, 'CANCELLED', false), ('proposed', 22, 'PROPOSED', false),
+         ('accepted', 23, 'ACCEPTED', true), ('partially-completed', 2, 'PARTIALLY_COMPLETED', true), ('completed', 1, 'COMPLETED', true)
+), "sources" AS (
+  SELECT "seed_plans".*, "appointment"."tenant_id", "appointment"."branch_id", "appointment"."patient_id", "visit"."id" AS "origin_visit_id",
+         "appointment"."assigned_dentist_user_id" AS "created_by_user_id", "appointment"."start_at", "receptionist"."user_id" AS "accepted_by_user_id"
+  FROM "seed_plans"
+  JOIN "appointments" AS "appointment" ON "appointment"."id" = md5('brightsmile-appointment-' || "seed_plans"."origin_n")::uuid
+  JOIN "visits" AS "visit" ON "visit"."appointment_id" = "appointment"."id"
+  CROSS JOIN LATERAL (SELECT "assignment"."user_id" FROM "role_assignments" AS "assignment"
+    WHERE "assignment"."tenant_id" = "appointment"."tenant_id" AND "assignment"."branch_id" = "appointment"."branch_id"
+      AND "assignment"."role_code" = 'RECEPTIONIST' AND "assignment"."revoked_at" IS NULL ORDER BY "assignment"."id" LIMIT 1) AS "receptionist"
+)
+INSERT INTO "treatment_plans" ("id", "tenant_id", "branch_id", "patient_id", "origin_visit_id", "created_by_user_id", "status", "accepted_by_user_id", "accepted_at", "created_at", "updated_at")
+SELECT md5('brightsmile-treatment-plan-' || "plan_key")::uuid, "tenant_id", "branch_id", "patient_id", "origin_visit_id", "created_by_user_id", "status"::"treatment_plan_status_enum",
+       CASE WHEN "accepted" THEN "accepted_by_user_id" END, CASE WHEN "accepted" THEN LEAST(CURRENT_TIMESTAMP, "start_at" + INTERVAL '15 minutes') END,
+       LEAST(CURRENT_TIMESTAMP, "start_at" + INTERVAL '5 minutes'), LEAST(CURRENT_TIMESTAMP, "start_at" + INTERVAL '45 minutes')
+FROM "sources"
+ON CONFLICT ("id") DO UPDATE SET "tenant_id" = EXCLUDED."tenant_id", "branch_id" = EXCLUDED."branch_id", "patient_id" = EXCLUDED."patient_id", "origin_visit_id" = EXCLUDED."origin_visit_id", "created_by_user_id" = EXCLUDED."created_by_user_id", "status" = EXCLUDED."status", "accepted_by_user_id" = EXCLUDED."accepted_by_user_id", "accepted_at" = EXCLUDED."accepted_at", "created_at" = EXCLUDED."created_at", "updated_at" = EXCLUDED."updated_at";
+
+WITH "seed_items" ("plan_key", "item_key", "service_code", "quantity", "discount", "tooth", "indication", "status") AS (
+  VALUES ('draft', 'filling', 'composite-filling-1-surface', 1, 0, '16', 'Synthetic draft restoration', 'PENDING'),
+         ('cancelled', 'extraction', 'simple-extraction', 1, 0, '48', 'Synthetic treatment cancelled before execution', 'CANCELLED'),
+         ('proposed', 'scaling', 'scaling-polishing', 1, 0, NULL, 'Synthetic preventive treatment proposal', 'PENDING'),
+         ('accepted', 'filling', 'composite-filling-1-surface', 1, 50000, '26', 'Synthetic accepted restoration', 'PENDING'),
+         ('partially-completed', 'completed-filling', 'composite-filling-1-surface', 1, 0, '36', 'Synthetic completed item in a staged plan', 'COMPLETED'),
+         ('partially-completed', 'root-canal', 'root-canal-premolar', 1, 0, '35', 'Synthetic treatment currently in progress', 'IN_PROGRESS'),
+         ('completed', 'completed-extraction', 'simple-extraction', 1, 0, '18', 'Synthetic completed extraction', 'COMPLETED'),
+         ('completed', 'cancelled-scaling', 'scaling-polishing', 1, 0, NULL, 'Synthetic item cancelled during an otherwise completed plan', 'CANCELLED')
+)
+INSERT INTO "treatment_items" ("id", "treatment_plan_id", "service_id", "service_code", "service_name", "list_unit_amount", "currency", "quantity", "discount_amount", "final_unit_amount", "tooth_position", "indication", "planned_dentist_user_id", "status", "created_at", "updated_at")
+SELECT md5('brightsmile-treatment-item-' || "seed_items"."plan_key" || '-' || "seed_items"."item_key")::uuid, "plan"."id", "service"."id", "service"."code", "service"."name", "service"."amount", "service"."currency", "seed_items"."quantity", "seed_items"."discount", "service"."amount" - "seed_items"."discount", "seed_items"."tooth", "seed_items"."indication", "plan"."created_by_user_id", "seed_items"."status"::"treatment_item_status_enum", "plan"."created_at", "plan"."updated_at"
+FROM "seed_items" JOIN "treatment_plans" AS "plan" ON "plan"."id" = md5('brightsmile-treatment-plan-' || "seed_items"."plan_key")::uuid
+JOIN "services" AS "service" ON "service"."tenant_id" = "plan"."tenant_id" AND "service"."code" = "seed_items"."service_code" AND "service"."is_active" = true
+ON CONFLICT ("id") DO UPDATE SET "treatment_plan_id" = EXCLUDED."treatment_plan_id", "service_id" = EXCLUDED."service_id", "service_code" = EXCLUDED."service_code", "service_name" = EXCLUDED."service_name", "list_unit_amount" = EXCLUDED."list_unit_amount", "currency" = EXCLUDED."currency", "quantity" = EXCLUDED."quantity", "discount_amount" = EXCLUDED."discount_amount", "final_unit_amount" = EXCLUDED."final_unit_amount", "tooth_position" = EXCLUDED."tooth_position", "indication" = EXCLUDED."indication", "planned_dentist_user_id" = EXCLUDED."planned_dentist_user_id", "status" = EXCLUDED."status", "created_at" = EXCLUDED."created_at", "updated_at" = EXCLUDED."updated_at";
+
+WITH "seed_events" ("plan_key", "item_key", "appointment_n", "event_type", "event_order") AS (
+  VALUES ('partially-completed', 'completed-filling', 24, 'IN_PROGRESS', 1), ('partially-completed', 'completed-filling', 24, 'COMPLETED', 2), ('partially-completed', 'root-canal', 24, 'IN_PROGRESS', 3),
+         ('completed', 'completed-extraction', 23, 'IN_PROGRESS', 1), ('completed', 'completed-extraction', 23, 'COMPLETED', 2), ('completed', 'cancelled-scaling', 23, 'CANCELLED', 3)
+)
+INSERT INTO "treatment_item_events" ("id", "treatment_item_id", "treatment_plan_id", "visit_id", "performed_by_user_id", "event_type", "created_at")
+SELECT md5('brightsmile-treatment-event-' || "seed_events"."plan_key" || '-' || "seed_events"."item_key" || '-' || "seed_events"."event_order")::uuid, "item"."id", "plan"."id", "visit"."id", "appointment"."assigned_dentist_user_id", "seed_events"."event_type"::"treatment_item_event_type_enum", LEAST(CURRENT_TIMESTAMP, "appointment"."start_at" + "seed_events"."event_order" * INTERVAL '10 minutes')
+FROM "seed_events" JOIN "treatment_plans" AS "plan" ON "plan"."id" = md5('brightsmile-treatment-plan-' || "seed_events"."plan_key")::uuid
+JOIN "treatment_items" AS "item" ON "item"."id" = md5('brightsmile-treatment-item-' || "seed_events"."plan_key" || '-' || "seed_events"."item_key")::uuid AND "item"."treatment_plan_id" = "plan"."id"
+JOIN "appointments" AS "appointment" ON "appointment"."id" = md5('brightsmile-appointment-' || "seed_events"."appointment_n")::uuid AND "appointment"."tenant_id" = "plan"."tenant_id" AND "appointment"."branch_id" = "plan"."branch_id" AND "appointment"."patient_id" = "plan"."patient_id" AND "appointment"."status" = 'IN_PROGRESS'
+JOIN "visits" AS "visit" ON "visit"."appointment_id" = "appointment"."id" AND "visit"."status" = 'OPEN'
+ON CONFLICT ("id") DO NOTHING;
+

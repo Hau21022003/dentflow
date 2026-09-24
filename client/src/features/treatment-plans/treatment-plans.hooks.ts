@@ -71,15 +71,3 @@ export function useRecordTreatmentItemEventMutation() {
     },
   });
 }
-
-export function useAcceptTreatmentPlanMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: treatmentPlansService.accept,
-    onSuccess: async (_receipt, command) => {
-      await queryClient.invalidateQueries({
-        queryKey: treatmentPlanQueryKeys.branch(command.tenantSlug, command.branchSlug),
-      });
-    },
-  });
-}

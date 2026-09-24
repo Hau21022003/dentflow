@@ -19,7 +19,8 @@
     "tenantStaff": "Practice staff",
     "branchStaff": "Branch staff",
     "appointments": "Appointments",
-    "doctorWorkspace": "Doctor workspace"
+    "doctorWorkspace": "Doctor workspace",
+    "treatmentPlanAcceptances": "Plan acceptances"
   },
   "language": {
     "switchToEnglish": "Switch to English",
