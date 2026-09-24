@@ -251,8 +251,14 @@ describe('Appointment workflow (e2e)', () => {
     await fixture.branchAdmin.agent
       .get(`${fixture.route}/booking-options/dentists`)
       .expect(200);
+    await fixture.dentist.agent
+      .get(`${fixture.route}/booking-options/dentists`)
+      .expect(200);
 
     const servicesResponse = await fixture.receptionist.agent
+      .get(`${fixture.route}/booking-options/services`)
+      .expect(200);
+    await fixture.dentist.agent
       .get(`${fixture.route}/booking-options/services`)
       .expect(200);
     expect(servicesResponse.body.items).toEqual(

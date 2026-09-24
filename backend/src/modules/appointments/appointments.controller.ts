@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { RequestContext } from '../../common/decorators/request-context.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { RequireAnyPermission } from '../../common/decorators/require-any-permission.decorator';
 import { TenantScope } from '../../common/decorators/tenant-scope.decorator';
 import type { AuthorizationContext } from '../authorization/authorization-context';
 import { Permission } from '../authorization/authorization.policy';
@@ -50,7 +51,10 @@ export class AppointmentsController {
   }
 
   @Get('booking-options/dentists')
-  @RequirePermissions(Permission.APPOINTMENT_MANAGE)
+  @RequireAnyPermission(
+    Permission.APPOINTMENT_MANAGE,
+    Permission.TREATMENT_PLAN_WRITE,
+  )
   listBookingDentists(
     @RequestContext() context: AuthorizationContext,
     @Query() query: ListAppointmentBookingOptionsQueryDto,
@@ -59,7 +63,10 @@ export class AppointmentsController {
   }
 
   @Get('booking-options/services')
-  @RequirePermissions(Permission.APPOINTMENT_MANAGE)
+  @RequireAnyPermission(
+    Permission.APPOINTMENT_MANAGE,
+    Permission.TREATMENT_PLAN_WRITE,
+  )
   listBookingServices(
     @RequestContext() context: AuthorizationContext,
     @Query() query: ListAppointmentBookingOptionsQueryDto,

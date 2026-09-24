@@ -22,6 +22,7 @@ import type { AssignedAppointment } from "@/features/appointments/appointments.t
 import { AppointmentStatusBadge } from "@/features/appointments/components/AppointmentStatusBadge";
 import { VisitAddendumForm } from "@/features/visits/components/VisitAddendumForm";
 import { VisitClinicalForm } from "@/features/visits/components/VisitClinicalForm";
+import { TreatmentPlansPanel } from "@/features/treatment-plans/components/TreatmentPlansPanel";
 import {
   useStartVisitMutation,
   useVisitQuery,
@@ -154,7 +155,7 @@ function AppointmentSummary({
 export function DoctorVisitPage() {
   const { appointmentId = "" } = useParams();
   const [searchParams] = useSearchParams();
-  const { branch, branchSlug, tenantSlug } = useRouteWorkspaceContext();
+  const { branch, branchSlug, tenantSlug, user } = useRouteWorkspaceContext();
   const { i18n, t } = useTranslation("visits");
   const date = searchParams.get("date");
   const validDate = isValidDate(date);
@@ -308,6 +309,14 @@ export function DoctorVisitPage() {
                   tenantSlug={tenantSlug}
                   visit={visit}
                 />
+                {visit.status === "OPEN" && (
+                  <TreatmentPlansPanel
+                    branchSlug={branchSlug}
+                    tenantSlug={tenantSlug}
+                    user={user}
+                    visitId={visit.id}
+                  />
+                )}
                 {visit.status === "COMPLETED" && (
                   <>
                     <VisitAddenda addenda={visit.addenda} locale={locale} timeZone={timeZone} />
