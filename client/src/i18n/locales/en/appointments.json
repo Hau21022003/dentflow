@@ -34,6 +34,7 @@
   "month": {
     "calendarLabel": "Monthly appointment calendar",
     "count": "{{count}} appointments",
+    "countCompact": "{{count}} appts.",
     "emptyDay": "No appointments scheduled for this day.",
     "loadError": "Could not load the monthly appointment summary.",
     "selectDay": "Select {{date}}, {{count}} appointments",

@@ -16,6 +16,7 @@
   "month": {
     "calendarLabel": "Lịch hẹn theo tháng",
     "count": "{{count}} lịch hẹn",
+    "countCompact": "{{count}} lịch hẹn",
     "emptyDay": "Không có lịch hẹn trong ngày này.",
     "loadError": "Không thể tải tổng hợp lịch hẹn theo tháng.",
     "selectDay": "Chọn ngày {{date}}, có {{count}} lịch hẹn",
