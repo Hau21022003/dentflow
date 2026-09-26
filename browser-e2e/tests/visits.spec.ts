@@ -21,19 +21,24 @@ test("Dentist starts, saves, completes, and adds to a Visit", async ({ page }) =
 
   await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
   await expect(page.getByRole("heading", { name: "My schedule" })).toBeVisible();
-  await page.getByRole("button", { name: "Open Visit" }).click();
-  await expect(page).toHaveURL(
-    new RegExp(`/doctor/appointments/[0-9a-f-]+/visit\\?date=${APPOINTMENT_DATE}$`),
-  );
-
+  await expect(page.getByLabel("Monthly appointment calendar")).toBeVisible();
+  await page.locator('button[data-date="2030-01-16"]').click();
+  await expect(page).toHaveURL(/date=2030-01-16/);
+  await page.locator(`button[data-date="${APPOINTMENT_DATE}"]`).click();
+  await expect(page).toHaveURL(new RegExp(`date=${APPOINTMENT_DATE}`));
+  await expect(page.getByText("1 appointment · 0h 30m total")).toBeVisible();
+  await expect(page.getByText("Female", { exact: true })).toBeVisible();
   const startRequest = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
       new URL(request.url()).pathname.endsWith("/start"),
   );
-  await page.getByRole("button", { name: "Start visit" }).click();
+  await page.getByRole("button", { name: "Start Visit" }).click();
   const start = await startRequest;
   expectIdempotencyKey(start.headers()["idempotency-key"]);
+  await expect(page).toHaveURL(
+    new RegExp(`/doctor/appointments/[0-9a-f-]+/visit\\?date=${APPOINTMENT_DATE}$`),
+  );
 
   await expect(page.getByRole("heading", { name: "Clinical record" })).toBeVisible();
   const completeButton = page.getByRole("button", { name: "Complete Visit", exact: true });
@@ -98,8 +103,7 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   await createAndCheckInAssignedAppointment(page);
 
   await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
-  await page.getByRole("button", { name: "Open Visit" }).click();
-  await page.getByRole("button", { name: "Start visit" }).click();
+  await page.getByRole("button", { name: "Start Visit" }).click();
   await expect(page.getByRole("heading", { name: "Treatment plans" })).toBeVisible();
   const treatmentPlans = page.locator('section[aria-labelledby="treatment-plans-title"]');
 
@@ -162,7 +166,7 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   await expect(queueRow).toHaveCount(0);
   await page.reload();
   await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
-  await page.getByRole("button", { name: "Open Visit" }).click();
+  await page.getByRole("button", { name: "Continue Visit" }).click();
   await treatmentPlans.getByRole("button", { name: /Treatment plan/ }).click();
 
   const startEventResponse = page.waitForResponse((response) =>

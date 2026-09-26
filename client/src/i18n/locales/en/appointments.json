@@ -4,6 +4,22 @@
   "description": "Coordinate the branch schedule, patient arrivals, and dentist handoff.",
   "doctorTitle": "My schedule",
   "doctorDescription": "Appointments assigned to you in this branch. Open eligible appointments to record the Visit.",
+  "doctorSchedule": {
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "daySummaryTitle": "Appointments summary",
+    "appointmentCount_one": "{{count}} appointment",
+    "appointmentCount_other": "{{count}} appointments",
+    "agendaMeta_one": "{{count}} appointment · {{duration}} total",
+    "agendaMeta_other": "{{count}} appointments · {{duration}} total",
+    "totalDuration": "{{hours}}h {{minutes}}m",
+    "summaryLoadError": "Could not load your monthly appointment summary.",
+    "emptyDescription": "Choose another day to view appointments assigned to you.",
+    "startVisit": "Start Visit",
+    "startingVisit": "Starting Visit",
+    "continueVisit": "Continue Visit",
+    "viewAppointment": "View"
+  },
   "agenda": {
     "today": "Today",
     "previousDay": "Previous day",

@@ -50,6 +50,15 @@ export class AppointmentsController {
     return this.appointmentsService.listAssigned(context, query);
   }
 
+  @Get('assigned/calendar-summary')
+  @RequirePermissions(Permission.APPOINTMENT_ASSIGNED_READ)
+  assignedCalendarSummary(
+    @RequestContext() context: AuthorizationContext,
+    @Query() query: GetAppointmentCalendarSummaryQueryDto,
+  ) {
+    return this.appointmentsService.assignedCalendarSummary(context, query.month);
+  }
+
   @Get('booking-options/dentists')
   @RequireAnyPermission(
     Permission.APPOINTMENT_MANAGE,
