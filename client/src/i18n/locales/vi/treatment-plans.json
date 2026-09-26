@@ -1,0 +1,18 @@
+{
+  "title": "Kế hoạch điều trị",
+  "description": "Tạo, đề xuất và thực hiện điều trị trong Visit hiện tại của bệnh nhân.",
+  "empty": "Chưa có kế hoạch điều trị nào cho bệnh nhân này.",
+  "planLabel": "Kế hoạch điều trị {{id}}",
+  "itemCount_one": "{{count}} hạng mục",
+  "itemCount_other": "{{count}} hạng mục",
+  "statuses": { "plan": { "DRAFT": "Bản nháp", "PROPOSED": "Đã đề xuất", "ACCEPTED": "Đã chấp thuận", "PARTIALLY_COMPLETED": "Hoàn thành một phần", "COMPLETED": "Đã hoàn thành", "CANCELLED": "Đã hủy" }, "item": { "PENDING": "Chờ thực hiện", "IN_PROGRESS": "Đang thực hiện", "COMPLETED": "Đã hoàn thành", "CANCELLED": "Đã hủy" } },
+  "actions": { "createDraft": "Tạo bản nháp", "addItem": "Thêm hạng mục", "removeItem": "Xóa hạng mục", "saveDraft": "Lưu bản nháp", "propose": "Đề xuất", "reopen": "Mở lại", "cancelPlan": "Hủy kế hoạch", "cancelItem": "Hủy hạng mục", "start": "Bắt đầu", "recordProgress": "Ghi nhận tiến độ", "complete": "Hoàn thành", "history": "Lịch sử sự kiện", "close": "Đóng", "saving": "Đang lưu" },
+  "fields": { "service": "Dịch vụ", "plannedDentist": "Bác sĩ dự kiến", "quantity": "Số lượng", "discountAmount": "Giảm giá", "toothPosition": "Vị trí răng", "indication": "Chỉ định", "reasonCode": "Mã lý do", "reasonCodePlaceholder": "Ví dụ: PATIENT_REQUEST" },
+  "picker": { "servicePlaceholder": "Chọn dịch vụ", "serviceSearch": "Tìm dịch vụ...", "emptyServices": "Không có dịch vụ hoạt động.", "dentistPlaceholder": "Chọn bác sĩ", "dentistSearch": "Tìm bác sĩ...", "emptyDentists": "Không có bác sĩ hoạt động." },
+  "validation": { "required": "Trường này là bắt buộc.", "quantity": "Số lượng phải từ 1 đến 10.000.", "discount": "Giảm giá không được âm.", "reasonCode": "Chỉ dùng chữ in hoa, số và dấu gạch dưới." },
+  "editor": { "noItems": "Thêm ít nhất một hạng mục trước khi đề xuất kế hoạch.", "item": "Hạng mục {{count}}", "saveBeforePropose": "Hãy lưu thay đổi bản nháp trước khi đề xuất." },
+  "detail": { "title": "Chi tiết kế hoạch", "originVisit": "Visit khởi tạo: {{id}}", "quantity": "Số lượng: {{count}}" },
+  "events": { "title": "Lịch sử sự kiện", "loading": "Đang tải lịch sử sự kiện...", "loadError": "Không thể tải lịch sử sự kiện. Vui lòng thử lại.", "empty": "Chưa có sự kiện thực hiện.", "loadMore": "Tải thêm", "types": { "IN_PROGRESS": "Đang thực hiện", "COMPLETED": "Đã hoàn thành", "CANCELLED": "Đã hủy" } },
+  "errors": { "plansLoad": "Không thể tải kế hoạch điều trị. Vui lòng thử lại.", "planLoad": "Không thể tải kế hoạch này. Vui lòng thử lại." },
+  "dialogs": { "reopen": { "title": "Mở lại kế hoạch điều trị", "description": "Thao tác này xóa chấp thuận trước đó và đưa kế hoạch về Bản nháp.", "submit": "Mở lại" }, "cancelPlan": { "title": "Hủy kế hoạch điều trị", "description": "Thao tác này hủy kế hoạch và mọi hạng mục đang chờ. Không dùng được sau khi đã có sự kiện thực hiện.", "submit": "Hủy kế hoạch" }, "cancelItem": { "title": "Hủy hạng mục điều trị", "description": "Ghi nhận sự kiện hủy cho hạng mục này.", "submit": "Hủy hạng mục" } }
+}

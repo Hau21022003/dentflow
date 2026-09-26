@@ -21,11 +21,11 @@ import { PatientsService } from './patients.service';
 
 @Controller('tenants/:tenantSlug/branches/:branchSlug/patients')
 @TenantScope('branch')
-@RequirePermissions(Permission.PATIENT_ADMINISTRATIVE_MANAGE)
 export class PatientsController {
   constructor(private readonly patientsService: PatientsService) {}
 
   @Get()
+  @RequirePermissions(Permission.PATIENT_ADMINISTRATIVE_MANAGE)
   list(
     @RequestContext() context: AuthorizationContext,
     @Query() query: ListPatientsQueryDto,
@@ -33,7 +33,17 @@ export class PatientsController {
     return this.patientsService.list(context, query);
   }
 
+  @Get('assigned')
+  @RequirePermissions(Permission.APPOINTMENT_ASSIGNED_READ)
+  listAssigned(
+    @RequestContext() context: AuthorizationContext,
+    @Query() query: ListPatientsQueryDto,
+  ) {
+    return this.patientsService.listAssigned(context, query);
+  }
+
   @Get(':patientId')
+  @RequirePermissions(Permission.PATIENT_ADMINISTRATIVE_MANAGE)
   get(
     @RequestContext() context: AuthorizationContext,
     @Param('patientId', ParseUUIDPipe) patientId: string,
@@ -43,6 +53,7 @@ export class PatientsController {
 
   @Post()
   @Idempotent('clinical.patient.create')
+  @RequirePermissions(Permission.PATIENT_ADMINISTRATIVE_MANAGE)
   create(
     @RequestContext() context: AuthorizationContext,
     @Body() body: CreatePatientDto,
@@ -52,6 +63,7 @@ export class PatientsController {
 
   @Patch(':patientId')
   @Idempotent('clinical.patient.update')
+  @RequirePermissions(Permission.PATIENT_ADMINISTRATIVE_MANAGE)
   update(
     @RequestContext() context: AuthorizationContext,
     @Param('patientId', ParseUUIDPipe) patientId: string,

@@ -251,8 +251,14 @@ describe('Appointment workflow (e2e)', () => {
     await fixture.branchAdmin.agent
       .get(`${fixture.route}/booking-options/dentists`)
       .expect(200);
+    await fixture.dentist.agent
+      .get(`${fixture.route}/booking-options/dentists`)
+      .expect(200);
 
     const servicesResponse = await fixture.receptionist.agent
+      .get(`${fixture.route}/booking-options/services`)
+      .expect(200);
+    await fixture.dentist.agent
       .get(`${fixture.route}/booking-options/services`)
       .expect(200);
     expect(servicesResponse.body.items).toEqual(
@@ -373,11 +379,95 @@ describe('Appointment workflow (e2e)', () => {
           patient: {
             id: fixture.patient.id,
             fullName: fixture.patient.fullName,
+            gender: PatientGender.OTHER,
+            dateOfBirth: null,
           },
         });
         expect(item).not.toHaveProperty('operationalNote');
         expect(JSON.stringify(item)).not.toContain(fixture.patient.phone);
+        expect(item?.patient).not.toHaveProperty('phone');
+        expect(item?.patient).not.toHaveProperty('address');
+        expect(item?.patient).not.toHaveProperty('emergencyContactPhone');
       });
+  });
+
+  it('returns a monthly summary only for the authenticated Dentist assignments', async () => {
+    const fixture = await createFixture('assigned-calendar-summary');
+    const otherDentist = await createActor(fixture.branch, TenantRoleCode.DENTIST);
+    await dataSource.getRepository(Patient).update(
+      { id: fixture.patient.id },
+      { gender: PatientGender.FEMALE, dateOfBirth: '2000-01-15' },
+    );
+
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: fixture.patient,
+      startAt: '2026-11-03T02:00:00.000Z',
+      endAt: '2026-11-03T02:30:00.000Z',
+      status: AppointmentStatus.CHECKED_IN,
+      assignedDentistUserId: fixture.dentist.user.id,
+    });
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: fixture.patient,
+      startAt: '2026-11-03T03:00:00.000Z',
+      endAt: '2026-11-03T03:30:00.000Z',
+      status: AppointmentStatus.CANCELLED,
+      assignedDentistUserId: fixture.dentist.user.id,
+    });
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: fixture.patient,
+      startAt: '2026-11-03T04:00:00.000Z',
+      endAt: '2026-11-03T04:30:00.000Z',
+      status: AppointmentStatus.BOOKED,
+      assignedDentistUserId: otherDentist.user.id,
+    });
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: fixture.patient,
+      startAt: '2026-11-03T05:00:00.000Z',
+      endAt: '2026-11-03T05:30:00.000Z',
+      status: AppointmentStatus.CONFIRMED,
+    });
+
+    const summary = await fixture.dentist.agent
+      .get(`${fixture.route}/assigned/calendar-summary?month=2026-11`)
+      .expect(200);
+    expect(summary.body).toMatchObject({
+      month: '2026-11',
+      timeZone: fixture.tenant.defaultTimezone,
+    });
+    expect(summary.body.days).toEqual([
+      expect.objectContaining({
+        date: '2026-11-03',
+        total: 2,
+        statuses: expect.objectContaining({
+          BOOKED: 0,
+          CHECKED_IN: 1,
+          CANCELLED: 1,
+        }),
+      }),
+    ]);
+
+    await otherDentist.agent
+      .get(`${fixture.route}/assigned/calendar-summary?month=2026-11`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.days).toEqual([
+          expect.objectContaining({ date: '2026-11-03', total: 1 }),
+        ]);
+      });
+    await fixture.receptionist.agent
+      .get(`${fixture.route}/assigned/calendar-summary?month=2026-11`)
+      .expect(403);
+    await fixture.dentist.agent
+      .get(`${fixture.route}/assigned/calendar-summary?month=2026-13`)
+      .expect(422);
   });
 
   it('validates scoped references, reason rules, list windows, and branch isolation', async () => {
@@ -710,6 +800,7 @@ describe('Appointment workflow (e2e)', () => {
     startAt,
     endAt,
     status,
+    assignedDentistUserId = null,
   }: {
     tenant: Tenant;
     branch: Branch;
@@ -717,6 +808,7 @@ describe('Appointment workflow (e2e)', () => {
     startAt: string;
     endAt: string;
     status: AppointmentStatus;
+    assignedDentistUserId?: string | null;
   }): Promise<Appointment> {
     return appointments.save(
       appointments.create({
@@ -727,7 +819,7 @@ describe('Appointment workflow (e2e)', () => {
         source: AppointmentSource.PHONE,
         startAt: new Date(startAt),
         endAt: new Date(endAt),
-        assignedDentistUserId: null,
+        assignedDentistUserId,
         serviceId: null,
         serviceCode: null,
         serviceName: null,

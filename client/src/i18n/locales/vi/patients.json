@@ -7,6 +7,8 @@
     "create": "Thêm bệnh nhân",
     "save": "Lưu thay đổi",
     "edit": "Chỉnh sửa",
+    "view": "Xem",
+    "viewProfile": "Xem hồ sơ của {{name}}",
     "retry": "Thử lại",
     "openActions": "Mở thao tác cho {{name}}"
   },
@@ -42,13 +44,30 @@
     "title": "Danh sách bệnh nhân",
     "description": "Danh sách hành chính dùng chung trong tenant, được truy cập từ branch hiện tại.",
     "searchPlaceholder": "Tìm theo họ tên hoặc số điện thoại…",
-    "fullName": "Họ và tên",
-    "phone": "Số điện thoại",
-    "gender": "Giới tính",
-    "dateOfBirth": "Ngày sinh",
-    "createdAt": "Ngày tạo",
+    "patient": "Bệnh nhân",
+    "contact": "Liên hệ",
+    "nextAppointment": "Lịch hẹn tiếp theo",
+    "lastVisit": "Lần khám gần nhất",
+    "completed": "Đã hoàn tất",
+    "age_one": "{{count}} tuổi",
+    "age_other": "{{count}} tuổi",
+    "filter": "Lọc",
     "notProvided": "Chưa có",
     "actions": "Thao tác"
+  },
+  "filters": {
+    "all": "Tất cả",
+    "withUpcoming": "Có lịch",
+    "withoutUpcoming": "Không có lịch"
+  },
+  "doctor": {
+    "eyebrow": "Bác sĩ · {{tenantName}} · {{branchName}}",
+    "title": "Bệnh nhân",
+    "description": "Bệnh nhân đang được phân công cho các lịch hẹn của bạn tại chi nhánh này.",
+    "tableTitle": "Bệnh nhân của tôi",
+    "tableDescription": "Thông tin liên hệ và lịch hẹn của bệnh nhân trong các ca được phân công cho bạn.",
+    "emptyTitle": "Chưa có bệnh nhân được phân công",
+    "emptyDescription": "Bệnh nhân sẽ xuất hiện tại đây khi một lịch hẹn được gán cho bạn."
   },
   "empty": {
     "title": "Chưa có bệnh nhân",

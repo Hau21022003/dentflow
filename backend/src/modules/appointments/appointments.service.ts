@@ -98,8 +98,14 @@ export interface AssignedAppointmentResponse {
   status: AppointmentStatus;
   startAt: Date;
   endAt: Date;
-  patient: { id: string; fullName: string };
+  patient: {
+    id: string;
+    fullName: string;
+    gender: Patient['gender'];
+    dateOfBirth: string | null;
+  };
   service: { id: string; code: string; name: string } | null;
+  visitReason: string | null;
 }
 
 export interface AppointmentDentistOptionResponse {
@@ -251,9 +257,24 @@ export class AppointmentsService {
     context: AuthorizationContext,
     month: string,
   ): Promise<AppointmentCalendarSummaryResponse> {
+    return this.calendarSummaryForDentist(context, month);
+  }
+
+  async assignedCalendarSummary(
+    context: AuthorizationContext,
+    month: string,
+  ): Promise<AppointmentCalendarSummaryResponse> {
+    return this.calendarSummaryForDentist(context, month, context.actor.userId);
+  }
+
+  private async calendarSummaryForDentist(
+    context: AuthorizationContext,
+    month: string,
+    assignedDentistUserId?: string,
+  ): Promise<AppointmentCalendarSummaryResponse> {
     const timeZone = context.branch!.timezone;
     const { monthStart, nextMonthStart } = this.parseCalendarMonth(month);
-    const rows = await this.appointmentsRepository.ormRepository
+    const queryBuilder = this.appointmentsRepository.ormRepository
       .createQueryBuilder('appointment')
       .select(
         `TO_CHAR(appointment.start_at AT TIME ZONE :timeZone, 'YYYY-MM-DD')`,
@@ -282,8 +303,16 @@ export class AppointmentsService {
         `TO_CHAR(appointment.start_at AT TIME ZONE :timeZone, 'YYYY-MM-DD')`,
         'ASC',
       )
-      .addOrderBy('appointment.status', 'ASC')
-      .getRawMany<AppointmentCalendarSummaryRow>();
+      .addOrderBy('appointment.status', 'ASC');
+
+    if (assignedDentistUserId) {
+      queryBuilder.andWhere(
+        'appointment.assignedDentistUserId = :assignedDentistUserId',
+        { assignedDentistUserId },
+      );
+    }
+
+    const rows = await queryBuilder.getRawMany<AppointmentCalendarSummaryRow>();
 
     const days = new Map<
       string,
@@ -1195,14 +1224,17 @@ export class AppointmentsService {
       patient: {
         id: appointment.patient.id,
         fullName: appointment.patient.fullName,
+        gender: appointment.patient.gender,
+        dateOfBirth: appointment.patient.dateOfBirth,
       },
       service: appointment.serviceId
         ? {
             id: appointment.serviceId,
             code: appointment.serviceCode!,
             name: appointment.serviceName!,
-          }
+        }
         : null,
+      visitReason: appointment.visitReason,
     };
   }
 

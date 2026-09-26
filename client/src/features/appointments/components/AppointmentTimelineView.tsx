@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   agendaRange,
   dateInTimeZone,
@@ -30,10 +31,9 @@ import {
   type Appointment,
   type AppointmentStatus,
 } from "@/features/appointments/appointments.types";
-import { UserAvatar } from "@/shared/components/UserAvatar";
 import { cn } from "@/shared/lib/utils";
 import { RefreshCw, Search, Stethoscope } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const ALL = "__all__";
@@ -41,6 +41,7 @@ const UNASSIGNED = "__unassigned__";
 const DENTIST_QUERY = { page: 1, limit: 100 };
 const HOUR_HEIGHT = 84;
 const DAY_MINUTES = 24 * 60;
+const DEFAULT_TIMELINE_START_HOUR = 7;
 
 const statusClass: Record<AppointmentStatus, string> = {
   BOOKED: "border-sky-500 bg-sky-100 text-slate-950",
@@ -139,6 +140,8 @@ export function AppointmentTimelineView({
   const [dentistId, setDentistId] = useState<string>(ALL);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const initiallyScrolledDateRef = useRef<string | null>(null);
   const locale = i18n.resolvedLanguage?.startsWith("vi") ? "vi-VN" : "en-US";
   const range = useMemo(() => agendaRange(date, timeZone), [date, timeZone]);
   const dentistsQuery = useAppointmentDentistsQuery(
@@ -215,17 +218,32 @@ export function AppointmentTimelineView({
       ),
     [appointments, columns],
   );
+  // Timeline offsets are based on branch-local minutes since midnight. Do not
+  // format a UTC date here: doing so applies the branch time-zone offset a
+  // second time and shifts the hour labels away from their grid lines.
   const hours = useMemo(
     () =>
-      Array.from({ length: 24 }, (_, hour) =>
-        new Intl.DateTimeFormat(locale, {
-          hour: "2-digit",
-          hourCycle: "h23",
-          timeZone,
-        }).format(new Date(Date.UTC(2024, 0, 1, hour))),
-      ),
-    [locale, timeZone],
+      Array.from({ length: 24 }, (_, hour) => ({
+        hour,
+        label: t("timeline.hourLabel", { hour }),
+      })),
+    [t],
   );
+
+  useEffect(() => {
+    if (
+      appointmentsQuery.isLoading ||
+      dentistsQuery.isLoading ||
+      columns.length === 0 ||
+      initiallyScrolledDateRef.current === date ||
+      !timelineRef.current
+    ) {
+      return;
+    }
+
+    timelineRef.current.scrollTop = DEFAULT_TIMELINE_START_HOUR * HOUR_HEIGHT;
+    initiallyScrolledDateRef.current = date;
+  }, [appointmentsQuery.isLoading, columns.length, date, dentistsQuery.isLoading]);
 
   if (appointmentsQuery.isLoading || dentistsQuery.isLoading) {
     return <div className="h-[38rem] animate-pulse bg-muted/40" />;
@@ -319,6 +337,7 @@ export function AppointmentTimelineView({
           aria-label={t("timeline.gridLabel")}
           className="max-h-[38rem] overflow-auto rounded-xl border"
           data-testid="appointment-timeline"
+          ref={timelineRef}
           role="region"
           tabIndex={0}
         >
@@ -356,7 +375,7 @@ export function AppointmentTimelineView({
               className="relative border-r"
               style={{ height: (DAY_MINUTES / 60) * HOUR_HEIGHT }}
             >
-              {hours.map((hour, index) => (
+              {hours.map(({ hour, label }, index) => (
                 <span
                   className={cn(
                     "absolute right-2 text-xs tabular-nums text-muted-foreground",
@@ -365,7 +384,7 @@ export function AppointmentTimelineView({
                   key={hour}
                   style={{ top: index * HOUR_HEIGHT }}
                 >
-                  {hour}
+                  {label}
                 </span>
               ))}
             </div>
@@ -383,11 +402,11 @@ export function AppointmentTimelineView({
                   key={dentist.id}
                   style={{ height: (DAY_MINUTES / 60) * HOUR_HEIGHT }}
                 >
-                  {hours.map((_, index) => (
+                  {hours.map(({ hour }, index) => (
                     <div
                       aria-hidden="true"
                       className="absolute right-0 left-0 border-t border-border/70"
-                      key={index}
+                      key={hour}
                       style={{ top: index * HOUR_HEIGHT }}
                     />
                   ))}
@@ -417,7 +436,10 @@ export function AppointmentTimelineView({
                           onClick={() => onViewAppointment(appointment)}
                           style={{
                             top: (top / 60) * HOUR_HEIGHT + 2,
-                            height: Math.max(28, (height / 60) * HOUR_HEIGHT - 4),
+                            height: Math.max(
+                              28,
+                              (height / 60) * HOUR_HEIGHT - 4,
+                            ),
                             left: `calc(${(lane / lanes) * 100}% + 3px)`,
                             width: `calc(${100 / lanes}% - 6px)`,
                           }}
@@ -427,17 +449,17 @@ export function AppointmentTimelineView({
                             {appointment.patient.fullName}
                           </span>
                           <span className="block truncate text-[11px] tabular-nums text-slate-700">
-                              {formatAppointmentTime(
-                                appointment.startAt,
-                                timeZone,
-                                locale,
-                              )}{" "}
-                              –{" "}
-                              {formatAppointmentTime(
-                                appointment.endAt,
-                                timeZone,
-                                locale,
-                              )}
+                            {formatAppointmentTime(
+                              appointment.startAt,
+                              timeZone,
+                              locale,
+                            )}{" "}
+                            –{" "}
+                            {formatAppointmentTime(
+                              appointment.endAt,
+                              timeZone,
+                              locale,
+                            )}
                           </span>
                         </button>
                       );

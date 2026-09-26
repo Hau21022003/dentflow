@@ -21,7 +21,11 @@ export const PATHS = {
     "/workspace/:tenantSlug/branches/:branchSlug/reception/patients",
   workspaceReceptionAppointments:
     "/workspace/:tenantSlug/branches/:branchSlug/reception/appointments",
+  workspaceReceptionTreatmentPlanAcceptances:
+    "/workspace/:tenantSlug/branches/:branchSlug/reception/treatment-plan-acceptances",
   workspaceDoctor: "/workspace/:tenantSlug/branches/:branchSlug/doctor",
+  workspaceDoctorPatients:
+    "/workspace/:tenantSlug/branches/:branchSlug/doctor/patients",
   workspaceDoctorVisit:
     "/workspace/:tenantSlug/branches/:branchSlug/doctor/appointments/:appointmentId/visit",
   workspaceUploadTest:
@@ -54,8 +58,12 @@ export const pathFor = {
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/reception/patients`,
   workspaceReceptionAppointments: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/reception/appointments`,
+  workspaceReceptionTreatmentPlanAcceptances: (tenantSlug: string, branchSlug: string) =>
+    `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/reception/treatment-plan-acceptances`,
   workspaceDoctor: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/doctor`,
+  workspaceDoctorPatients: (tenantSlug: string, branchSlug: string) =>
+    `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/doctor/patients`,
   workspaceDoctorVisit: (
     tenantSlug: string,
     branchSlug: string,

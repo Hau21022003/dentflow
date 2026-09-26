@@ -4,8 +4,8 @@ import { useAssignAppointmentMutation, useAppointmentDentistsQuery } from "@/fea
 import type { Appointment } from "@/features/appointments/appointments.types";
 import { handleApiError } from "@/shared/lib/error";
 import { idempotencyKeyForIntent, type IdempotencyIntent } from "@/shared/lib/idempotency";
-import { useToast } from "@/shared/components/ToastProvider";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -16,7 +16,6 @@ type Values = { assignedDentistUserId: string };
 
 export function AppointmentAssignmentDialog({ appointment, branchSlug, open, onOpenChange, tenantSlug }: Props) {
   const { t } = useTranslation("appointments");
-  const { success } = useToast();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [intent, setIntent] = useState<IdempotencyIntent | null>(null);
@@ -37,7 +36,7 @@ export function AppointmentAssignmentDialog({ appointment, branchSlug, open, onO
       setIntent(nextIntent);
       await mutation.mutateAsync({ tenantSlug, branchSlug, appointmentId: appointment.id, input, idempotencyKey: nextIntent.key });
       onOpenChange(false);
-      success(t("assignment.feedback"));
+      toast.success(t("assignment.feedback"));
     } catch (error) { handleApiError<Values>({ error, setError }); }
   }
   return <FormDialog description={t("assignment.description")} isDirty={isDirty} isSubmitting={mutation.isPending} noValidate onOpenChange={(next) => { if (!next) setIntent(null); onOpenChange(next); }} onSubmit={handleSubmit(submit)} open={open} submitText={t("actions.assign")} title={t("assignment.title")}>

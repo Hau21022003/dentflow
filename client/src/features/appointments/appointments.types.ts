@@ -55,8 +55,14 @@ export type AssignedAppointment = {
   status: AppointmentStatus;
   startAt: string;
   endAt: string;
-  patient: { id: string; fullName: string };
+  patient: {
+    id: string;
+    fullName: string;
+    gender: PatientGender;
+    dateOfBirth: string | null;
+  };
   service: { id: string; code: string; name: string } | null;
+  visitReason: string | null;
 };
 
 export type AppointmentDentistOption = {

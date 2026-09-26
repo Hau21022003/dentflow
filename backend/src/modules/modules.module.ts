@@ -16,6 +16,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { PatientsModule } from './patients/patients.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { VisitsModule } from './visits/visits.module';
+import { TreatmentPlansModule } from './treatment-plans/treatment-plans.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { VisitsModule } from './visits/visits.module';
     PatientsModule,
     AppointmentsModule,
     VisitsModule,
+    TreatmentPlansModule,
     ServicesModule,
     IdempotencyModule,
     EmailTemplatesModule,

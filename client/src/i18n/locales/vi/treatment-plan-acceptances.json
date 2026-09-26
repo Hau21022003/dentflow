@@ -1,0 +1,31 @@
+{
+  "eyebrow": "Tiếp tân · {{tenantName}} · {{branchName}}",
+  "title": "Xác nhận kế hoạch điều trị",
+  "description": "Ghi nhận bệnh nhân chấp thuận các kế hoạch điều trị đã đề xuất.",
+  "loading": "Đang tải hàng đợi xác nhận…",
+  "table": {
+    "title": "Hàng đợi xác nhận",
+    "description": "Chỉ hiển thị kế hoạch đang ở trạng thái Đã đề xuất.",
+    "patient": "Bệnh nhân",
+    "plan": "Mã kế hoạch",
+    "status": "Trạng thái",
+    "createdAt": "Tạo lúc",
+    "updatedAt": "Cập nhật lúc",
+    "actions": "Thao tác"
+  },
+  "status": { "proposed": "Đã đề xuất" },
+  "actions": { "accept": "Chấp thuận", "accepting": "Đang xác nhận…", "cancel": "Hủy", "retry": "Thử lại" },
+  "dialog": {
+    "title": "Xác nhận chấp thuận kế hoạch điều trị",
+    "description": "Ghi nhận {{name}} chấp thuận kế hoạch điều trị {{planId}}."
+  },
+  "feedback": { "accepted": "Đã chấp thuận kế hoạch điều trị." },
+  "empty": { "title": "Chưa có kế hoạch được đề xuất", "description": "Kế hoạch do Bác sĩ đề xuất sẽ xuất hiện tại đây." },
+  "errors": {
+    "listTitle": "Không thể tải hàng đợi xác nhận",
+    "forbidden": "Bạn không còn quyền xác nhận kế hoạch điều trị tại chi nhánh này.",
+    "notFound": "Kế hoạch điều trị không còn khả dụng trong chi nhánh hiện tại.",
+    "conflict": "Kế hoạch không còn ở trạng thái Đã đề xuất. Hãy tải lại hàng đợi và thử lại.",
+    "invalid": "Yêu cầu kế hoạch điều trị không hợp lệ. Hãy tải lại hàng đợi và thử lại."
+  }
+}

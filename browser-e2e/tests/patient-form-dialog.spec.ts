@@ -14,6 +14,8 @@ const BRANCH_SLUG = "central";
 const PATIENTS_ROUTE = `/tenants/${TENANT_SLUG}/branches/${BRANCH_SLUG}/patients`;
 const PATIENTS_WORKSPACE_PATH =
   `/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/reception/patients`;
+const DOCTOR_PATIENTS_WORKSPACE_PATH =
+  `/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/doctor/patients`;
 
 test.beforeEach(async ({ request }) => {
   await resetDatabase(request);
@@ -192,6 +194,24 @@ test("Patient workspace is denied without administrative permission", async ({ p
   await submitLogin(page, E2E_USERS.dentist);
   await page.goto(PATIENTS_WORKSPACE_PATH);
   await expect(page.getByText("403 · Không có quyền truy cập")).toBeVisible();
+});
+
+test("Dentist can open the assigned-patient list without administrative actions", async ({
+  page,
+}) => {
+  await login(page, E2E_USERS.branchDentist);
+  await switchToEnglish(page);
+  const assignedList = page.waitForResponse((response) => {
+    if (response.request().method() !== "GET") return false;
+    return new URL(response.url()).pathname === `${PATIENTS_ROUTE}/assigned`;
+  });
+  await page.goto(DOCTOR_PATIENTS_WORKSPACE_PATH);
+  await assignedList;
+
+  await expect(page.getByRole("heading", { name: "Patients", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add patient" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "My patients" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Open actions for/ })).toHaveCount(0);
 });
 
 async function switchToEnglish(page: Page): Promise<void> {

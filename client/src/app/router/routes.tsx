@@ -15,8 +15,10 @@ import { BranchWorkspaceHomePage } from "../../pages/workspace/branch/BranchWork
 import { BranchStaffManagementPage } from "../../pages/workspace/branch/BranchStaffManagementPage";
 import { TempImageUploadTestPage } from "../../pages/workspace/branch/TempImageUploadTestPage";
 import { DoctorHomePage } from "../../pages/workspace/doctor/DoctorHomePage";
+import { DoctorPatientsPage } from "../../pages/workspace/doctor/DoctorPatientsPage";
 import { DoctorVisitPage } from "../../pages/workspace/doctor/DoctorVisitPage";
 import { AppointmentsPage } from "../../pages/workspace/reception/AppointmentsPage";
+import { TreatmentPlanAcceptancesPage } from "../../pages/workspace/reception/TreatmentPlanAcceptancesPage";
 import { BranchManagementPage } from "../../pages/workspace/tenant/BranchManagementPage";
 import { ServiceManagementPage } from "../../pages/workspace/tenant/ServiceManagementPage";
 import { TenantHomePage } from "../../pages/workspace/tenant/TenantHomePage";
@@ -222,6 +224,18 @@ export const routes: RouteObject[] = [
                         ),
                         children: [
                           { index: true, element: <DoctorHomePage /> },
+                          { path: "patients", element: <DoctorPatientsPage /> },
+                        ],
+                      },
+                      {
+                        path: "reception/treatment-plan-acceptances",
+                        element: (
+                          <RequireBranchPermission
+                            permission={PERMISSIONS.treatmentPlanAccept}
+                          />
+                        ),
+                        children: [
+                          { index: true, element: <TreatmentPlanAcceptancesPage /> },
                         ],
                       },
                       {

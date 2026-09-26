@@ -21,7 +21,37 @@ export type Patient = {
   updatedAt: string;
 };
 
-export type PatientSortBy = "fullName" | "dateOfBirth" | "createdAt";
+export type PatientSortBy =
+  | "fullName"
+  | "dateOfBirth"
+  | "createdAt"
+  | "nextAppointmentAt"
+  | "lastVisitAt";
+
+export type PatientScheduleFilter = "WITH_UPCOMING" | "WITHOUT_UPCOMING";
+
+export type PatientAppointmentSummary = {
+  startAt: string;
+  serviceName: string | null;
+  visitReason: string | null;
+};
+
+export type PatientLastVisitSummary = {
+  completedAt: string;
+};
+
+export type PatientListItem = Patient & {
+  nextAppointment: PatientAppointmentSummary | null;
+  lastVisit: PatientLastVisitSummary | null;
+};
+
+export type AssignedPatientListItem = Pick<
+  Patient,
+  "id" | "fullName" | "phone" | "dateOfBirth" | "gender"
+> & {
+  nextAppointment: PatientAppointmentSummary | null;
+  lastVisit: PatientLastVisitSummary | null;
+};
 
 export type SortOrder = "ASC" | "DESC";
 
@@ -31,15 +61,21 @@ export type PatientListQuery = {
   search?: string;
   sortBy?: PatientSortBy;
   sortOrder?: SortOrder;
+  scheduleFilter?: PatientScheduleFilter;
 };
 
-export type PatientPage = {
-  items: Patient[];
+export type PatientPage<TPatient = PatientListItem> = {
+  items: TPatient[];
   meta: {
     page: number;
     limit: number;
     total: number;
     totalPages: number;
+    scheduleCounts: {
+      all: number;
+      withUpcoming: number;
+      withoutUpcoming: number;
+    };
   };
 };
 

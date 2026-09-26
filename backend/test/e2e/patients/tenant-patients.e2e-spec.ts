@@ -18,6 +18,11 @@ import {
   TenantStatus,
 } from 'src/modules/tenants/entities/tenant.entity';
 import { User } from 'src/modules/users/entities/user.entity';
+import {
+  Appointment,
+  AppointmentSource,
+  AppointmentStatus,
+} from 'src/modules/appointments/entities/appointment.entity';
 import request from 'supertest';
 import { createAuthFixtures } from 'test/fixtures/auth.fixture';
 import { loginAs } from 'test/helpers/auth.helper';
@@ -33,6 +38,7 @@ describe('Patient administrative management (e2e)', () => {
   let authFixtures: ReturnType<typeof createAuthFixtures>;
   let patientsRepository: Repository<Patient>;
   let auditLogsRepository: Repository<AuditLog>;
+  let appointmentsRepository: Repository<Appointment>;
 
   beforeAll(async () => {
     app = await initApp();
@@ -45,6 +51,7 @@ describe('Patient administrative management (e2e)', () => {
     });
     patientsRepository = dataSource.getRepository(Patient);
     auditLogsRepository = dataSource.getRepository(AuditLog);
+    appointmentsRepository = dataSource.getRepository(Appointment);
     await dataSource.runMigrations();
   });
 
@@ -242,7 +249,17 @@ describe('Patient administrative management (e2e)', () => {
       .expect((response) => {
         expect(response.body).toMatchObject({
           items: [expect.objectContaining({ id: alpha.id })],
-          meta: { page: 1, limit: 1, total: 1, totalPages: 1 },
+          meta: {
+            page: 1,
+            limit: 1,
+            total: 1,
+            totalPages: 1,
+            scheduleCounts: {
+              all: 1,
+              withUpcoming: 0,
+              withoutUpcoming: 1,
+            },
+          },
         });
       });
     await agent
@@ -388,6 +405,132 @@ describe('Patient administrative management (e2e)', () => {
     });
     await agent.get(route).expect(403);
     expect(patient.id).toBeDefined();
+  });
+
+  it('lists only patients currently assigned to the requesting Dentist with branch-scoped schedule summaries', async () => {
+    const { tenant, branch, agent } = await createBranchActor(
+      'patient-assigned-list',
+      TenantRoleCode.RECEPTIONIST,
+    );
+    const route = patientRoute(tenant, branch);
+    const assignedPatient = await createPatient(agent, route, {
+      fullName: 'Synthetic Assigned Patient',
+      phone: '0901234580',
+      gender: PatientGender.FEMALE,
+      address: 'Sensitive address must not be returned to Dentist',
+    });
+    const otherPatient = await createPatient(agent, route, {
+      fullName: 'Synthetic Other Dentist Patient',
+      phone: '0901234581',
+      gender: PatientGender.MALE,
+    });
+    const unassignedPatient = await createPatient(agent, route, {
+      fullName: 'Synthetic Unassigned Patient',
+      phone: '0901234582',
+      gender: PatientGender.OTHER,
+    });
+    const dentist = await authFixtures.createUser({
+      email: `assigned-dentist-${randomUUID()}@patients.test`,
+    });
+    const otherDentist = await authFixtures.createUser({
+      email: `other-dentist-${randomUUID()}@patients.test`,
+    });
+    await authFixtures.grantBranchRole(dentist, branch, TenantRoleCode.DENTIST);
+    await authFixtures.grantBranchRole(
+      otherDentist,
+      branch,
+      TenantRoleCode.DENTIST,
+    );
+    const dentistSession = await loginAs(app, {
+      email: dentist.email,
+      password: PASSWORD,
+    });
+    const now = Date.now();
+    await appointmentsRepository.save([
+      appointmentsRepository.create({
+        tenantId: tenant.id,
+        branchId: branch.id,
+        patientId: assignedPatient.id,
+        source: AppointmentSource.PHONE,
+        status: AppointmentStatus.BOOKED,
+        startAt: new Date(now + 2 * 24 * 60 * 60 * 1000),
+        endAt: new Date(now + (2 * 24 * 60 + 30) * 60 * 1000),
+        assignedDentistUserId: dentist.id,
+        visitReason: 'Synthetic follow-up',
+      }),
+      appointmentsRepository.create({
+        tenantId: tenant.id,
+        branchId: branch.id,
+        patientId: assignedPatient.id,
+        source: AppointmentSource.PHONE,
+        status: AppointmentStatus.COMPLETED,
+        startAt: new Date(now - 3 * 24 * 60 * 60 * 1000),
+        endAt: new Date(now - (3 * 24 * 60 - 30) * 60 * 1000),
+        assignedDentistUserId: dentist.id,
+        visitReason: 'Synthetic completed visit',
+      }),
+      appointmentsRepository.create({
+        tenantId: tenant.id,
+        branchId: branch.id,
+        patientId: otherPatient.id,
+        source: AppointmentSource.PHONE,
+        status: AppointmentStatus.CONFIRMED,
+        startAt: new Date(now + 3 * 24 * 60 * 60 * 1000),
+        endAt: new Date(now + (3 * 24 * 60 + 30) * 60 * 1000),
+        assignedDentistUserId: otherDentist.id,
+        visitReason: 'Synthetic other appointment',
+      }),
+      appointmentsRepository.create({
+        tenantId: tenant.id,
+        branchId: branch.id,
+        patientId: unassignedPatient.id,
+        source: AppointmentSource.PHONE,
+        status: AppointmentStatus.BOOKED,
+        startAt: new Date(now + 4 * 24 * 60 * 60 * 1000),
+        endAt: new Date(now + (4 * 24 * 60 + 30) * 60 * 1000),
+        assignedDentistUserId: null,
+        visitReason: 'Synthetic unassigned appointment',
+      }),
+    ]);
+
+    await agent.get(`${route}/assigned`).expect(403);
+    await dentistSession.agent
+      .get(`${route}/assigned?scheduleFilter=WITH_UPCOMING&sortBy=nextAppointmentAt&sortOrder=ASC`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as {
+          items: Array<Record<string, unknown>>;
+          meta: {
+            scheduleCounts: {
+              all: number;
+              withUpcoming: number;
+              withoutUpcoming: number;
+            };
+          };
+        };
+        expect(body.items).toHaveLength(1);
+        expect(body.meta).toMatchObject({
+          scheduleCounts: {
+            all: 1,
+            withUpcoming: 1,
+            withoutUpcoming: 0,
+          },
+        });
+        expect(body.items[0]).toMatchObject({
+          id: assignedPatient.id,
+          fullName: 'Synthetic Assigned Patient',
+          phone: '0901234580',
+          nextAppointment: { visitReason: 'Synthetic follow-up' },
+          lastVisit: expect.objectContaining({ completedAt: expect.any(String) }),
+        });
+        expect(body.items[0]).not.toHaveProperty('address');
+        expect(body.items[0]).not.toHaveProperty('emergencyContact');
+        expect(body.items[0]).not.toHaveProperty('createdAt');
+      });
+    await dentistSession.agent
+      .get(`${route}/assigned?scheduleFilter=WITHOUT_UPCOMING`)
+      .expect(200)
+      .expect((response) => expect(response.body.items).toEqual([]));
   });
 
   async function createBranchActor(

@@ -62,6 +62,17 @@ export const appointmentsService = {
     return payload;
   },
 
+  async assignedCalendarSummary(
+    scope: AppointmentScope,
+    month: string,
+  ): Promise<AppointmentCalendarSummary> {
+    const { payload } = await http.get<AppointmentCalendarSummary>(
+      `${appointmentsRoute(scope)}/assigned/calendar-summary`,
+      { params: { month } },
+    );
+    return payload;
+  },
+
   async get(scope: AppointmentScope, appointmentId: string): Promise<AppointmentDetail> {
     const { payload } = await http.get<AppointmentDetail>(appointmentRoute(scope, appointmentId));
     return payload;

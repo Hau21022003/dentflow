@@ -6,6 +6,7 @@ const TENANT_SLUG = "test-brightsmile";
 const BRANCH_SLUG = "central";
 const APPOINTMENTS_WORKSPACE = `/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/reception/appointments`;
 const DOCTOR_WORKSPACE = `/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/doctor`;
+const ACCEPTANCE_WORKSPACE = `/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/reception/treatment-plan-acceptances`;
 const APPOINTMENT_DATE = "2030-01-15";
 const DENTIST_NAME = "Synthetic Test Branch Admin";
 
@@ -20,19 +21,24 @@ test("Dentist starts, saves, completes, and adds to a Visit", async ({ page }) =
 
   await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
   await expect(page.getByRole("heading", { name: "My schedule" })).toBeVisible();
-  await page.getByRole("button", { name: "Open Visit" }).click();
-  await expect(page).toHaveURL(
-    new RegExp(`/doctor/appointments/[0-9a-f-]+/visit\\?date=${APPOINTMENT_DATE}$`),
-  );
-
+  await expect(page.getByLabel("Monthly appointment calendar")).toBeVisible();
+  await page.locator('button[data-date="2030-01-16"]').click();
+  await expect(page).toHaveURL(/date=2030-01-16/);
+  await page.locator(`button[data-date="${APPOINTMENT_DATE}"]`).click();
+  await expect(page).toHaveURL(new RegExp(`date=${APPOINTMENT_DATE}`));
+  await expect(page.getByText("1 appointment · 0h 30m total")).toBeVisible();
+  await expect(page.getByText("Female", { exact: true })).toBeVisible();
   const startRequest = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
       new URL(request.url()).pathname.endsWith("/start"),
   );
-  await page.getByRole("button", { name: "Start visit" }).click();
+  await page.getByRole("button", { name: "Start Visit" }).click();
   const start = await startRequest;
   expectIdempotencyKey(start.headers()["idempotency-key"]);
+  await expect(page).toHaveURL(
+    new RegExp(`/doctor/appointments/[0-9a-f-]+/visit\\?date=${APPOINTMENT_DATE}$`),
+  );
 
   await expect(page.getByRole("heading", { name: "Clinical record" })).toBeVisible();
   const completeButton = page.getByRole("button", { name: "Complete Visit", exact: true });
@@ -89,6 +95,137 @@ test("Dentist starts, saves, completes, and adds to a Visit", async ({ page }) =
   await page.reload();
   await expect(page.getByLabel("Symptoms")).toHaveValue("Synthetic visit symptom");
   await expect(page.getByText("Synthetic completed Visit addendum", { exact: true })).toBeVisible();
+});
+
+test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", async ({ page }) => {
+  await grantDentistRole(page);
+  await loginAsDentistReceptionist(page);
+  await createAndCheckInAssignedAppointment(page);
+
+  await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
+  await page.getByRole("button", { name: "Start Visit" }).click();
+  await expect(page.getByRole("heading", { name: "Treatment plans" })).toBeVisible();
+  const treatmentPlans = page.locator('section[aria-labelledby="treatment-plans-title"]');
+
+  const createRequest = page.waitForRequest((request) =>
+    request.method() === "POST" && new URL(request.url()).pathname.endsWith("/treatment-plans"),
+  );
+  await treatmentPlans.getByRole("button", { name: "Create draft" }).click();
+  expectIdempotencyKey((await createRequest).headers()["idempotency-key"]);
+
+  await treatmentPlans.getByRole("button", { name: "Add item" }).click();
+  await treatmentPlans.getByRole("combobox", { name: "Service" }).first().click();
+  await page.getByRole("option").first().click();
+  await treatmentPlans.getByRole("combobox", { name: "Planned dentist" }).first().click();
+  await page.getByRole("option").first().click();
+  await treatmentPlans.getByRole("button", { name: "Add item" }).click();
+  await treatmentPlans.getByRole("combobox", { name: "Service" }).nth(1).click();
+  await page.getByRole("option").first().click();
+  await treatmentPlans.getByRole("combobox", { name: "Planned dentist" }).nth(1).click();
+  await page.getByRole("option").first().click();
+
+  const syncRequest = page.waitForRequest((request) =>
+    request.method() === "PATCH" && new URL(request.url()).pathname.includes("/treatment-plans/"),
+  );
+  await treatmentPlans.getByRole("button", { name: "Save draft" }).click();
+  const sync = await syncRequest;
+  expectIdempotencyKey(sync.headers()["idempotency-key"]);
+  expect(sync.postDataJSON().items).toHaveLength(2);
+
+  const proposeRequest = page.waitForRequest((request) =>
+    request.method() === "POST" && new URL(request.url()).pathname.endsWith("/propose"),
+  );
+  await treatmentPlans.getByRole("button", { name: "Propose" }).click();
+  const propose = await proposeRequest;
+  expectIdempotencyKey(propose.headers()["idempotency-key"]);
+  await expect(treatmentPlans.getByText("Proposed", { exact: true }).last()).toBeVisible();
+
+  const planId = propose.url().split("/").at(-2);
+  expect(planId).toBeTruthy();
+  await page.goto(ACCEPTANCE_WORKSPACE);
+  await expect(page.getByRole("heading", { name: "Treatment plan acceptances" })).toBeVisible();
+  const queueRow = page.getByRole("row").filter({ hasText: "Synthetic Visit Patient" });
+  await expect(queueRow).toContainText(planId!.slice(0, 8));
+  await expect(page.getByText("Synthetic indication", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/synthetic-cleaning/i)).toHaveCount(0);
+  await expect(page.getByText("Service", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Tooth position", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Indication", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Discount amount", { exact: true })).toHaveCount(0);
+  const acceptanceRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname.endsWith(`/treatment-plans/${planId}/accept`),
+  );
+  await queueRow.getByRole("button", { name: "Accept" }).click();
+  const acceptanceDialog = page.getByRole("alertdialog", {
+    name: "Confirm treatment plan acceptance",
+  });
+  await acceptanceDialog.getByRole("button", { name: "Accept", exact: true }).click();
+  expectIdempotencyKey((await acceptanceRequest).headers()["idempotency-key"]);
+  await expect(queueRow).toHaveCount(0);
+  await page.reload();
+  await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
+  await page.getByRole("button", { name: "Continue Visit" }).click();
+  await treatmentPlans.getByRole("button", { name: /Treatment plan/ }).click();
+
+  const startEventResponse = page.waitForResponse((response) =>
+    response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/events"),
+  );
+  await treatmentPlans.getByRole("button", { name: "Start" }).first().click();
+  expectIdempotencyKey((await startEventResponse).request().headers()["idempotency-key"]);
+  const completeEventResponse = page.waitForResponse((response) =>
+    response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/events"),
+  );
+  await treatmentPlans.getByRole("button", { name: "Complete" }).click();
+  expectIdempotencyKey((await completeEventResponse).request().headers()["idempotency-key"]);
+  await treatmentPlans.getByRole("button", { name: "Cancel item" }).last().click();
+  const itemCancelDialog = page.getByRole("dialog", { name: "Cancel treatment item" });
+  await itemCancelDialog.getByLabel("Reason code").fill("PATIENT_REQUEST");
+  const cancelEventResponse = page.waitForResponse((response) =>
+    response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/events"),
+  );
+  await itemCancelDialog.getByRole("button", { name: "Cancel item", exact: true }).click();
+  expectIdempotencyKey((await cancelEventResponse).request().headers()["idempotency-key"]);
+  await treatmentPlans.getByRole("button", { name: "Event history" }).first().click();
+  await expect(treatmentPlans.getByText("Completed", { exact: true }).last()).toBeVisible();
+
+  const secondCreateRequest = page.waitForRequest((request) =>
+    request.method() === "POST" && new URL(request.url()).pathname.endsWith("/treatment-plans"),
+  );
+  await treatmentPlans.getByRole("button", { name: "Create draft" }).click();
+  await secondCreateRequest;
+  await expect(treatmentPlans.getByRole("button", { name: "Add item" })).toBeVisible();
+  await treatmentPlans.getByRole("button", { name: "Add item" }).click();
+  await treatmentPlans.getByRole("combobox", { name: "Service" }).click();
+  await page.getByRole("option").first().click();
+  await treatmentPlans.getByRole("combobox", { name: "Planned dentist" }).click();
+  await page.getByRole("option").first().click();
+  const secondSyncRequest = page.waitForRequest((request) =>
+    request.method() === "PATCH" && new URL(request.url()).pathname.includes("/treatment-plans/"),
+  );
+  await treatmentPlans.getByRole("button", { name: "Save draft" }).click();
+  await secondSyncRequest;
+  await expect(treatmentPlans.getByRole("button", { name: "Propose" })).toBeEnabled();
+  await treatmentPlans.getByRole("button", { name: "Propose" }).click();
+  await treatmentPlans.getByRole("button", { name: "Reopen" }).click();
+  const reopenDialog = page.getByRole("dialog", { name: "Reopen treatment plan" });
+  await reopenDialog.getByLabel("Reason code").fill("PATIENT_REQUEST");
+  const reopenRequest = page.waitForRequest((request) =>
+    request.method() === "POST" && new URL(request.url()).pathname.endsWith("/reopen"),
+  );
+  await reopenDialog.getByRole("button", { name: "Reopen", exact: true }).click();
+  expectIdempotencyKey((await reopenRequest).headers()["idempotency-key"]);
+
+  await treatmentPlans.getByRole("button", { name: "Cancel plan" }).click();
+  const cancelDialog = page.getByRole("dialog", { name: "Cancel treatment plan" });
+  await cancelDialog.getByLabel("Reason code").fill("PATIENT_REQUEST");
+  const cancelRequest = page.waitForRequest((request) =>
+    request.method() === "POST" && new URL(request.url()).pathname.endsWith("/cancel"),
+  );
+  await cancelDialog.getByRole("button", { name: "Cancel plan", exact: true }).click();
+  expectIdempotencyKey((await cancelRequest).headers()["idempotency-key"]);
+  await expect(treatmentPlans.getByText("Cancelled", { exact: true }).last()).toBeVisible();
 });
 
 async function grantDentistRole(page: Page): Promise<void> {

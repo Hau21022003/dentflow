@@ -27,8 +27,8 @@ import {
 } from "@/features/appointments/appointments.types";
 import { PatientFormDialog } from "@/features/patients/components/PatientFormDialog";
 import { useBranchPatientsQuery } from "@/features/patients/patients.hooks";
-import { useToast } from "@/shared/components/ToastProvider";
 import { handleApiError } from "@/shared/lib/error";
+import { toast } from "sonner";
 import {
   idempotencyKeyForIntent,
   type IdempotencyIntent,
@@ -127,7 +127,6 @@ export function AppointmentFormDialog({
   timeZone,
 }: AppointmentFormDialogProps) {
   const { t } = useTranslation("appointments");
-  const { success } = useToast();
   const [patientSearch, setPatientSearch] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [dentistSearch, setDentistSearch] = useState("");
@@ -350,7 +349,7 @@ export function AppointmentFormDialog({
           idempotencyKey: nextIntent.key,
         });
         close(false);
-        success(t("feedback.created"));
+        toast.success(t("feedback.created"));
         return;
       }
 
@@ -395,7 +394,7 @@ export function AppointmentFormDialog({
         idempotencyKey: nextIntent.key,
       });
       close(false);
-      success(t("feedback.updated"));
+      toast.success(t("feedback.updated"));
     } catch (error) {
       handleApiError<AppointmentFormValues>({ error, setError });
     }

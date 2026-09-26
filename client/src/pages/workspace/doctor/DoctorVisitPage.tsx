@@ -22,13 +22,14 @@ import type { AssignedAppointment } from "@/features/appointments/appointments.t
 import { AppointmentStatusBadge } from "@/features/appointments/components/AppointmentStatusBadge";
 import { VisitAddendumForm } from "@/features/visits/components/VisitAddendumForm";
 import { VisitClinicalForm } from "@/features/visits/components/VisitClinicalForm";
+import { TreatmentPlansPanel } from "@/features/treatment-plans/components/TreatmentPlansPanel";
 import {
   useStartVisitMutation,
   useVisitQuery,
 } from "@/features/visits/visits.hooks";
 import type { Visit } from "@/features/visits/visits.types";
-import { useToast } from "@/shared/components/ToastProvider";
 import { handleApiError } from "@/shared/lib/error";
+import { toast } from "sonner";
 import {
   idempotencyKeyForIntent,
   type IdempotencyIntent,
@@ -154,9 +155,8 @@ function AppointmentSummary({
 export function DoctorVisitPage() {
   const { appointmentId = "" } = useParams();
   const [searchParams] = useSearchParams();
-  const { branch, branchSlug, tenantSlug } = useRouteWorkspaceContext();
+  const { branch, branchSlug, tenantSlug, user } = useRouteWorkspaceContext();
   const { i18n, t } = useTranslation("visits");
-  const { success } = useToast();
   const date = searchParams.get("date");
   const validDate = isValidDate(date);
   const timeZone = branch?.branch.timezone ?? "Asia/Ho_Chi_Minh";
@@ -202,7 +202,7 @@ export function DoctorVisitPage() {
       });
       setStartIntent(null);
       setStartedVisit(created);
-      success(t("feedback.started"));
+      toast.success(t("feedback.started"));
     } catch (error) {
       handleApiError({ error, onMessage: setStartError });
     }
@@ -309,6 +309,14 @@ export function DoctorVisitPage() {
                   tenantSlug={tenantSlug}
                   visit={visit}
                 />
+                {visit.status === "OPEN" && (
+                  <TreatmentPlansPanel
+                    branchSlug={branchSlug}
+                    tenantSlug={tenantSlug}
+                    user={user}
+                    visitId={visit.id}
+                  />
+                )}
                 {visit.status === "COMPLETED" && (
                   <>
                     <VisitAddenda addenda={visit.addenda} locale={locale} timeZone={timeZone} />

@@ -202,12 +202,17 @@ export function AppointmentMonthView({
                       {cell.day}
                     </span>
                     {day && day.total > 0 && (
-                      <span className="inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground sm:hidden">
+                      <span className="hidden min-w-5 shrink-0 items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground min-[430px]:inline-flex sm:hidden">
                         {formatCompactCount(day.total)}
                       </span>
                     )}
                     {day && day.total > 0 && (
-                      <span className="hidden shrink-0 whitespace-nowrap text-xs font-medium text-muted-foreground sm:inline">
+                      <span className="hidden shrink-0 whitespace-nowrap text-xs font-medium text-muted-foreground sm:inline 2xl:hidden">
+                        {t("month.countCompact", { count: day.total })}
+                      </span>
+                    )}
+                    {day && day.total > 0 && (
+                      <span className="hidden shrink-0 whitespace-nowrap text-xs font-medium text-muted-foreground 2xl:inline">
                         {t("month.count", { count: day.total })}
                       </span>
                     )}

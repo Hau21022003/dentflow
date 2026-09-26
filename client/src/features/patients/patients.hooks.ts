@@ -16,17 +16,34 @@ export const patientQueryKeys = {
     [...patientQueryKeys.all, "branch", tenantSlug, branchSlug] as const,
   list: (tenantSlug: string, branchSlug: string, query: PatientListQuery) =>
     [...patientQueryKeys.branch(tenantSlug, branchSlug), "list", query] as const,
+  assignedList: (tenantSlug: string, branchSlug: string, query: PatientListQuery) =>
+    [...patientQueryKeys.branch(tenantSlug, branchSlug), "assigned-list", query] as const,
 };
 
 export function useBranchPatientsQuery(
   tenantSlug: string,
   branchSlug: string,
   query: PatientListQuery,
+  enabled = true,
 ) {
   return useQuery({
     queryKey: patientQueryKeys.list(tenantSlug, branchSlug, query),
     queryFn: () => patientsService.list(tenantSlug, branchSlug, query),
-    enabled: Boolean(tenantSlug && branchSlug),
+    enabled: enabled && Boolean(tenantSlug && branchSlug),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAssignedBranchPatientsQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  query: PatientListQuery,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: patientQueryKeys.assignedList(tenantSlug, branchSlug, query),
+    queryFn: () => patientsService.listAssigned(tenantSlug, branchSlug, query),
+    enabled: enabled && Boolean(tenantSlug && branchSlug),
     placeholderData: keepPreviousData,
   });
 }

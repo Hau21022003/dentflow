@@ -19,6 +19,8 @@ export const appointmentQueryKeys = {
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "list", query] as const,
   assignedAgenda: (tenantSlug: string, branchSlug: string, query: AppointmentAgendaQuery) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "assigned-agenda", query] as const,
+  assignedCalendarSummary: (tenantSlug: string, branchSlug: string, month: string) =>
+    [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "assigned-calendar-summary", month] as const,
   calendarSummary: (tenantSlug: string, branchSlug: string, month: string) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "calendar-summary", month] as const,
   detail: (tenantSlug: string, branchSlug: string, appointmentId: string) =>
@@ -100,6 +102,19 @@ export function useAppointmentCalendarSummaryQuery(
     queryKey: appointmentQueryKeys.calendarSummary(tenantSlug, branchSlug, month),
     queryFn: () =>
       appointmentsService.calendarSummary({ tenantSlug, branchSlug }, month),
+    enabled: Boolean(tenantSlug && branchSlug && month),
+  });
+}
+
+export function useAssignedAppointmentCalendarSummaryQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  month: string,
+) {
+  return useQuery<AppointmentCalendarSummary>({
+    queryKey: appointmentQueryKeys.assignedCalendarSummary(tenantSlug, branchSlug, month),
+    queryFn: () =>
+      appointmentsService.assignedCalendarSummary({ tenantSlug, branchSlug }, month),
     enabled: Boolean(tenantSlug && branchSlug && month),
   });
 }

@@ -1,6 +1,6 @@
 # DentFlow — Kế hoạch triển khai Idempotency
 
-> Trạng thái triển khai (2026-09-21): Foundation, Pilot Plan, tenant lifecycle, Patient administrative command, Appointment V1 và Visit V1 đã được thực hiện. Appointment yêu cầu `Idempotency-Key` cho create, update, confirm, check-in, assign, cancel và no-show. Visit yêu cầu key cho start, update, complete và create addendum. Treatment, financial command, provider checkout và webhook vẫn là các giai đoạn rollout sau. Retention `IdempotencyRecord` chạy trực tiếp trong API mỗi ngày lúc 03:15 UTC bằng Nest Scheduler; không dùng queue hoặc worker riêng cho tác vụ xóa idempotent này.
+> Trạng thái triển khai (2026-09-24): Foundation, Pilot Plan, tenant lifecycle, Patient administrative, Appointment V1, Visit V1 và Treatment Plan/Item Backend V1 đã được thực hiện. Treatment dùng key riêng cho create, draft-sync, propose, reopen, cancel, accept và record item event. Financial command, provider checkout và webhook vẫn là các giai đoạn rollout sau. Retention `IdempotencyRecord` chạy trực tiếp trong API mỗi ngày lúc 03:15 UTC bằng Nest Scheduler; không dùng queue hoặc worker riêng cho tác vụ xóa idempotent này.
 
 Sơ đồ đọc nhanh cho developer: [Idempotency request flow](./flows/idempotency-request-flow.md).
 
@@ -126,7 +126,7 @@ Login và refresh token rotation không vào generic decorator trong đợt này
 - Áp dụng decorator cho command tenant lifecycle, clinical và financial theo mức rủi ro đã chọn.
 - Giữ transaction hiện có của từng mutation service; không yêu cầu `UnitOfWork` hoặc manager dùng chung.
 - Cập nhật tài liệu domain/API của từng module trong cùng PR.
-- Đã rollout: Patient administrative create/update; Appointment V1 create/update, confirm, check-in, assign, cancel, no-show; và Visit V1 start, update, complete, create addendum. Treatment và financial command vẫn chưa rollout.
+- Đã rollout: Patient administrative create/update; Appointment V1 create/update, confirm, check-in, assign, cancel, no-show; Visit V1 start, update, complete, create addendum; và Treatment Plan/Item V1 create, draft-sync, propose, reopen, direct cancel, accept, record item event. Financial command vẫn chưa rollout.
 
 ### Giai đoạn 4 — Provider và webhook
 

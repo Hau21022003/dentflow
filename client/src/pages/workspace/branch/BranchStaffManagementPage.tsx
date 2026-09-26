@@ -22,10 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { UserAvatar } from "@/shared/components/UserAvatar";
-import { getErrorMessage } from "@/shared/lib/error";
-import { StaffActionDialog } from "@/features/staff/components/StaffActionDialog";
+import { UserAvatar } from "@/components/UserAvatar";
 import { BranchStaffRoleDialog } from "@/features/staff/components/BranchStaffRoleDialog";
+import { StaffActionDialog } from "@/features/staff/components/StaffActionDialog";
 import {
   useBranchStaffQuery,
   useRemoveBranchStaffMutation,
@@ -42,6 +41,7 @@ import type {
   StaffMemberItem,
 } from "@/features/staff/staff.types";
 import { createDataTableLocale } from "@/i18n/data-table";
+import { getErrorMessage } from "@/shared/lib/error";
 import { type ColumnDef, type ColumnFiltersState } from "@tanstack/react-table";
 import {
   Ellipsis,
@@ -93,7 +93,8 @@ function canManageMember(item: StaffMemberItem): boolean {
       (assignment) =>
         assignment.roleCode === "TENANT_ADMIN" ||
         assignment.roleCode === "BRANCH_ADMIN",
-    ) && item.assignments.some((assignment) => isManagedRole(assignment.roleCode))
+    ) &&
+    item.assignments.some((assignment) => isManagedRole(assignment.roleCode))
   );
 }
 
@@ -201,7 +202,9 @@ export function BranchStaffManagementPage() {
                   className="flex items-center gap-2"
                   key={`${assignment.roleCode}-${assignment.branchId ?? "branch"}`}
                 >
-                  <Badge variant="outline">{t(`roles.${assignment.roleCode}`)}</Badge>
+                  <Badge variant="outline">
+                    {t(`roles.${assignment.roleCode}`)}
+                  </Badge>
                   {item.kind === "MEMBER" &&
                     memberIsManageable &&
                     isManagedRole(assignment.roleCode) &&
@@ -283,7 +286,11 @@ export function BranchStaffManagementPage() {
                   <>
                     <DropdownMenuItem
                       onSelect={() =>
-                        setActionSelection({ action: "resend", item, kind: "invitation" })
+                        setActionSelection({
+                          action: "resend",
+                          item,
+                          kind: "invitation",
+                        })
                       }
                     >
                       <RefreshCw aria-hidden="true" />
@@ -394,7 +401,9 @@ export function BranchStaffManagementPage() {
     <div className="space-y-7">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-3xl space-y-2">
-          <p className="text-sm font-semibold text-primary">{t("branch.eyebrow")}</p>
+          <p className="text-sm font-semibold text-primary">
+            {t("branch.eyebrow")}
+          </p>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
             {t("branch.title")}
           </h1>
@@ -413,7 +422,10 @@ export function BranchStaffManagementPage() {
           <div>
             <CardTitle>{t("table.title")}</CardTitle>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              {t("branch.table.description", { tenant: tenantName, branch: branchName })}
+              {t("branch.table.description", {
+                tenant: tenantName,
+                branch: branchName,
+              })}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -425,12 +437,17 @@ export function BranchStaffManagementPage() {
             )}
             <Select
               onValueChange={(value) => {
-                setStatus(value === "ALL" ? undefined : (value as StaffListStatus));
+                setStatus(
+                  value === "ALL" ? undefined : (value as StaffListStatus),
+                );
                 resetToFirstPage();
               }}
               value={status ?? "ALL"}
             >
-              <SelectTrigger aria-label={t("table.statusFilter")} className="w-40">
+              <SelectTrigger
+                aria-label={t("table.statusFilter")}
+                className="w-40"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -454,8 +471,14 @@ export function BranchStaffManagementPage() {
                       <UsersRound aria-hidden="true" />
                     </EmptyMedia>
                     <EmptyTitle>{t("errors.listTitle")}</EmptyTitle>
-                    <EmptyDescription>{getErrorMessage(staffQuery.error)}</EmptyDescription>
-                    <Button onClick={() => void staffQuery.refetch()} size="sm" type="button">
+                    <EmptyDescription>
+                      {getErrorMessage(staffQuery.error)}
+                    </EmptyDescription>
+                    <Button
+                      onClick={() => void staffQuery.refetch()}
+                      size="sm"
+                      type="button"
+                    >
                       {t("actions.retry")}
                     </Button>
                   </EmptyHeader>
@@ -467,7 +490,9 @@ export function BranchStaffManagementPage() {
                       <UsersRound aria-hidden="true" />
                     </EmptyMedia>
                     <EmptyTitle>{t("empty.title")}</EmptyTitle>
-                    <EmptyDescription>{t("branch.empty.description")}</EmptyDescription>
+                    <EmptyDescription>
+                      {t("branch.empty.description")}
+                    </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
               )
@@ -483,7 +508,8 @@ export function BranchStaffManagementPage() {
               rowCount: staffQuery.data?.meta.total ?? 0,
               onPaginationChange: (next) =>
                 setPagination((current) => ({
-                  pageIndex: next.pageSize === current.pageSize ? next.pageIndex : 0,
+                  pageIndex:
+                    next.pageSize === current.pageSize ? next.pageIndex : 0,
                   pageSize: next.pageSize,
                 })),
             }}

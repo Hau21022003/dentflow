@@ -24,8 +24,8 @@ import {
   type Visit,
   type VisitClinicalField,
 } from "@/features/visits/visits.types";
-import { useToast } from "@/shared/components/ToastProvider";
 import { handleApiError } from "@/shared/lib/error";
+import { toast } from "sonner";
 import {
   idempotencyKeyForIntent,
   type IdempotencyIntent,
@@ -82,7 +82,6 @@ export function VisitClinicalForm({
   visit,
 }: VisitClinicalFormProps) {
   const { t } = useTranslation("visits");
-  const { success } = useToast();
   const updateMutation = useUpdateVisitMutation();
   const completeMutation = useCompleteVisitMutation();
   const [saveIntent, setSaveIntent] = useState<IdempotencyIntent | null>(null);
@@ -152,7 +151,7 @@ export function VisitClinicalForm({
       });
       setSaveIntent(null);
       reset(formValuesForVisit(saved));
-      success(t("feedback.saved"));
+      toast.success(t("feedback.saved"));
     } catch (error) {
       handleApiError<VisitFormValues>({ error, setError });
     }
@@ -176,7 +175,7 @@ export function VisitClinicalForm({
       });
       setCompleteIntent(null);
       setCompleteDialogOpen(false);
-      success(t("feedback.completed"));
+      toast.success(t("feedback.completed"));
     } catch (error) {
       handleApiError({ error, onMessage: setCompleteError });
     }

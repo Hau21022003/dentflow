@@ -1,6 +1,7 @@
 import http from "@/shared/lib/http";
 import type { IdempotentCommand } from "@/shared/lib/idempotency";
 import type {
+  AssignedPatientListItem,
   CreatePatientInput,
   Patient,
   PatientListQuery,
@@ -35,6 +36,18 @@ export const patientsService = {
   ): Promise<PatientPage> {
     const { payload } = await http.get<PatientPage>(
       patientsRoute(tenantSlug, branchSlug),
+      { params: query },
+    );
+    return payload;
+  },
+
+  async listAssigned(
+    tenantSlug: string,
+    branchSlug: string,
+    query: PatientListQuery,
+  ): Promise<PatientPage<AssignedPatientListItem>> {
+    const { payload } = await http.get<PatientPage<AssignedPatientListItem>>(
+      `${patientsRoute(tenantSlug, branchSlug)}/assigned`,
       { params: query },
     );
     return payload;
