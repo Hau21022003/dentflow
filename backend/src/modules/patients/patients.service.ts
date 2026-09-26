@@ -4,7 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, EntityManager, QueryFailedError } from 'typeorm';
+import {
+  DataSource,
+  EntityManager,
+  QueryFailedError,
+  SelectQueryBuilder,
+} from 'typeorm';
 import {
   applyIlikeSearch,
   applyOffsetPagination,
@@ -20,6 +25,7 @@ import type { AuthorizationContext } from '../authorization/authorization-contex
 import { CreatePatientDto } from './dto/create-patient.dto';
 import {
   ListPatientsQueryDto,
+  PatientScheduleFilter,
   PatientSortBy,
 } from './dto/list-patients-query.dto';
 import { PatientEmergencyContactDto } from './dto/patient-emergency-contact.dto';
@@ -27,6 +33,10 @@ import { UpdatePatientDto } from './dto/update-patient.dto';
 import { Patient, PatientGender } from './entities/patient.entity';
 import { normalizePatientPhone } from './patient-phone.util';
 import { PatientsRepository } from './patients.repository';
+import {
+  Appointment,
+  AppointmentStatus,
+} from '../appointments/entities/appointment.entity';
 
 const PATIENT_CREATED_FIELDS = [
   'fullName',
@@ -41,7 +51,14 @@ const PATIENT_SORT_FIELDS: Readonly<Record<PatientSortBy, string>> = {
   [PatientSortBy.FULL_NAME]: 'patient.full_name',
   [PatientSortBy.DATE_OF_BIRTH]: 'patient.date_of_birth',
   [PatientSortBy.CREATED_AT]: 'patient.created_at',
+  [PatientSortBy.NEXT_APPOINTMENT_AT]: 'nextAppointment.start_at',
+  [PatientSortBy.LAST_VISIT_AT]: 'lastVisit.end_at',
 };
+
+const UPCOMING_APPOINTMENT_STATUSES = [
+  AppointmentStatus.BOOKED,
+  AppointmentStatus.CONFIRMED,
+] as const;
 
 export interface PatientResponse {
   id: string;
@@ -59,6 +76,47 @@ export interface PatientResponse {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface PatientAppointmentSummary {
+  startAt: Date;
+  serviceName: string | null;
+  visitReason: string | null;
+}
+
+export interface PatientLastVisitSummary {
+  completedAt: Date;
+}
+
+export interface PatientListResponse extends PatientResponse {
+  nextAppointment: PatientAppointmentSummary | null;
+  lastVisit: PatientLastVisitSummary | null;
+}
+
+export interface AssignedPatientListResponse {
+  id: string;
+  fullName: string;
+  phone: string;
+  dateOfBirth: string | null;
+  gender: PatientGender;
+  nextAppointment: PatientAppointmentSummary | null;
+  lastVisit: PatientLastVisitSummary | null;
+}
+
+export interface PatientScheduleCounts {
+  all: number;
+  withUpcoming: number;
+  withoutUpcoming: number;
+}
+
+type PatientListMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  scheduleCounts: PatientScheduleCounts;
+};
+
+type PatientScheduleCountsRaw = Record<keyof PatientScheduleCounts, string>;
 
 type PatientUpdateValues = {
   fullName?: string;
@@ -85,19 +143,115 @@ export class PatientsService {
     context: AuthorizationContext,
     query: ListPatientsQueryDto,
   ): Promise<{
-    items: PatientResponse[];
-    meta: { page: number; limit: number; total: number; totalPages: number };
+    items: PatientListResponse[];
+    meta: PatientListMeta;
+  }> {
+    return this.listPatients(context, query, false);
+  }
+
+  async listAssigned(
+    context: AuthorizationContext,
+    query: ListPatientsQueryDto,
+  ): Promise<{
+    items: AssignedPatientListResponse[];
+    meta: PatientListMeta;
+  }> {
+    return this.listPatients(context, query, true);
+  }
+
+  private async listPatients(
+    context: AuthorizationContext,
+    query: ListPatientsQueryDto,
+    assignedOnly: false,
+  ): Promise<{
+    items: PatientListResponse[];
+    meta: PatientListMeta;
+  }>;
+  private async listPatients(
+    context: AuthorizationContext,
+    query: ListPatientsQueryDto,
+    assignedOnly: true,
+  ): Promise<{
+    items: AssignedPatientListResponse[];
+    meta: PatientListMeta;
+  }>;
+  private async listPatients(
+    context: AuthorizationContext,
+    query: ListPatientsQueryDto,
+    assignedOnly: boolean,
+  ): Promise<{
+    items: PatientListResponse[] | AssignedPatientListResponse[];
+    meta: PatientListMeta;
   }> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const queryBuilder = this.patientsRepository.ormRepository
       .createQueryBuilder('patient')
-      .where('patient.tenantId = :tenantId', { tenantId: context.tenant!.id });
+      .where('patient.tenantId = :tenantId', { tenantId: context.tenant!.id })
+      .leftJoin(
+        Appointment,
+        'nextAppointment',
+        `nextAppointment.id = (
+          SELECT next_appointment.id
+          FROM appointments next_appointment
+          WHERE next_appointment.tenant_id = patient.tenant_id
+            AND next_appointment.branch_id = :branchId
+            AND next_appointment.patient_id = patient.id
+            AND next_appointment.status IN (:...upcomingStatuses)
+            AND next_appointment.start_at > NOW()
+          ORDER BY next_appointment.start_at ASC, next_appointment.id ASC
+          LIMIT 1
+        )`,
+      )
+      .leftJoin(
+        Appointment,
+        'lastVisit',
+        `lastVisit.id = (
+          SELECT last_visit.id
+          FROM appointments last_visit
+          WHERE last_visit.tenant_id = patient.tenant_id
+            AND last_visit.branch_id = :branchId
+            AND last_visit.patient_id = patient.id
+            AND last_visit.status = :completedStatus
+          ORDER BY last_visit.end_at DESC, last_visit.id DESC
+          LIMIT 1
+        )`,
+      )
+      .addSelect('nextAppointment.startAt', 'next_appointment_start_at')
+      .addSelect('nextAppointment.serviceName', 'next_appointment_service_name')
+      .addSelect('nextAppointment.visitReason', 'next_appointment_visit_reason')
+      .addSelect('lastVisit.endAt', 'last_visit_completed_at')
+      .setParameters({
+        branchId: context.branch!.id,
+        upcomingStatuses: UPCOMING_APPOINTMENT_STATUSES,
+        completedStatus: AppointmentStatus.COMPLETED,
+      });
+
+    if (assignedOnly) {
+      queryBuilder.andWhere(
+        `EXISTS (
+          SELECT 1
+          FROM appointments assigned_appointment
+          WHERE assigned_appointment.tenant_id = patient.tenant_id
+            AND assigned_appointment.branch_id = :branchId
+            AND assigned_appointment.patient_id = patient.id
+            AND assigned_appointment.assigned_dentist_user_id = :actorUserId
+        )`,
+        { actorUserId: context.actor.userId },
+      );
+    }
 
     applyIlikeSearch(queryBuilder, query.search, [
       'patient.full_name',
       'patient.phone',
     ]);
+    const scheduleCounts = await this.getScheduleCounts(queryBuilder);
+    if (query.scheduleFilter === PatientScheduleFilter.WITH_UPCOMING) {
+      queryBuilder.andWhere('nextAppointment.id IS NOT NULL');
+    }
+    if (query.scheduleFilter === PatientScheduleFilter.WITHOUT_UPCOMING) {
+      queryBuilder.andWhere('nextAppointment.id IS NULL');
+    }
     applySafeSort(queryBuilder, {
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
@@ -106,12 +260,40 @@ export class PatientsService {
       defaultOrder: SortOrder.DESC,
       tieBreaker: 'patient.id',
     });
+    const total = await queryBuilder.getCount();
     applyOffsetPagination(queryBuilder, { page, limit });
 
-    const [patients, total] = await queryBuilder.getManyAndCount();
+    const raw = await queryBuilder.getRawMany<Record<string, unknown>>();
     return {
-      items: patients.map((patient) => this.toResponse(patient)),
-      meta: toPageMeta({ page, limit }, total),
+      items: raw.map((row) => {
+        const patient = this.toResponseFromRaw(row);
+        const summary = this.toListSummary(row);
+        if (assignedOnly) {
+          return this.toAssignedListResponse(patient, summary);
+        }
+        return { ...patient, ...summary };
+      }),
+      meta: { ...toPageMeta({ page, limit }, total), scheduleCounts },
+    };
+  }
+
+  private async getScheduleCounts(
+    queryBuilder: SelectQueryBuilder<Patient>,
+  ): Promise<PatientScheduleCounts> {
+    const counts = await queryBuilder
+      .clone()
+      .select('COUNT(patient.id)', 'all')
+      .addSelect('COUNT(nextAppointment.id)', 'withUpcoming')
+      .addSelect(
+        'COUNT(patient.id) FILTER (WHERE nextAppointment.id IS NULL)',
+        'withoutUpcoming',
+      )
+      .getRawOne<PatientScheduleCountsRaw>();
+
+    return {
+      all: Number(counts?.all ?? 0),
+      withUpcoming: Number(counts?.withUpcoming ?? 0),
+      withoutUpcoming: Number(counts?.withoutUpcoming ?? 0),
     };
   }
 
@@ -374,6 +556,76 @@ export class PatientsService {
       referralSource: patient.referralSource,
       createdAt: patient.createdAt,
       updatedAt: patient.updatedAt,
+    };
+  }
+
+  private toListSummary(raw: Record<string, unknown>): Pick<
+    PatientListResponse,
+    'nextAppointment' | 'lastVisit'
+  > {
+    const nextStartAt = raw.next_appointment_start_at;
+    const lastCompletedAt = raw.last_visit_completed_at;
+    return {
+      nextAppointment: nextStartAt
+        ? {
+            startAt: new Date(String(nextStartAt)),
+            serviceName:
+              typeof raw.next_appointment_service_name === 'string'
+                ? raw.next_appointment_service_name
+                : null,
+            visitReason:
+              typeof raw.next_appointment_visit_reason === 'string'
+                ? raw.next_appointment_visit_reason
+                : null,
+          }
+        : null,
+      lastVisit: lastCompletedAt
+        ? { completedAt: new Date(String(lastCompletedAt)) }
+        : null,
+    };
+  }
+
+  private toResponseFromRaw(raw: Record<string, unknown>): PatientResponse {
+    const emergencyContactName = this.rawString(raw.patient_emergency_contact_name);
+    const emergencyContactPhone = this.rawString(raw.patient_emergency_contact_phone);
+    return {
+      id: String(raw.patient_id),
+      fullName: String(raw.patient_full_name),
+      phone: String(raw.patient_phone),
+      dateOfBirth: this.rawString(raw.patient_date_of_birth),
+      gender: raw.patient_gender as PatientGender,
+      address: this.rawString(raw.patient_address),
+      emergencyContact:
+        emergencyContactName && emergencyContactPhone
+          ? {
+              fullName: emergencyContactName,
+              phone: emergencyContactPhone,
+              relationship: this.rawString(
+                raw.patient_emergency_contact_relationship,
+              ),
+            }
+          : null,
+      referralSource: this.rawString(raw.patient_referral_source),
+      createdAt: new Date(String(raw.patient_created_at)),
+      updatedAt: new Date(String(raw.patient_updated_at)),
+    };
+  }
+
+  private rawString(value: unknown): string | null {
+    return typeof value === 'string' ? value : null;
+  }
+
+  private toAssignedListResponse(
+    patient: PatientResponse,
+    summary: Pick<PatientListResponse, 'nextAppointment' | 'lastVisit'>,
+  ): AssignedPatientListResponse {
+    return {
+      id: patient.id,
+      fullName: patient.fullName,
+      phone: patient.phone,
+      dateOfBirth: patient.dateOfBirth,
+      gender: patient.gender,
+      ...summary,
     };
   }
 

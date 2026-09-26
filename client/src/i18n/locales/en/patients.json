@@ -7,6 +7,8 @@
     "create": "Add patient",
     "save": "Save changes",
     "edit": "Edit",
+    "view": "View",
+    "viewProfile": "View profile for {{name}}",
     "retry": "Try again",
     "openActions": "Open actions for {{name}}"
   },
@@ -42,13 +44,30 @@
     "title": "Patient list",
     "description": "Administrative profiles shared across the tenant and accessed from the current branch.",
     "searchPlaceholder": "Search by name or phone number…",
-    "fullName": "Full name",
-    "phone": "Phone number",
-    "gender": "Gender",
-    "dateOfBirth": "Date of birth",
-    "createdAt": "Created",
+    "patient": "Patient",
+    "contact": "Contact",
+    "nextAppointment": "Next appointment",
+    "lastVisit": "Last visit",
+    "completed": "Completed",
+    "age_one": "{{count}} year",
+    "age_other": "{{count}} years",
+    "filter": "Filter",
     "notProvided": "Not provided",
     "actions": "Actions"
+  },
+  "filters": {
+    "all": "All",
+    "withUpcoming": "Upcoming",
+    "withoutUpcoming": "No upcoming"
+  },
+  "doctor": {
+    "eyebrow": "Doctor · {{tenantName}} · {{branchName}}",
+    "title": "Patients",
+    "description": "Patients currently assigned to your appointments in this branch.",
+    "tableTitle": "My patients",
+    "tableDescription": "Patient contact and appointment information for your assigned appointments.",
+    "emptyTitle": "No assigned patients",
+    "emptyDescription": "Patients appear here when an appointment is assigned to you."
   },
   "empty": {
     "title": "No patients yet",

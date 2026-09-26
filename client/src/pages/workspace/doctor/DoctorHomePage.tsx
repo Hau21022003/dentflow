@@ -11,15 +11,15 @@ import {
   monthForDate,
   todayInTimeZone,
 } from "@/features/appointments/appointment-time";
-import { AppointmentStatusBadge } from "@/features/appointments/components/AppointmentStatusBadge";
 import {
   useAssignedAppointmentCalendarSummaryQuery,
   useAssignedAppointmentsAgendaQuery,
 } from "@/features/appointments/appointments.hooks";
 import type {
-  AssignedAppointment,
   AppointmentStatus,
+  AssignedAppointment,
 } from "@/features/appointments/appointments.types";
+import { AppointmentStatusBadge } from "@/features/appointments/components/AppointmentStatusBadge";
 import { useStartVisitMutation } from "@/features/visits/visits.hooks";
 import { handleApiError } from "@/shared/lib/error";
 import {
@@ -38,8 +38,8 @@ import {
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { DoctorScheduleCalendar } from "./DoctorScheduleCalendar";
 import { useRouteWorkspaceContext } from "../use-route-workspace-context";
+import { DoctorScheduleCalendar } from "./DoctorScheduleCalendar";
 
 const ACTIVE_DURATION_STATUSES = new Set<AppointmentStatus>([
   "BOOKED",
@@ -61,7 +61,9 @@ const statusAccentClass: Record<AppointmentStatus, string> = {
 
 function isValidDate(value: string | null): value is string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  return new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value;
+  return (
+    new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value
+  );
 }
 
 function initials(fullName: string): string {
@@ -77,16 +79,27 @@ function ageAt(dateOfBirth: string | null, date: string): number | null {
   if (!dateOfBirth) return null;
   const [birthYear, birthMonth, birthDay] = dateOfBirth.split("-").map(Number);
   const [year, month, day] = date.split("-").map(Number);
-  if (![birthYear, birthMonth, birthDay, year, month, day].every(Number.isFinite)) {
+  if (
+    ![birthYear, birthMonth, birthDay, year, month, day].every(Number.isFinite)
+  ) {
     return null;
   }
-  return year - birthYear - (month < birthMonth || (month === birthMonth && day < birthDay) ? 1 : 0);
+  return (
+    year -
+    birthYear -
+    (month < birthMonth || (month === birthMonth && day < birthDay) ? 1 : 0)
+  );
 }
 
 function durationMinutes(appointments: AssignedAppointment[]): number {
   return appointments.reduce((total, appointment) => {
     if (!ACTIVE_DURATION_STATUSES.has(appointment.status)) return total;
-    return total + (new Date(appointment.endAt).getTime() - new Date(appointment.startAt).getTime()) / 60000;
+    return (
+      total +
+      (new Date(appointment.endAt).getTime() -
+        new Date(appointment.startAt).getTime()) /
+        60000
+    );
   }, 0);
 }
 
@@ -96,13 +109,19 @@ export function DoctorHomePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [startError, setStartError] = useState("");
-  const [startIntent, setStartIntent] = useState<IdempotencyIntent | null>(null);
+  const [startIntent, setStartIntent] = useState<IdempotencyIntent | null>(
+    null,
+  );
   const timeZone = branch?.branch.timezone ?? "Asia/Ho_Chi_Minh";
   const locale = localeForLanguage(i18n.resolvedLanguage);
   const dateParam = searchParams.get("date");
   const date = isValidDate(dateParam) ? dateParam : todayInTimeZone(timeZone);
   const range = useMemo(() => agendaRange(date, timeZone), [date, timeZone]);
-  const agenda = useAssignedAppointmentsAgendaQuery(tenantSlug, branchSlug, range);
+  const agenda = useAssignedAppointmentsAgendaQuery(
+    tenantSlug,
+    branchSlug,
+    range,
+  );
   const summary = useAssignedAppointmentCalendarSummaryQuery(
     tenantSlug,
     branchSlug,
@@ -171,7 +190,9 @@ export function DoctorHomePage() {
           locale={locale}
           onDateChange={setDate}
           onNextMonth={() => setDate(addMonthsInTimeZone(date, 1, timeZone))}
-          onPreviousMonth={() => setDate(addMonthsInTimeZone(date, -1, timeZone))}
+          onPreviousMonth={() =>
+            setDate(addMonthsInTimeZone(date, -1, timeZone))
+          }
           onRetry={() => void summary.refetch()}
           onToday={() => setDate(todayInTimeZone(timeZone))}
           summary={summary.data}
@@ -195,115 +216,169 @@ export function DoctorHomePage() {
               </p>
             </div>
 
-            {startError && <Alert className="m-5" variant="destructive">{startError}</Alert>}
+            {startError && (
+              <Alert className="m-5" variant="destructive">
+                {startError}
+              </Alert>
+            )}
 
             {agenda.isLoading ? (
               <div className="space-y-3 p-5 sm:p-7">
                 {[1, 2, 3, 4].map((index) => (
-                  <div className="h-24 animate-pulse rounded-xl bg-muted" key={index} />
+                  <div
+                    className="h-24 animate-pulse rounded-xl bg-muted"
+                    key={index}
+                  />
                 ))}
               </div>
             ) : agenda.isError ? (
               <div className="grid justify-items-center gap-3 p-12 text-center">
-                <CalendarDays aria-hidden="true" className="size-8 text-muted-foreground" />
+                <CalendarDays
+                  aria-hidden="true"
+                  className="size-8 text-muted-foreground"
+                />
                 <p className="font-semibold">{t("agenda.loadError")}</p>
-                <Button onClick={() => void agenda.refetch()} size="sm" type="button">
+                <Button
+                  onClick={() => void agenda.refetch()}
+                  size="sm"
+                  type="button"
+                >
                   <RefreshCw aria-hidden="true" />
                   {t("agenda.retry")}
                 </Button>
               </div>
             ) : appointments.length === 0 ? (
               <div className="grid justify-items-center gap-3 p-12 text-center">
-                <CalendarDays aria-hidden="true" className="size-8 text-muted-foreground" />
+                <CalendarDays
+                  aria-hidden="true"
+                  className="size-8 text-muted-foreground"
+                />
                 <p className="font-semibold">{t("agenda.emptyTitle")}</p>
                 <p className="max-w-sm text-sm text-muted-foreground">
                   {t("doctorSchedule.emptyDescription")}
                 </p>
               </div>
             ) : (
-              <ol className="divide-y">
-                {appointments.map((appointment) => {
-                  const appointmentDate = dateInTimeZone(appointment.startAt, timeZone);
-                  const age = ageAt(appointment.patient.dateOfBirth, appointmentDate);
-                  const isStarting =
-                    startVisitMutation.isPending &&
-                    startVisitMutation.variables?.appointmentId === appointment.id;
-                  const actionLabel =
-                    appointment.status === "CHECKED_IN"
-                      ? t("doctorSchedule.startVisit")
-                      : appointment.status === "IN_PROGRESS"
-                        ? t("doctorSchedule.continueVisit")
-                        : t("doctorSchedule.viewAppointment");
+              <div className="overflow-x-auto">
+                <ol className="divide-y sm:min-w-[48rem]">
+                  {appointments.map((appointment) => {
+                    const appointmentDate = dateInTimeZone(
+                      appointment.startAt,
+                      timeZone,
+                    );
+                    const age = ageAt(
+                      appointment.patient.dateOfBirth,
+                      appointmentDate,
+                    );
+                    const isStarting =
+                      startVisitMutation.isPending &&
+                      startVisitMutation.variables?.appointmentId ===
+                        appointment.id;
+                    const actionLabel =
+                      appointment.status === "CHECKED_IN"
+                        ? t("doctorSchedule.startVisit")
+                        : appointment.status === "IN_PROGRESS"
+                          ? t("doctorSchedule.continueVisit")
+                          : t("doctorSchedule.viewAppointment");
 
-                  return (
-                    <li
-                      className="grid gap-4 px-5 py-5 sm:grid-cols-[5.25rem_minmax(13rem,1.15fr)_minmax(10rem,1fr)_auto_auto] sm:items-center sm:px-7 xl:grid-cols-[5.25rem_minmax(12rem,1.2fr)_minmax(10rem,1fr)_8.25rem_8.75rem]"
-                      key={appointment.id}
-                    >
-                      <div className="tabular-nums">
-                        <p className="whitespace-nowrap font-bold">
-                          {formatAppointmentTime(appointment.startAt, timeZone, locale)}
-                        </p>
-                        <p className="whitespace-nowrap text-sm text-muted-foreground">
-                          {formatAppointmentTime(appointment.endAt, timeZone, locale)}
-                        </p>
-                      </div>
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span
-                          aria-hidden="true"
-                          className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary"
-                        >
-                          {initials(appointment.patient.fullName)}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold">{appointment.patient.fullName}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {t(`detail.genders.${appointment.patient.gender}`)}
-                            {age !== null && ` · ${t("detail.age", { count: age })}`}
+                    return (
+                      <li
+                        className="grid gap-4 px-5 py-5 sm:grid-cols-[5.25rem_minmax(13rem,1.15fr)_minmax(10rem,1fr)_auto_auto] sm:items-center sm:px-7 xl:grid-cols-[5.25rem_minmax(12rem,1.2fr)_minmax(10rem,1fr)_8.25rem_8.75rem]"
+                        key={appointment.id}
+                      >
+                        <div className="tabular-nums">
+                          <p className="whitespace-nowrap font-bold">
+                            {formatAppointmentTime(
+                              appointment.startAt,
+                              timeZone,
+                              locale,
+                            )}
+                          </p>
+                          <p className="whitespace-nowrap text-sm text-muted-foreground">
+                            {formatAppointmentTime(
+                              appointment.endAt,
+                              timeZone,
+                              locale,
+                            )}
                           </p>
                         </div>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold">
-                          {appointment.service?.name ?? appointment.visitReason ?? t("detail.notProvided")}
-                        </p>
-                        <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Clock3 aria-hidden="true" className="size-4" />
-                          {t("detail.duration", {
-                            count: Math.round(
-                              (new Date(appointment.endAt).getTime() -
-                                new Date(appointment.startAt).getTime()) /
-                                60000,
-                            ),
-                          })}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          aria-hidden="true"
-                          className={cn("size-2.5 rounded-full", statusAccentClass[appointment.status])}
-                        />
-                        <AppointmentStatusBadge status={appointment.status} />
-                      </div>
-                      <Button
-                        disabled={isStarting}
-                        onClick={() =>
-                          appointment.status === "CHECKED_IN"
-                            ? void startVisit(appointment)
-                            : openVisit(appointment)
-                        }
-                        size="sm"
-                        type="button"
-                        variant={appointment.status === "CHECKED_IN" ? "default" : "outline"}
-                      >
-                        {appointment.status === "CHECKED_IN" && <Stethoscope aria-hidden="true" />}
-                        {isStarting ? t("doctorSchedule.startingVisit") : actionLabel}
-                        {appointment.status !== "CHECKED_IN" && <ChevronRight aria-hidden="true" />}
-                      </Button>
-                    </li>
-                  );
-                })}
-              </ol>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span
+                            aria-hidden="true"
+                            className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary"
+                          >
+                            {initials(appointment.patient.fullName)}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold">
+                              {appointment.patient.fullName}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {t(
+                                `detail.genders.${appointment.patient.gender}`,
+                              )}
+                              {age !== null &&
+                                ` · ${t("detail.age", { count: age })}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold">
+                            {appointment.service?.name ??
+                              appointment.visitReason ??
+                              t("detail.notProvided")}
+                          </p>
+                          <p className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Clock3 aria-hidden="true" className="size-4" />
+                            {t("detail.duration", {
+                              count: Math.round(
+                                (new Date(appointment.endAt).getTime() -
+                                  new Date(appointment.startAt).getTime()) /
+                                  60000,
+                              ),
+                            })}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "size-2.5 rounded-full",
+                              statusAccentClass[appointment.status],
+                            )}
+                          />
+                          <AppointmentStatusBadge status={appointment.status} />
+                        </div>
+                        <Button
+                          disabled={isStarting}
+                          onClick={() =>
+                            appointment.status === "CHECKED_IN"
+                              ? void startVisit(appointment)
+                              : openVisit(appointment)
+                          }
+                          size="sm"
+                          type="button"
+                          variant={
+                            appointment.status === "CHECKED_IN"
+                              ? "default"
+                              : "outline"
+                          }
+                        >
+                          {appointment.status === "CHECKED_IN" && (
+                            <Stethoscope aria-hidden="true" />
+                          )}
+                          {isStarting
+                            ? t("doctorSchedule.startingVisit")
+                            : actionLabel}
+                          {appointment.status !== "CHECKED_IN" && (
+                            <ChevronRight aria-hidden="true" />
+                          )}
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
             )}
           </CardContent>
         </Card>

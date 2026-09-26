@@ -22,6 +22,10 @@ export const E2E_USERS = {
     email: "dentist@dentflow.test",
     password: "12345",
   },
+  branchDentist: {
+    email: "nguyen.minh.tuan@dentflow.test",
+    password: "12345",
+  },
 } satisfies Record<string, E2EUser>;
 
 export async function submitLogin(page: Page, user: E2EUser): Promise<void> {

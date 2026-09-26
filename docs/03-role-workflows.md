@@ -78,17 +78,19 @@ Chi tiết nghiệp vụ, cài đặt tenant, luồng onboarding, API định h�
 ### Luồng một ca điều trị
 
 1. Xem danh sách appointment được phân công tại branch của mình.
-2. Khi bệnh nhân đã check-in, bắt đầu appointment và mở `Visit`.
-3. Ghi triệu chứng, thông tin khám, chẩn đoán, PatientAlert và clinical note; có thể đọc lịch sử clinical cùng branch của Patient, nhưng không đọc clinical branch khác.
-4. Tạo `TreatmentPlan` Draft rỗng từ Visit hiện tại, đồng bộ hạng mục với snapshot dịch vụ, vị trí/răng, số lượng, giảm giá, chỉ định và bác sĩ dự kiến; Plan vẫn thuộc Patient + Tenant + Branch nên có thể được tiếp tục ở Visit sau cùng branch.
+2. Xem danh sách Patient read-only tại branch, chỉ gồm những Patient có Appointment hiện đang gán cho mình; danh sách chỉ trả thông tin liên hệ tối thiểu, lịch hẹn sắp tới và lần khám hoàn tất gần nhất trong branch đó.
+3. Khi bệnh nhân đã check-in, bắt đầu appointment và mở `Visit`.
+4. Ghi triệu chứng, thông tin khám, chẩn đoán, PatientAlert và clinical note; có thể đọc lịch sử clinical cùng branch của Patient, nhưng không đọc clinical branch khác.
+5. Tạo `TreatmentPlan` Draft rỗng từ Visit hiện tại, đồng bộ hạng mục với snapshot dịch vụ, vị trí/răng, số lượng, giảm giá, chỉ định và bác sĩ dự kiến; Plan vẫn thuộc Patient + Tenant + Branch nên có thể được tiếp tục ở Visit sau cùng branch.
    Dentist dùng read-only booking options hiện có để chọn Service active và Dentist active cùng branch; quyền đọc tối thiểu cho hai picker này là `treatment-plan.write`, không trao `appointment.manage` hay quyền quản lý catalog.
-5. Chuyển kế hoạch sang `PROPOSED`; Receptionist ghi nhận sự chấp thuận của bệnh nhân trước khi tạo invoice.
-6. Thực hiện từng treatment item, cập nhật tiến độ và ghi diễn biến điều trị.
-7. Hoàn tất visit để khóa nội dung gốc; nếu cần sửa sau đó chỉ thêm addendum. Đề xuất tái khám hoặc chuyển chuyên khoa để Receptionist tạo appointment tái khám.
+6. Chuyển kế hoạch sang `PROPOSED`; Receptionist ghi nhận sự chấp thuận của bệnh nhân trước khi tạo invoice.
+7. Thực hiện từng treatment item, cập nhật tiến độ và ghi diễn biến điều trị.
+8. Hoàn tất visit để khóa nội dung gốc; nếu cần sửa sau đó chỉ thêm addendum. Đề xuất tái khám hoặc chuyển chuyên khoa để Receptionist tạo appointment tái khám.
 
 ### Ranh giới bắt buộc
 
 - Chỉ truy cập ca được phân công; Branch Admin chỉ chuyển Dentist đến hết `CHECKED_IN` và luôn có audit trail.
+- Patient list của Dentist không cấp create/update Patient hoặc Patient detail hành chính; Patient xuất hiện khi và chỉ khi có Appointment trong branch hiện tại đang gán Dentist đó. Reassign hoặc unassign loại Patient khỏi danh sách.
 - Không tự đánh dấu invoice là paid, tạo refund hay sửa payment.
 - Không truy cập clinical history ở branch khác hoặc Patient/Visit không gắn với một Appointment đang được phân công cho mình.
 
