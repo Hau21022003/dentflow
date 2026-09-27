@@ -1,0 +1,39 @@
+{
+  "eyebrow": "Temporary diagnostic",
+  "title": "DataTable mobile renderer",
+  "description": "Static synthetic records for checking the shared responsive table and card views.",
+  "temporaryNotice": "This unlinked route has no business data or API calls and must be removed once a production workflow uses the mobile renderer.",
+  "controls": {
+    "toggleLoading": "Toggle loading",
+    "toggleFetching": "Toggle refresh overlay"
+  },
+  "lastClicked": "Last clicked: {{reference}}",
+  "noRecordClicked": "No record clicked yet",
+  "layouts": {
+    "divided": {
+      "title": "Divided list (default)",
+      "description": "DataTable owns the shared border and divider between each compact item."
+    },
+    "cards": {
+      "title": "Card list",
+      "description": "Each mobile item is a self-contained card returned by the renderer."
+    }
+  },
+  "table": {
+    "searchPlaceholder": "Search demo records...",
+    "sequence": "Sequence",
+    "reference": "Reference",
+    "status": "Status",
+    "updatedAt": "Updated"
+  },
+  "statuses": {
+    "READY": "Ready",
+    "REVIEW": "In review",
+    "PAUSED": "Paused"
+  },
+  "card": {
+    "visiblePosition": "Visible item {{index}}",
+    "sequence": "Sequence {{sequence}}",
+    "updatedAt": "Updated {{date}}"
+  }
+}

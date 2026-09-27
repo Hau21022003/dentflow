@@ -13,6 +13,7 @@ import { TenantManagementPage } from "../../pages/platform/TenantManagementPage"
 import { TenantDetailPage } from "../../pages/platform/TenantDetailPage";
 import { BranchWorkspaceHomePage } from "../../pages/workspace/branch/BranchWorkspaceHomePage";
 import { BranchStaffManagementPage } from "../../pages/workspace/branch/BranchStaffManagementPage";
+import { DataTableMobileDemoPage } from "../../pages/workspace/branch/DataTableMobileDemoPage";
 import { TempImageUploadTestPage } from "../../pages/workspace/branch/TempImageUploadTestPage";
 import { DoctorHomePage } from "../../pages/workspace/doctor/DoctorHomePage";
 import { DoctorPatientsPage } from "../../pages/workspace/doctor/DoctorPatientsPage";
@@ -182,6 +183,11 @@ export const routes: RouteObject[] = [
                       {
                         path: "branch/staff",
                         element: <LegacyBranchStaffRedirect />,
+                      },
+                      // Temporary, unlinked responsive DataTable diagnostic route.
+                      {
+                        path: "data-table-mobile-demo",
+                        element: <DataTableMobileDemoPage />,
                       },
                       // Temporary, unlinked diagnostic route for direct-storage E2E coverage.
                       {

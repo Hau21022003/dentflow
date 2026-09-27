@@ -30,6 +30,8 @@ export const PATHS = {
     "/workspace/:tenantSlug/branches/:branchSlug/doctor/appointments/:appointmentId/visit",
   workspaceUploadTest:
     "/workspace/:tenantSlug/branches/:branchSlug/upload-test",
+  workspaceDataTableMobileDemo:
+    "/workspace/:tenantSlug/branches/:branchSlug/data-table-mobile-demo",
 } as const;
 
 function toPathSegment(value: string): string {
@@ -73,4 +75,6 @@ export const pathFor = {
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/doctor/appointments/${toPathSegment(appointmentId)}/visit?date=${toPathSegment(date)}`,
   workspaceUploadTest: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/upload-test`,
+  workspaceDataTableMobileDemo: (tenantSlug: string, branchSlug: string) =>
+    `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/data-table-mobile-demo`,
 };

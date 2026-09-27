@@ -55,15 +55,15 @@ export function DataTablePagination<TData>({
   if (!enabled) return null
 
   return (
-    <div className='flex items-center px-2'>
+    <div className='flex flex-wrap items-center gap-3 px-2'>
       {rowSelection && (
-        <div className='text-muted-foreground flex-1 text-sm'>
+        <div className='text-muted-foreground basis-full text-sm sm:basis-auto sm:flex-1'>
           {table.getFilteredSelectedRowModel().rows.length} of{' '}
           {table.getFilteredRowModel().rows.length} {locale.pagination.rowsSelected}
         </div>
       )}
-      <div className='flex items-center space-x-4 ml-auto'>
-        <div className='flex items-center space-x-2'>
+      <div className='ml-auto flex flex-wrap items-center justify-end gap-x-4 gap-y-3'>
+        <div className='flex items-center gap-2'>
           <p className='text-sm font-medium'>{locale.pagination.rowsPerPage}</p>
           <Select
             value={`${table.getState().pagination.pageSize}`}
@@ -87,7 +87,7 @@ export function DataTablePagination<TData>({
           {locale.pagination.page} {table.getState().pagination.pageIndex + 1}{' '}
           {locale.pagination.of} {table.getPageCount()}
         </div>
-        <div className='flex items-center space-x-2'>
+        <div className='flex items-center gap-2'>
           <Button
             variant='outline'
             size='icon'

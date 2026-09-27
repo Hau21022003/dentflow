@@ -4,6 +4,7 @@ import { initReactI18next } from "react-i18next";
 import enBranches from "./locales/en/branches.json";
 import enAppointments from "./locales/en/appointments.json";
 import enCommon from "./locales/en/common.json";
+import enDataTableDemo from "./locales/en/data-table-demo.json";
 import enEmailTemplates from "./locales/en/email-templates.json";
 import enPatients from "./locales/en/patients.json";
 import enPlans from "./locales/en/plans.json";
@@ -20,6 +21,7 @@ import enTreatmentPlanAcceptances from "./locales/en/treatment-plan-acceptances.
 import viBranches from "./locales/vi/branches.json";
 import viAppointments from "./locales/vi/appointments.json";
 import viCommon from "./locales/vi/common.json";
+import viDataTableDemo from "./locales/vi/data-table-demo.json";
 import viEmailTemplates from "./locales/vi/email-templates.json";
 import viPatients from "./locales/vi/patients.json";
 import viPlans from "./locales/vi/plans.json";
@@ -47,6 +49,7 @@ i18n
       "branches",
       "appointments",
       "common",
+      "dataTableDemo",
       "emailTemplates",
       "invitations",
       "patients",
@@ -67,6 +70,7 @@ i18n
         branches: enBranches,
         appointments: enAppointments,
         common: enCommon,
+        dataTableDemo: enDataTableDemo,
         emailTemplates: enEmailTemplates,
         invitations: enInvitations,
         patients: enPatients,
@@ -85,6 +89,7 @@ i18n
         branches: viBranches,
         appointments: viAppointments,
         common: viCommon,
+        dataTableDemo: viDataTableDemo,
         emailTemplates: viEmailTemplates,
         invitations: viInvitations,
         patients: viPatients,

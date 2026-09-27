@@ -191,6 +191,10 @@ const dataTableLocale = useMemo(
 <DataTable columns={columns} data={data} locale={dataTableLocale} />;
 ```
 
+`mobileLayout` nhận `"divided"` (mặc định) hoặc `"cards"`. `divided` để
+DataTable vẽ khung chung và `divide-y` cùng token `border` với table; `cards`
+để renderer trả card có khoảng cách và border riêng.
+
 - `createDataTableLocale(tCommon, overrides?)` luôn trả về đủ
   `DataTableLocale`; override được merge theo từng nhóm và chỉ dành cho text
   đặc thù bảng. Select/multi-select không cần `filterConfig.placeholder` nếu
@@ -199,6 +203,13 @@ const dataTableLocale = useMemo(
   `pageSize`, `rowCount`, `onPaginationChange`; `serverState.sorting` và
   `serverState.filtering` cho sort, global search và column filters. Khi dùng
   `serverState`, TanStack không sort/lọc local trên một trang đã tải.
+- Truyền `renderMobileItem(item, index)` khi một bảng cần layout mobile riêng.
+  Khi có prop này, bảng chỉ hiện từ breakpoint `md` (768px) và danh sách item
+  hiện dưới `md`; không truyền prop thì DataTable giữ nguyên table ở mọi kích
+  thước. `item` và `index` lấy từ `table.getRowModel()` sau sort, filter và
+  pagination, nên `index` là vị trí 0-based đang thấy. Renderer sở hữu nội dung
+  card; DataTable vẫn xử lý `onRowClick`, skeleton/empty/fetching state và
+  checkbox `rowSelection` cạnh item trên mobile.
 - Trang `/platform/tenants` là reference implementation: API dùng page 1-based,
   client đổi từ `pageIndex` 0-based, debounce search 300ms, reset về trang đầu
   khi đổi search/filter/sort/page size, và truyền `meta.total` vào `rowCount`.
