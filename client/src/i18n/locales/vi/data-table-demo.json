@@ -1,0 +1,39 @@
+{
+  "eyebrow": "Chẩn đoán tạm thời",
+  "title": "Mobile renderer cho DataTable",
+  "description": "Dữ liệu synthetic tĩnh để kiểm tra chế độ bảng và card responsive dùng chung.",
+  "temporaryNotice": "Route ẩn này không có dữ liệu nghiệp vụ hoặc API và phải được xóa khi một luồng nghiệp vụ thật dùng mobile renderer.",
+  "controls": {
+    "toggleLoading": "Bật/tắt trạng thái tải",
+    "toggleFetching": "Bật/tắt lớp làm mới"
+  },
+  "lastClicked": "Vừa chọn: {{reference}}",
+  "noRecordClicked": "Chưa chọn bản ghi nào",
+  "layouts": {
+    "divided": {
+      "title": "Danh sách có divider (mặc định)",
+      "description": "DataTable tạo khung chung và đường phân cách cho từng item gọn."
+    },
+    "cards": {
+      "title": "Danh sách card",
+      "description": "Mỗi item mobile là một card độc lập do renderer trả về."
+    }
+  },
+  "table": {
+    "searchPlaceholder": "Tìm bản ghi mẫu...",
+    "sequence": "Thứ tự",
+    "reference": "Mã tham chiếu",
+    "status": "Trạng thái",
+    "updatedAt": "Cập nhật"
+  },
+  "statuses": {
+    "READY": "Sẵn sàng",
+    "REVIEW": "Đang xem xét",
+    "PAUSED": "Tạm dừng"
+  },
+  "card": {
+    "visiblePosition": "Mục đang hiển thị {{index}}",
+    "sequence": "Thứ tự {{sequence}}",
+    "updatedAt": "Cập nhật {{date}}"
+  }
+}

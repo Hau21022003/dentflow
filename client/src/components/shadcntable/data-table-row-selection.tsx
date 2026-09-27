@@ -29,19 +29,29 @@ function RowSelectionHeader<TData>({ table }: { table: Table<TData> }) {
   )
 }
 
-function RowSelectionCell<TData>({ row }: { row: Row<TData> }) {
+export function DataTableRowSelectionControl<TData>({
+  row,
+}: {
+  row: Row<TData>
+}) {
   'use no memo'
   const locale = useDataTableLocale()
 
   return (
+    <Checkbox
+      checked={row.getIsSelected()}
+      disabled={!row.getCanSelect()}
+      onCheckedChange={(value) => row.toggleSelected(!!value)}
+      aria-label={locale.rowSelection.selectRow}
+      onClick={(e) => e.stopPropagation()}
+    />
+  )
+}
+
+function RowSelectionCell<TData>({ row }: { row: Row<TData> }) {
+  return (
     <div className='flex items-center justify-center px-2'>
-      <Checkbox
-        checked={row.getIsSelected()}
-        disabled={!row.getCanSelect()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label={locale.rowSelection.selectRow}
-        onClick={(e) => e.stopPropagation()}
-      />
+      <DataTableRowSelectionControl row={row} />
     </div>
   )
 }

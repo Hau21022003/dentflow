@@ -1,11 +1,9 @@
 import { type Table, flexRender } from '@tanstack/react-table'
-import { Box } from 'lucide-react'
 
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { TableBody } from '@/components/ui/table'
 
-import { useDataTableLocale } from './contexts/data-table-locale-context'
+import { DataTableEmptyState } from './data-table-empty-state'
 
 export interface DataTableBodyProps<TData> {
   emptyState?: React.ReactNode
@@ -20,7 +18,6 @@ export function DataTableBody<TData>({
   table,
 }: DataTableBodyProps<TData>) {
   'use no memo'
-  const locale = useDataTableLocale()
   if (isLoading) {
     return (
       <TableBody>
@@ -57,16 +54,7 @@ export function DataTableBody<TData>({
       ) : (
         <TableRow>
           <TableCell colSpan={columns.length}>
-            {emptyState ?? (
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant='icon'>
-                    <Box />
-                  </EmptyMedia>
-                  <EmptyTitle>{locale.body.noResults}</EmptyTitle>
-                </EmptyHeader>
-              </Empty>
-            )}
+            {emptyState ?? <DataTableEmptyState />}
           </TableCell>
         </TableRow>
       )}

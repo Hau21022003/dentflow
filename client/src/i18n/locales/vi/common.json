@@ -19,7 +19,9 @@
     "tenantStaff": "Nhân sự phòng khám",
     "branchStaff": "Nhân sự chi nhánh",
     "appointments": "Lịch hẹn",
-    "doctorWorkspace": "Workspace bác sĩ"
+    "doctorWorkspace": "Lịch của tôi",
+    "doctorPatients": "Bệnh nhân của tôi",
+    "treatmentPlanAcceptances": "Xác nhận kế hoạch"
   },
   "language": {
     "switchToEnglish": "Chuyển sang tiếng Anh",
@@ -84,6 +86,16 @@
       "keepEditing": "Tiếp tục nhập",
       "discard": "Bỏ thay đổi"
     }
+  },
+  "form": {
+    "combobox": {
+      "placeholder": "Chọn một lựa chọn",
+      "searchPlaceholder": "Tìm lựa chọn...",
+      "noResults": "Không có lựa chọn phù hợp."
+    }
+  },
+  "toast": {
+    "close": "Đóng thông báo"
   },
   "dataTable": {
     "body": {

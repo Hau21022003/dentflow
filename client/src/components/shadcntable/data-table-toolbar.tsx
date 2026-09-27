@@ -29,8 +29,10 @@ export function DataTableToolbar<TData>({
   const locale = useDataTableLocale();
   const { search = true, viewOptions = true } = config ?? {};
 
+  if (!search && !viewOptions) return null;
+
   return (
-    <div className="flex items-center">
+    <div className="flex flex-wrap items-center gap-2">
       {search && (
         <Input
           disabled={isLoading}
@@ -46,7 +48,7 @@ export function DataTableToolbar<TData>({
             }
             table.setGlobalFilter(value);
           }}
-          className="max-w-sm"
+          className="w-full sm:max-w-sm"
         />
       )}
       {viewOptions && (

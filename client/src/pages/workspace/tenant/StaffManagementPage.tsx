@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { UserAvatar } from "@/components/UserAvatar";
 import { authQueryKeys } from "@/features/auth/auth.hooks";
 import { authService } from "@/features/auth/auth.service";
 import { useAuthStore } from "@/features/auth/auth.store";
@@ -46,7 +47,6 @@ import type {
 } from "@/features/staff/staff.types";
 import { createDataTableLocale } from "@/i18n/data-table";
 import { getErrorMessage } from "@/shared/lib/error";
-import { UserAvatar } from "@/shared/components/UserAvatar";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ColumnDef, type ColumnFiltersState } from "@tanstack/react-table";
 import {

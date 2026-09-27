@@ -12,6 +12,7 @@ import {
 } from '../authorization-context';
 import {
   AUTHORIZATION_SCOPE_KEY,
+  REQUIRED_ANY_PERMISSIONS_KEY,
   REQUIRED_PERMISSIONS_KEY,
   type AuthorizationScope,
 } from '../authorization.constants';
@@ -76,6 +77,18 @@ export class AuthorizationGuard implements CanActivate {
     if (
       requiredPermissions &&
       !requiredPermissions.every((permission) =>
+        access.permissions.includes(permission),
+      )
+    ) {
+      throw new ForbiddenException('Missing required permission.');
+    }
+
+    const requiredAnyPermissions = this.reflector.getAllAndOverride<
+      Permission[]
+    >(REQUIRED_ANY_PERMISSIONS_KEY, [context.getHandler(), context.getClass()]);
+    if (
+      requiredAnyPermissions &&
+      !requiredAnyPermissions.some((permission) =>
         access.permissions.includes(permission),
       )
     ) {

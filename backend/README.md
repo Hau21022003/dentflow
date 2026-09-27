@@ -13,6 +13,21 @@ npm run setup:dev
 npm run start:dev
 ```
 
+Khi thay đổi fixture development, dùng các lệnh sau thay vì xóa/tạo lại database:
+
+```powershell
+# Chỉ reset data trong schema public, giữ lại migration history, rồi nạp seeds/dev.
+npm run reset:dev
+
+# Apply migration pending trước, sau đó reset và nạp lại development fixtures.
+npm run refresh:dev
+```
+
+`reset:dev` và `refresh:dev` chỉ chạy khi `.env.development` đặt
+`ALLOW_DEV_DB_RESET=true`. Chúng xóa toàn bộ data tự tạo trong schema `public`
+(trừ migration history), không xóa Redis hay object storage. Dùng database development
+local riêng và không chạy lúc backend đang phục vụ request.
+
 `setup:dev` chạy migration và seed dữ liệu synthetic. Chỉ cấu hình
 `.env.development` trỏ vào database local dành riêng cho development.
 

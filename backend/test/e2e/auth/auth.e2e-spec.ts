@@ -143,6 +143,7 @@ describe('Authentication (e2e)', () => {
         address: '1 Synthetic Street',
         phone: '+84900000001',
         status: BranchStatus.INACTIVE,
+        timezone: 'Asia/Ho_Chi_Minh',
       },
     });
 
@@ -216,6 +217,7 @@ describe('Authentication (e2e)', () => {
                   slug: branch.slug,
                   name: branch.name,
                   status: BranchStatus.INACTIVE,
+                  timezone: branch.timezone,
                 },
                 roles: [TenantRoleCode.DENTIST, TenantRoleCode.RECEPTIONIST],
                 permissions: [
@@ -227,7 +229,8 @@ describe('Authentication (e2e)', () => {
                   'patient-invoice.create',
                   'patient-payment.record',
                   'patient.administrative.manage',
-                  'treatment-item.complete',
+                  'treatment-item.execute',
+                  'treatment-plan.accept',
                   'treatment-plan.write',
                 ],
               },

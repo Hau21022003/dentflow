@@ -47,9 +47,18 @@ export const AuditAction = {
   PATIENT_CREATED: 'PATIENT_CREATED',
   PATIENT_ADMINISTRATIVE_UPDATED: 'PATIENT_ADMINISTRATIVE_UPDATED',
   APPOINTMENT_CREATED: 'APPOINTMENT_CREATED',
+  APPOINTMENT_UPDATED: 'APPOINTMENT_UPDATED',
+  APPOINTMENT_ASSIGNMENT_CHANGED: 'APPOINTMENT_ASSIGNMENT_CHANGED',
   APPOINTMENT_STATE_CHANGED: 'APPOINTMENT_STATE_CHANGED',
+  VISIT_OPENED: 'VISIT_OPENED',
+  VISIT_UPDATED: 'VISIT_UPDATED',
+  VISIT_COMPLETED: 'VISIT_COMPLETED',
+  TREATMENT_NOTE_ADDED: 'TREATMENT_NOTE_ADDED',
   TREATMENT_PLAN_STATE_CHANGED: 'TREATMENT_PLAN_STATE_CHANGED',
   TREATMENT_ITEM_STATE_CHANGED: 'TREATMENT_ITEM_STATE_CHANGED',
+  TREATMENT_PLAN_ACCEPTED: 'TREATMENT_PLAN_ACCEPTED',
+  TREATMENT_PLAN_REOPENED: 'TREATMENT_PLAN_REOPENED',
+  TREATMENT_ITEM_EVENT_RECORDED: 'TREATMENT_ITEM_EVENT_RECORDED',
   PATIENT_INVOICE_ISSUED: 'PATIENT_INVOICE_ISSUED',
   PATIENT_INVOICE_VOIDED: 'PATIENT_INVOICE_VOIDED',
   PATIENT_PAYMENT_RECORDED: 'PATIENT_PAYMENT_RECORDED',
@@ -76,6 +85,8 @@ export type AuditResourceType =
   | 'SERVICE_GROUP'
   | 'PATIENT'
   | 'APPOINTMENT'
+  | 'VISIT'
+  | 'TREATMENT_NOTE'
   | 'TREATMENT_PLAN'
   | 'TREATMENT_ITEM'
   | 'PATIENT_INVOICE'
@@ -181,14 +192,36 @@ const PATIENT_PAYLOAD: AuditPayloadPolicy = {
   metadata: ['changedFields', 'reasonCode'],
 };
 const APPOINTMENT_PAYLOAD: AuditPayloadPolicy = {
-  before: ['status', 'scheduledAt', 'assignedDentistUserId'],
-  after: ['status', 'scheduledAt', 'assignedDentistUserId'],
+  before: [
+    'status',
+    'startAt',
+    'endAt',
+    'assignedDentistUserId',
+    'changedFields',
+  ],
+  after: [
+    'status',
+    'startAt',
+    'endAt',
+    'assignedDentistUserId',
+    'changedFields',
+  ],
   metadata: ['reasonCode'],
 };
 const TREATMENT_PAYLOAD: AuditPayloadPolicy = {
   before: ['status'],
-  after: ['status'],
+  after: ['status', 'visitId'],
   metadata: ['reasonCode'],
+};
+const VISIT_PAYLOAD: AuditPayloadPolicy = {
+  before: ['status'],
+  after: ['status', 'changedFields'],
+  metadata: [],
+};
+const TREATMENT_NOTE_PAYLOAD: AuditPayloadPolicy = {
+  before: [],
+  after: ['visitId', 'createdAt'],
+  metadata: [],
 };
 const INVOICE_PAYLOAD: AuditPayloadPolicy = {
   before: ['status', 'totalAmount', 'currency'],
@@ -489,11 +522,47 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     false,
     APPOINTMENT_PAYLOAD,
   ),
+  [AuditAction.APPOINTMENT_UPDATED]: definition(
+    AuditDomain.CLINICAL,
+    'APPOINTMENT',
+    false,
+    APPOINTMENT_PAYLOAD,
+  ),
+  [AuditAction.APPOINTMENT_ASSIGNMENT_CHANGED]: definition(
+    AuditDomain.CLINICAL,
+    'APPOINTMENT',
+    false,
+    APPOINTMENT_PAYLOAD,
+  ),
   [AuditAction.APPOINTMENT_STATE_CHANGED]: definition(
     AuditDomain.CLINICAL,
     'APPOINTMENT',
     false,
     APPOINTMENT_PAYLOAD,
+  ),
+  [AuditAction.VISIT_OPENED]: definition(
+    AuditDomain.CLINICAL,
+    'VISIT',
+    false,
+    VISIT_PAYLOAD,
+  ),
+  [AuditAction.VISIT_UPDATED]: definition(
+    AuditDomain.CLINICAL,
+    'VISIT',
+    false,
+    VISIT_PAYLOAD,
+  ),
+  [AuditAction.VISIT_COMPLETED]: definition(
+    AuditDomain.CLINICAL,
+    'VISIT',
+    false,
+    VISIT_PAYLOAD,
+  ),
+  [AuditAction.TREATMENT_NOTE_ADDED]: definition(
+    AuditDomain.CLINICAL,
+    'TREATMENT_NOTE',
+    false,
+    TREATMENT_NOTE_PAYLOAD,
   ),
   [AuditAction.TREATMENT_PLAN_STATE_CHANGED]: definition(
     AuditDomain.CLINICAL,
@@ -502,6 +571,24 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     TREATMENT_PAYLOAD,
   ),
   [AuditAction.TREATMENT_ITEM_STATE_CHANGED]: definition(
+    AuditDomain.CLINICAL,
+    'TREATMENT_ITEM',
+    false,
+    TREATMENT_PAYLOAD,
+  ),
+  [AuditAction.TREATMENT_PLAN_ACCEPTED]: definition(
+    AuditDomain.CLINICAL,
+    'TREATMENT_PLAN',
+    false,
+    TREATMENT_PAYLOAD,
+  ),
+  [AuditAction.TREATMENT_PLAN_REOPENED]: definition(
+    AuditDomain.CLINICAL,
+    'TREATMENT_PLAN',
+    false,
+    TREATMENT_PAYLOAD,
+  ),
+  [AuditAction.TREATMENT_ITEM_EVENT_RECORDED]: definition(
     AuditDomain.CLINICAL,
     'TREATMENT_ITEM',
     false,

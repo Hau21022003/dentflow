@@ -60,6 +60,36 @@ VALUES
     '$2b$12$OFMsdYjCNgdKETLPShvBzunCfOVlqDxCpQp2Rw0J4YTTjb3RHFu3K',
     NOW(),
     NOW()
+  ),
+  (
+    '31000000-0000-4000-8000-000000000006',
+    'nguyen.minh.tuan@dentflow.test',
+    'nguyen.minh.tuan@dentflow.test',
+    'BS. Nguyễn Minh Tuấn',
+    'ACTIVE',
+    '$2b$12$OFMsdYjCNgdKETLPShvBzunCfOVlqDxCpQp2Rw0J4YTTjb3RHFu3K',
+    NOW(),
+    NOW()
+  ),
+  (
+    '31000000-0000-4000-8000-000000000007',
+    'tran.ngoc.mai@dentflow.test',
+    'tran.ngoc.mai@dentflow.test',
+    'BS. Trần Ngọc Mai',
+    'ACTIVE',
+    '$2b$12$OFMsdYjCNgdKETLPShvBzunCfOVlqDxCpQp2Rw0J4YTTjb3RHFu3K',
+    NOW(),
+    NOW()
+  ),
+  (
+    '31000000-0000-4000-8000-000000000008',
+    'le.hoang.phuc@dentflow.test',
+    'le.hoang.phuc@dentflow.test',
+    'BS. Lê Hoàng Phúc',
+    'ACTIVE',
+    '$2b$12$OFMsdYjCNgdKETLPShvBzunCfOVlqDxCpQp2Rw0J4YTTjb3RHFu3K',
+    NOW(),
+    NOW()
   )
 ON CONFLICT ("email_normalized") DO UPDATE
 SET

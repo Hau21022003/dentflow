@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
-import { IsBoolean, IsString, validate } from 'class-validator';
+import { IsBoolean, IsDateString, IsString, validate } from 'class-validator';
+import { IsNotFutureDate } from './is-not-future-date.decorator';
 import { LoginDto } from '../../modules/auth/dto/login.dto';
 import { NormalizeWhitespace } from './normalize-whitespace.decorator';
 import { ToBoolean } from './to-boolean.decorator';
@@ -27,6 +28,12 @@ class LowerCaseDto {
 class NormalizeWhitespaceDto {
   @NormalizeWhitespace()
   @IsString()
+  value: string;
+}
+
+class NotFutureDateDto {
+  @IsDateString({ strict: true })
+  @IsNotFutureDate()
   value: string;
 }
 
@@ -128,4 +135,21 @@ describe('DTO decorators', () => {
     expect(dto.email).toBe('dentist@example.test');
     await expect(validate(dto)).resolves.toHaveLength(0);
   });
+
+  it('accepts an ISO calendar date that is today or in the past', async () => {
+    const dto = plainToInstance(NotFutureDateDto, {
+      value: new Date().toISOString().slice(0, 10),
+    });
+
+    await expect(validate(dto)).resolves.toHaveLength(0);
+  });
+
+  it.each(['2999-01-01', 'not-a-date'])(
+    'rejects an invalid or future date %s',
+    async (value) => {
+      const dto = plainToInstance(NotFutureDateDto, { value });
+
+      await expect(validate(dto)).resolves.not.toHaveLength(0);
+    },
+  );
 });

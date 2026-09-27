@@ -61,6 +61,7 @@ export class TenantContextService {
     authorizationContext.branch = {
       id: branch.id,
       slug: branch.slug,
+      timezone: branch.timezone ?? tenant.defaultTimezone,
       status: branch.status,
     };
 

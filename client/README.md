@@ -73,6 +73,23 @@ và chạy `npm run lint`, `npm run build`.
 ## Quy ước frontend
 
 - Dùng alias `@/` cho `src/`; utilities là `@/shared/lib/utils`.
+- Icon mặc định là `lucide-react`. Khi Lucide không có icon phù hợp, dùng
+  `@tabler/icons-react`; cả hai đều dùng named export để Vite tree-shake những
+  icon không được sử dụng:
+
+  ```tsx
+  import { IconCalendar } from "@tabler/icons-react";
+
+  <IconCalendar aria-hidden="true" size={20} stroke={2} />
+  ```
+
+  Không import toàn bộ package, dùng icon font, hoặc tải SVG từ CDN lúc chạy.
+  Giữ cùng kích thước (thường `16`, `20`, hoặc `24`) và `stroke={2}` trong một
+  khu vực UI. Tabler Icons dùng MIT license. Nếu cả hai package đều chưa có
+  icon nghiệp vụ cần thiết, thêm SVG local vào `src/components/icons/`, dùng
+  `currentColor`, nhận SVG props, và ghi rõ URL nguồn cùng license trong
+  `src/components/icons/SOURCES.md`. Không lấy icon từ một trang tổng hợp nếu
+  chưa xác minh license của icon pack gốc.
 - API đi qua HTTP client tại `src/shared/lib/http.ts`. Tạo service và React
   Query hook trong feature phù hợp, thay vì gọi `fetch` trực tiếp trong page.
   Endpoint chỉ được một service/feature dùng thì khai báo trực tiếp tại service;
@@ -114,6 +131,32 @@ Không ghi đè component trong `src/components/ui` bằng lệnh registry nếu
 xem `--dry-run` và `--diff`, vì chúng là UI foundation đang được các page dùng
 chung.
 
+## React Hook Form fields
+
+Form dùng React Hook Form được ưu tiên các wrapper tại `src/components/form` để
+giữ nhất quán label, required marker, accessibility và hiển thị helper/validation
+message:
+
+```tsx
+import {
+  RHFCombobox,
+  RHFSelect,
+  RHFTextarea,
+  RHFTextField,
+} from "@/components/form";
+```
+
+- Dùng `RHFTextField` cho input native (bao gồm `type`, `inputMode`, `min`,
+  `max`); dùng `RHFTextarea` cho nội dung nhiều dòng.
+- Dùng `RHFSelect` cho tập option nhỏ, ổn định; dùng `RHFCombobox` khi người
+  dùng cần tìm trong danh sách option. `RHFCombobox` chỉ tìm local trong options
+  đã tải; danh sách phân trang hoặc có thể lớn phải dùng server-side search có
+  debounce.
+- Truyền placeholder, search placeholder và empty message qua i18n (ưu tiên
+  namespace domain khi text mang ngữ cảnh nghiệp vụ).
+- Chỉ dùng `Controller` trực tiếp khi control chưa có wrapper tại đây hoặc có
+  hành vi đặc thù không thể tạo thành component dùng chung.
+
 ## DataTable
 
 DataTable dùng chung nằm tại `src/components/shadcntable/data-table.tsx` và dựa
@@ -148,6 +191,10 @@ const dataTableLocale = useMemo(
 <DataTable columns={columns} data={data} locale={dataTableLocale} />;
 ```
 
+`mobileLayout` nhận `"divided"` (mặc định) hoặc `"cards"`. `divided` để
+DataTable vẽ khung chung và `divide-y` cùng token `border` với table; `cards`
+để renderer trả card có khoảng cách và border riêng.
+
 - `createDataTableLocale(tCommon, overrides?)` luôn trả về đủ
   `DataTableLocale`; override được merge theo từng nhóm và chỉ dành cho text
   đặc thù bảng. Select/multi-select không cần `filterConfig.placeholder` nếu
@@ -156,6 +203,13 @@ const dataTableLocale = useMemo(
   `pageSize`, `rowCount`, `onPaginationChange`; `serverState.sorting` và
   `serverState.filtering` cho sort, global search và column filters. Khi dùng
   `serverState`, TanStack không sort/lọc local trên một trang đã tải.
+- Truyền `renderMobileItem(item, index)` khi một bảng cần layout mobile riêng.
+  Khi có prop này, bảng chỉ hiện từ breakpoint `md` (768px) và danh sách item
+  hiện dưới `md`; không truyền prop thì DataTable giữ nguyên table ở mọi kích
+  thước. `item` và `index` lấy từ `table.getRowModel()` sau sort, filter và
+  pagination, nên `index` là vị trí 0-based đang thấy. Renderer sở hữu nội dung
+  card; DataTable vẫn xử lý `onRowClick`, skeleton/empty/fetching state và
+  checkbox `rowSelection` cạnh item trên mobile.
 - Trang `/platform/tenants` là reference implementation: API dùng page 1-based,
   client đổi từ `pageIndex` 0-based, debounce search 300ms, reset về trang đầu
   khi đổi search/filter/sort/page size, và truyền `meta.total` vào `rowCount`.

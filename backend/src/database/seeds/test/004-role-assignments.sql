@@ -3,6 +3,9 @@ INSERT INTO "tenant_user_memberships" ("tenant_id", "user_id", "status")
 VALUES
   ('11000000-0000-4000-8000-000000000001', (SELECT "id" FROM "users" WHERE "email_normalized" = 'e2e.user@dentflow.test'), 'ACTIVE'),
   ('11000000-0000-4000-8000-000000000001', (SELECT "id" FROM "users" WHERE "email_normalized" = 'branch.admin@dentflow.test'), 'ACTIVE'),
+  ('11000000-0000-4000-8000-000000000001', (SELECT "id" FROM "users" WHERE "email_normalized" = 'nguyen.minh.tuan@dentflow.test'), 'ACTIVE'),
+  ('11000000-0000-4000-8000-000000000001', (SELECT "id" FROM "users" WHERE "email_normalized" = 'tran.ngoc.mai@dentflow.test'), 'ACTIVE'),
+  ('11000000-0000-4000-8000-000000000001', (SELECT "id" FROM "users" WHERE "email_normalized" = 'le.hoang.phuc@dentflow.test'), 'ACTIVE'),
   ('11000000-0000-4000-8000-000000000002', (SELECT "id" FROM "users" WHERE "email_normalized" = 'dentist@dentflow.test'), 'ACTIVE'),
   ('11000000-0000-4000-8000-000000000002', (SELECT "id" FROM "users" WHERE "email_normalized" = 'harmony.admin@dentflow.test'), 'ACTIVE')
 ON CONFLICT ("tenant_id", "user_id") DO NOTHING;
@@ -93,5 +96,32 @@ VALUES
     'TENANT_ADMIN',
     (SELECT "id" FROM "users" WHERE "email_normalized" = 'platform.admin@dentflow.test'),
     'Synthetic Harmony test tenant administrator'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000008',
+    (SELECT "id" FROM "users" WHERE "email_normalized" = 'nguyen.minh.tuan@dentflow.test'),
+    '11000000-0000-4000-8000-000000000001',
+    '21000000-0000-4000-8000-000000000001',
+    'DENTIST',
+    (SELECT "id" FROM "users" WHERE "email_normalized" = 'branch.admin@dentflow.test'),
+    'Synthetic test dentist Nguyễn Minh Tuấn'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000009',
+    (SELECT "id" FROM "users" WHERE "email_normalized" = 'tran.ngoc.mai@dentflow.test'),
+    '11000000-0000-4000-8000-000000000001',
+    '21000000-0000-4000-8000-000000000001',
+    'DENTIST',
+    (SELECT "id" FROM "users" WHERE "email_normalized" = 'branch.admin@dentflow.test'),
+    'Synthetic test dentist Trần Ngọc Mai'
+  ),
+  (
+    '51000000-0000-4000-8000-000000000010',
+    (SELECT "id" FROM "users" WHERE "email_normalized" = 'le.hoang.phuc@dentflow.test'),
+    '11000000-0000-4000-8000-000000000001',
+    '21000000-0000-4000-8000-000000000001',
+    'DENTIST',
+    (SELECT "id" FROM "users" WHERE "email_normalized" = 'branch.admin@dentflow.test'),
+    'Synthetic test dentist Lê Hoàng Phúc'
   )
 ON CONFLICT ("id") DO NOTHING;

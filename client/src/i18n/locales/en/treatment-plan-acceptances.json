@@ -1,0 +1,31 @@
+{
+  "eyebrow": "Reception · {{tenantName}} · {{branchName}}",
+  "title": "Treatment plan acceptances",
+  "description": "Confirm patient acceptance for proposed treatment plans.",
+  "loading": "Loading acceptance queue…",
+  "table": {
+    "title": "Acceptance queue",
+    "description": "Only proposed treatment plans are shown.",
+    "patient": "Patient",
+    "plan": "Plan reference",
+    "status": "Status",
+    "createdAt": "Created",
+    "updatedAt": "Updated",
+    "actions": "Actions"
+  },
+  "status": { "proposed": "Proposed" },
+  "actions": { "accept": "Accept", "accepting": "Accepting…", "cancel": "Cancel", "retry": "Try again" },
+  "dialog": {
+    "title": "Confirm treatment plan acceptance",
+    "description": "Record that {{name}} accepts treatment plan {{planId}}."
+  },
+  "feedback": { "accepted": "Treatment plan accepted." },
+  "empty": { "title": "No proposed treatment plans", "description": "Plans proposed by Dentists will appear here." },
+  "errors": {
+    "listTitle": "We could not load the acceptance queue",
+    "forbidden": "You no longer have permission to accept treatment plans in this branch.",
+    "notFound": "This treatment plan is no longer available in the current branch.",
+    "conflict": "This treatment plan is no longer proposed. Refresh the queue and try again.",
+    "invalid": "The treatment plan request is invalid. Refresh the queue and try again."
+  }
+}

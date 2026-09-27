@@ -19,6 +19,8 @@ export interface AuthorizationContext {
   branch?: {
     id: string;
     slug: string;
+    /** Branch override, or the tenant default, resolved by TenantContextService. */
+    timezone: string;
     status: BranchStatus;
   };
   access?: EffectiveAuthorizationAccess;

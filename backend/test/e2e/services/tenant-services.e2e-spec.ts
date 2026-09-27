@@ -301,7 +301,7 @@ describe('Tenant Admin service catalog management (e2e)', () => {
       slug: 'service-migration-b',
     });
 
-    await dataSource.undoLastMigration();
+    await undoMigrationsThroughServiceGroups();
     await dataSource.query(
       `INSERT INTO "services" ("tenant_id", "code", "name", "group_name", "amount", "currency", "duration_minutes")
        VALUES
@@ -341,7 +341,7 @@ describe('Tenant Admin service catalog management (e2e)', () => {
       linksByCode.get('legacy-imaging-other-tenant')?.service_group_id,
     );
 
-    await dataSource.undoLastMigration();
+    await undoMigrationsThroughServiceGroups();
     await dataSource.query(
       `INSERT INTO "services" ("tenant_id", "code", "name", "group_name", "amount", "currency", "duration_minutes")
        VALUES ($1, 'legacy-blank-group', 'Legacy Blank Group', '   ', 1000, 'VND', 30)`,
@@ -361,6 +361,22 @@ describe('Tenant Admin service catalog management (e2e)', () => {
     );
     await dataSource.runMigrations();
   });
+
+  async function undoMigrationsThroughServiceGroups(): Promise<void> {
+    const serviceGroupsMigration = 'CreateServiceGroups1786060800018';
+
+    while (true) {
+      const applied = (await dataSource.query(
+        'SELECT 1 FROM "migrations" WHERE "name" = $1',
+        [serviceGroupsMigration],
+      )) as unknown[];
+      if (applied.length === 0) {
+        return;
+      }
+
+      await dataSource.undoLastMigration();
+    }
+  }
 
   async function createServiceGroup(
     agent: ReturnType<typeof request.agent>,

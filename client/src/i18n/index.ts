@@ -2,7 +2,9 @@ import i18n from "i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 import enBranches from "./locales/en/branches.json";
+import enAppointments from "./locales/en/appointments.json";
 import enCommon from "./locales/en/common.json";
+import enDataTableDemo from "./locales/en/data-table-demo.json";
 import enEmailTemplates from "./locales/en/email-templates.json";
 import enPatients from "./locales/en/patients.json";
 import enPlans from "./locales/en/plans.json";
@@ -13,8 +15,13 @@ import enValidation from "./locales/en/validation.json";
 import enTenants from "./locales/en/tenants.json";
 import enInvitations from "./locales/en/invitations.json";
 import enStaff from "./locales/en/staff.json";
+import enVisits from "./locales/en/visits.json";
+import enTreatmentPlans from "./locales/en/treatment-plans.json";
+import enTreatmentPlanAcceptances from "./locales/en/treatment-plan-acceptances.json";
 import viBranches from "./locales/vi/branches.json";
+import viAppointments from "./locales/vi/appointments.json";
 import viCommon from "./locales/vi/common.json";
+import viDataTableDemo from "./locales/vi/data-table-demo.json";
 import viEmailTemplates from "./locales/vi/email-templates.json";
 import viPatients from "./locales/vi/patients.json";
 import viPlans from "./locales/vi/plans.json";
@@ -25,6 +32,9 @@ import viValidation from "./locales/vi/validation.json";
 import viTenants from "./locales/vi/tenants.json";
 import viInvitations from "./locales/vi/invitations.json";
 import viStaff from "./locales/vi/staff.json";
+import viVisits from "./locales/vi/visits.json";
+import viTreatmentPlans from "./locales/vi/treatment-plans.json";
+import viTreatmentPlanAcceptances from "./locales/vi/treatment-plan-acceptances.json";
 
 export const supportedLanguages = ["vi", "en"] as const;
 
@@ -37,7 +47,9 @@ i18n
     load: "languageOnly",
     ns: [
       "branches",
+      "appointments",
       "common",
+      "dataTableDemo",
       "emailTemplates",
       "invitations",
       "patients",
@@ -48,12 +60,17 @@ i18n
       "staff",
       "tenants",
       "validation",
+      "visits",
+      "treatmentPlans",
+      "treatmentPlanAcceptances",
     ],
     defaultNS: "common",
     resources: {
       en: {
         branches: enBranches,
+        appointments: enAppointments,
         common: enCommon,
+        dataTableDemo: enDataTableDemo,
         emailTemplates: enEmailTemplates,
         invitations: enInvitations,
         patients: enPatients,
@@ -64,10 +81,15 @@ i18n
         staff: enStaff,
         tenants: enTenants,
         validation: enValidation,
+        visits: enVisits,
+        treatmentPlans: enTreatmentPlans,
+        treatmentPlanAcceptances: enTreatmentPlanAcceptances,
       },
       vi: {
         branches: viBranches,
+        appointments: viAppointments,
         common: viCommon,
+        dataTableDemo: viDataTableDemo,
         emailTemplates: viEmailTemplates,
         invitations: viInvitations,
         patients: viPatients,
@@ -78,6 +100,9 @@ i18n
         staff: viStaff,
         tenants: viTenants,
         validation: viValidation,
+        visits: viVisits,
+        treatmentPlans: viTreatmentPlans,
+        treatmentPlanAcceptances: viTreatmentPlanAcceptances,
       },
     },
     detection: {

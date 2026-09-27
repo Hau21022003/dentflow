@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { CAT_AVATAR_PNG_FILE } from "./fixtures/images";
+import { CAT_AVATAR_JPEG_FILE } from "./fixtures/images";
 import { resetDatabase } from "./support/database";
 import { E2E_USERS, login } from "./support/login";
 
@@ -16,7 +16,7 @@ test("a signed-in user updates their profile avatar and staff roster shows it", 
   await login(page, E2E_USERS.tenantAdmin);
   await page.goto("/profile");
 
-  await page.locator("#profile-avatar").setInputFiles(CAT_AVATAR_PNG_FILE);
+  await page.locator("#profile-avatar").setInputFiles(CAT_AVATAR_JPEG_FILE);
   await page.locator("#profile-full-name").fill(avatarName);
   await page.locator('form button[type="submit"]').click();
 

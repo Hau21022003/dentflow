@@ -13,6 +13,10 @@ import { StaffModule } from './staff/staff.module';
 import { ServicesModule } from './services/services.module';
 import { ServiceGroupsModule } from './service-groups/service-groups.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { PatientsModule } from './patients/patients.module';
+import { AppointmentsModule } from './appointments/appointments.module';
+import { VisitsModule } from './visits/visits.module';
+import { TreatmentPlansModule } from './treatment-plans/treatment-plans.module';
 
 @Module({
   imports: [
@@ -23,6 +27,10 @@ import { UploadsModule } from './uploads/uploads.module';
     BranchesModule,
     ServiceGroupsModule,
     UploadsModule,
+    PatientsModule,
+    AppointmentsModule,
+    VisitsModule,
+    TreatmentPlansModule,
     ServicesModule,
     IdempotencyModule,
     EmailTemplatesModule,

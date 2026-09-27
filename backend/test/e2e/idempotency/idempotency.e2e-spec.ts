@@ -109,6 +109,7 @@ describe('Idempotency pilot for subscription plans (e2e)', () => {
       .expect('Idempotency-Replayed', 'true');
 
     expect(replay.body).toEqual(first.body);
+    const firstPlanId = planIdFromResponse(first.body as unknown);
     await expect(
       dataSource.getRepository(IdempotencyRecord).findOneByOrFail({
         actorUserId: user.id,
@@ -120,10 +121,18 @@ describe('Idempotency pilot for subscription plans (e2e)', () => {
       responseBody: first.body as unknown,
     });
     await expect(
-      auditLogs.count({ where: { action: AuditAction.PLAN_CREATED } }),
+      auditLogs.count({
+        where: {
+          action: AuditAction.PLAN_CREATED,
+          resourceId: firstPlanId,
+        },
+      }),
     ).resolves.toBe(1);
     await expect(
-      dataSource.query('SELECT COUNT(*)::int AS count FROM subscription_plans'),
+      dataSource.query(
+        'SELECT COUNT(*)::int AS count FROM subscription_plans WHERE code = $1',
+        ['replayed-plan'],
+      ),
     ).resolves.toEqual([{ count: 1 }]);
   });
 

@@ -25,7 +25,8 @@ export const PERMISSIONS = {
   appointmentAssignedRead: "appointment.assigned.read",
   clinicalVisitWrite: "clinical.visit.write",
   treatmentPlanWrite: "treatment-plan.write",
-  treatmentItemComplete: "treatment-item.complete",
+  treatmentItemExecute: "treatment-item.execute",
+  treatmentPlanAccept: "treatment-plan.accept",
   followUpRecommend: "follow-up.recommend",
 } as const;
 
@@ -57,6 +58,7 @@ export type TenantAuthorization = {
       id: string;
       slug: string;
       name: string;
+      timezone: string;
       status: BranchStatus;
     };
     roles: TenantRoleCode[];

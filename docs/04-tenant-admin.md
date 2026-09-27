@@ -117,6 +117,11 @@ Tenant Admin không được tự chuyển subscription sang `ACTIVE` hoặc đ�
 
 ## 8. API contract định hướng
 
+Patient, Appointment, Visit, Treatment Plan, PatientInvoice, Payment và follow-up
+không phải tenant-wide management API. Chúng dùng branch-scoped context, case
+ownership và state contract tại [06-domain-workflows.md](./06-domain-workflows.md);
+`TENANT_ADMIN` không tự có quyền gọi các command này chỉ vì đang ở tenant scope.
+
 Các endpoint nội bộ trong tài liệu này yêu cầu tenant context đã xác minh và `TENANT_ADMIN` cho năng lực quản trị tương ứng. API prefix/version công khai do Nginx/gateway quản lý khi deploy nên không được ghi cứng ở backend. Mỗi endpoint vẫn áp dụng Subscription Guard, kiểm tra role và truy vấn có điều kiện `tenantId`/`branchId`.
 
 - `GET/PATCH /tenant/settings`

@@ -8,17 +8,17 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { UserAvatar } from "@/components/UserAvatar";
 import { authQueryKeys } from "@/features/auth/auth.hooks";
 import { authService } from "@/features/auth/auth.service";
 import { useAuthStore } from "@/features/auth/auth.store";
 import type { AuthUser } from "@/features/auth/auth.types";
-import { UserAvatar } from "@/shared/components/UserAvatar";
 import { getErrorMessage } from "@/shared/lib/error";
 import { uploadUserTempImage } from "@/shared/lib/temp-image-upload";
+import { useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle, Trash2, Upload } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
 
 export function ProfilePage() {
   const user = useAuthStore((state) => state.user);

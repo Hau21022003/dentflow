@@ -43,12 +43,12 @@ Một người dùng có thể được cấp nhiều vai trò/phạm vi, ví d�
 
 1. Lễ tân tìm kiếm theo số điện thoại để tránh tạo trùng hồ sơ trong cùng tenant.
 2. Nếu là bệnh nhân mới, tạo hồ sơ với thông tin liên hệ, ngày sinh, giới tính, địa chỉ, người liên hệ khẩn cấp và nguồn biết đến phòng khám.
-3. Bệnh nhân có thể có nhiều lần đến khám tại các chi nhánh khác nhau của cùng một tenant; lịch sử vẫn thống nhất ở cấp tenant.
-4. Lễ tân ghi cảnh báo ngắn như dị ứng thuốc hoặc yêu cầu đặc biệt. Các nội dung khám chuyên môn chỉ bác sĩ/nhân sự được phép mới xem được.
+3. Bệnh nhân có thể có nhiều lần đến khám tại các chi nhánh khác nhau của cùng một tenant; hồ sơ hành chính vẫn thống nhất ở cấp tenant. Lịch sử clinical của từng branch chỉ Dentist có ca được phân công tại branch đó xem được.
+4. Cảnh báo như dị ứng thuốc là `PatientAlert` clinical-only: chỉ Dentist đang có ca được phân công mới tạo, xem hoặc sửa; alert không xuất hiện trong audit payload.
 
 ### 3.2 Lịch hẹn và check-in
 
-Lịch hẹn bao gồm bệnh nhân, chi nhánh, bác sĩ dự kiến, dịch vụ/lý do đến khám, khoảng thời gian, ghi chú và nguồn đặt hẹn. Hệ thống kiểm tra trùng lịch cho bác sĩ và ghế/phòng khám nếu đã cấu hình.
+Lịch hẹn bao gồm bệnh nhân, chi nhánh, bác sĩ dự kiến tùy chọn, dịch vụ/lý do đến khám, khoảng thời gian, ghi chú và nguồn đặt hẹn. Ca chưa có Dentist vẫn check-in được nhưng không thể bắt đầu. Backend chặn cứng lịch giao nhau của Dentist đã được gán; chair/room scheduling là giai đoạn sau.
 
 Vòng đời lịch hẹn:
 
@@ -58,18 +58,18 @@ BOOKED → CONFIRMED → CHECKED_IN → IN_PROGRESS → COMPLETED
      └→ NO_SHOW
 ```
 
-- Lễ tân tạo, xác nhận, check-in, hủy và đánh dấu no-show.
-- Bác sĩ bắt đầu và hoàn tất phiên khám của bệnh nhân được giao.
+- Lễ tân tạo, xác nhận, check-in, hủy và đánh dấu no-show; Branch Admin điều phối slot và đổi Dentist đến hết `CHECKED_IN`.
+- Bác sĩ được gán bắt đầu ca từ `CHECKED_IN`; command tạo một Visit duy nhất và chuyển lịch sang `IN_PROGRESS` trong cùng transaction.
 - Mỗi lần đổi trạng thái lưu thời gian, người thực hiện và lý do hủy/no-show nếu có.
 - Dashboard hiển thị lịch hôm nay, tình trạng chờ, no-show và công suất bác sĩ.
 
 ### 3.3 Khám, chẩn đoán và kế hoạch điều trị
 
-Sau khi bệnh nhân check-in, bác sĩ mở một **visit** gắn với lịch hẹn. Visit có triệu chứng, tiền sử liên quan, chẩn đoán, ghi chú lâm sàng và tệp đính kèm trong giai đoạn sau.
+Sau khi bệnh nhân check-in, Dentist được gán bắt đầu một **visit** duy nhất gắn với lịch hẹn. Visit có triệu chứng, tiền sử liên quan, chẩn đoán và ghi chú lâm sàng; khi hoàn tất, nội dung gốc bị khóa và chỉ thêm addendum có tác giả/thời điểm. Tệp đính kèm là giai đoạn sau.
 
-Bác sĩ tạo **treatment plan** gồm các hạng mục điều trị: dịch vụ, răng/vị trí (mã FDI hoặc mô tả), bác sĩ thực hiện, số lượng, đơn giá, giảm giá và ghi chú. Kế hoạch có trạng thái `DRAFT`, `PROPOSED`, `ACCEPTED`, `PARTIALLY_COMPLETED`, `COMPLETED`, `CANCELLED`.
+Bác sĩ tạo **treatment plan** dài hạn thuộc Patient + Tenant + Branch, với `originVisitId` bất biến để ghi nhận lần khởi tạo. Một Dentist được gán một Visit `OPEN` khác của cùng Patient/Branch vẫn có thể xem, chỉnh Draft hoặc thực hiện Plan đó sau khi origin Visit đã hoàn tất. Plan gồm các hạng mục điều trị: snapshot dịch vụ, răng/vị trí, bác sĩ dự kiến, số lượng, đơn giá, giảm giá và chỉ định. Kế hoạch có trạng thái `DRAFT`, `PROPOSED`, `ACCEPTED`, `PARTIALLY_COMPLETED`, `COMPLETED`, `CANCELLED`.
 
-- Bệnh nhân xác nhận kế hoạch tại quầy; lễ tân ghi lại người xác nhận và thời điểm.
+- Bệnh nhân xác nhận kế hoạch tại quầy; lễ tân ghi lại người xác nhận và thời điểm. Dentist muốn sửa plan `PROPOSED` phải reopen về `DRAFT`, làm acceptance cũ mất hiệu lực rồi đề xuất/xác nhận lại.
 - Mỗi hạng mục điều trị tiến triển độc lập: `PENDING`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`.
 - MVP chỉ cần chọn răng theo mã/mô tả. Odontogram trực quan là hạng mục nâng cao, không chặn luồng điều trị cơ bản.
 
@@ -77,9 +77,9 @@ Bác sĩ tạo **treatment plan** gồm các hạng mục điều trị: dịch 
 
 DentFlow có **hai dòng tiền độc lập**: phí thuê bao SaaS mà tenant trả cho DentFlow, và chi phí điều trị mà bệnh nhân trả trực tiếp cho phòng khám. Chi tiết mô hình, trách nhiệm và roadmap được quy định tại [01-payment-model.md](./01-payment-model.md).
 
-Từ hạng mục điều trị đã xác nhận, lễ tân lập invoice theo từng lần thanh toán hoặc một đợt điều trị. Invoice có dòng chi tiết, tổng tiền, giảm giá, số đã thu, số còn lại và phương thức thanh toán (`CASH`, `BANK_TRANSFER`, `CARD`, `OTHER`).
+Từ hạng mục điều trị đã `ACCEPTED`, lễ tân lập invoice theo từng đợt điều trị. Một item thuộc tối đa một invoice còn hiệu lực; trả góp được ghi bằng nhiều payment trên invoice đó. Invoice có dòng snapshot, tổng tiền, giảm giá, số đã thu, số còn lại và phương thức thanh toán (`CASH`, `BANK_TRANSFER`, `CARD`, `OTHER`).
 
-Vòng đời invoice: `DRAFT → ISSUED → PARTIALLY_PAID → PAID`, hoặc `VOID`. Không cho phép sửa các dòng tiền sau khi invoice đã có giao dịch thanh toán; thay vào đó lập điều chỉnh có audit log.
+Vòng đời invoice: `DRAFT → ISSUED → PARTIALLY_PAID → PAID`, hoặc `VOID`. Không cho phép sửa các dòng tiền sau khi invoice đã có giao dịch thanh toán; refund/adjustment là record bù trừ mới tham chiếu payment gốc, có audit log. Invoice có net collected amount chỉ được void sau khi số đó đã được bù trừ về 0.
 
 Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch tái khám với lý do và khoảng thời gian gợi ý. Trong MVP, việc gửi nhắc hẹn được mô phỏng bằng hàng đợi/lịch sử thông báo; SMS/Zalo/email thật là giai đoạn nâng cao.
 
@@ -118,10 +118,10 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 | Tổ chức   | Branch, User, RoleAssignment                     | RoleAssignment có phạm vi branch tùy chọn                                                                                 |
 | Xác thực  | User, AuthSession, TotpFactor, PasskeyCredential | User là identity toàn hệ thống; có `fullName` và avatar cá nhân tùy chọn; session theo từng thiết bị, TOTP secret và refresh token chỉ lưu dạng mã hóa/hash         |
 | Danh mục  | ServiceGroup, Service                            | Nhóm dịch vụ tenant-scoped và Service có mã bất biến, giá hiện hành theo ISO currency, thời lượng và trạng thái hoạt động |
-| Bệnh nhân | Patient, PatientAlert                            | Patient thuộc tenant, không bị giới hạn một branch                                                                        |
-| Điều phối | Appointment, Visit                               | Appointment thuộc branch; Visit được tạo từ appointment                                                                   |
-| Điều trị  | TreatmentPlan, TreatmentItem, TreatmentNote      | Bác sĩ được gán và lịch sử thực hiện                                                                                      |
-| Thu phí   | PatientInvoice, PatientInvoiceItem, Payment      | Tách biệt với hóa đơn SaaS của tenant                                                                                     |
+| Bệnh nhân | Patient, PatientAlert                            | Patient thuộc tenant, không bị giới hạn branch; alert clinical-only                                                       |
+| Điều phối | Appointment, Visit, FollowUpRecommendation       | Appointment/Visit thuộc branch; start tạo Visit duy nhất; follow-up tạo lịch tái khám có nguồn                            |
+| Điều trị  | TreatmentPlan, TreatmentItem, TreatmentItemEvent, TreatmentNote | Plan thuộc Patient + Tenant + Branch với origin Visit bất biến; event giữ Visit/Dentist thực hiện, item snapshot Service |
+| Thu phí   | PatientInvoice, PatientInvoiceItem, Payment      | Tách biệt với hóa đơn SaaS; payment/refund/adjustment là immutable ledger records                                         |
 | Tuân thủ  | AuditLog                                         | Ai làm gì, trên bản ghi nào, khi nào                                                                                      |
 
 ## 6. API và nguyên tắc bảo mật
@@ -136,11 +136,9 @@ Tài liệu này chỉ mô tả route nội bộ của backend và không ghi c�
 - `GET/POST /tenants/:tenantSlug/branches`, `PATCH /tenants/:tenantSlug/branches/:branchSlug`, `POST /tenants/:tenantSlug/branches/:branchSlug/deactivate` và `/activate`: Tenant Admin theo tenant scope; command branch dùng idempotency và không nhận `tenantId` từ client. Branch inactive bị chặn khỏi route vận hành branch-scoped, trừ route read-only khai báo ngoại lệ rõ ràng. Tenant Admin quản lý staff tenant-wide tại `/tenants/:tenantSlug/staff`; Branch Admin dùng `/tenants/:tenantSlug/branches/:branchSlug/staff` chỉ cho roster, invitation và grant/revoke `RECEPTIONIST`/`DENTIST` tại branch đã resolve.
 - `GET/POST /tenants/:tenantSlug/service-groups`, `GET/PATCH /tenants/:tenantSlug/service-groups/:serviceGroupId`, `POST .../:serviceGroupId/deactivate` và `/activate`: Tenant Admin quản lý nhóm danh mục tenant-scoped bằng tên unique không phân biệt hoa/thường; command dùng idempotency, không hard-delete. Nhóm inactive không nhận Service mới nhưng không tự deactivate Service hiện hữu.
 - `GET/POST /tenants/:tenantSlug/services`, `GET/PATCH /tenants/:tenantSlug/services/:serviceId`, `POST .../:serviceId/deactivate` và `/activate`: Tenant Admin quản lý catalog dịch vụ chung tenant. Mã dịch vụ dạng slug là bất biến và unique trong tenant; create/update dùng `serviceGroupId` active cùng tenant, command dùng idempotency và không nhận tenant context từ client. Chỉ service `ACTIVE` được chọn cho appointment/treatment mới khi các module đó được triển khai; bản ghi nghiệp vụ phải snapshot giá/currency tại thời điểm tạo để thay đổi catalog không hồi tố điều trị hoặc thanh toán.
-- `GET/POST /patients`, `GET/POST /appointments`, `POST /appointments/:id/check-in`, `POST /appointments/:id/start`, `POST /appointments/:id/complete`.
-- `GET/POST /visits`, `GET/POST /treatment-plans`, `POST /treatment-items/:id/complete`.
+- Clinical API dùng route branch-scoped `/tenants/:tenantSlug/branches/:branchSlug/...`: Patient, Appointment, Visit, Treatment Plan/Item, PatientInvoice/Payment và follow-up. Contract route, state, permission, idempotency và error nằm tại [06-domain-workflows.md](./06-domain-workflows.md); không dùng `/patients`, `/appointments`, `/visits` hoặc `/patient-invoices` global.
 - `POST /tenants/:tenantSlug/branches/:branchSlug/uploads/image-intents`: route branch-scoped với permission `file.upload`; chỉ cấp presigned POST ngắn hạn cho ảnh JPG/PNG/WEBP không quá 2 MB dưới key temp do server tạo. Client upload trực tiếp vào object storage; route không nhận tenant/branch ID hoặc object key trong body, không lưu attachment và không trả public URL.
 - `POST /uploads/image-intents`: route chỉ yêu cầu JWT cho ảnh user-owned. Body nhận `folder` enum (V1 chỉ `AVATAR`), MIME và dung lượng; server lấy user ID từ JWT rồi tạo key temp. Client không truyền path, user ID hoặc permanent object key.
-- `GET/POST /patient-invoices`, `POST /patient-invoices/:id/payments`.
 - `POST /billing/checkout-session`, `POST /billing/webhook`; webhook không dùng JWT mà xác minh chữ ký Stripe.
 
 Mọi endpoint nghiệp vụ phải áp dụng theo thứ tự: xác thực → lấy tenant context → kiểm tra subscription → kiểm tra role/phạm vi branch → truy vấn có điều kiện `tenantId`/`branchId`.

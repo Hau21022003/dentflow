@@ -16,6 +16,10 @@ import { DataTableLocaleProvider } from "./contexts/data-table-locale-context";
 import { DataTableBody, type DataTableBodyProps } from "./data-table-body";
 import { DataTableHeader } from "./data-table-header";
 import {
+  DataTableMobileList,
+  type DataTableMobileLayout,
+} from "./data-table-mobile-list";
+import {
   DataTablePagination,
   type DataTablePaginationConfig,
 } from "./data-table-pagination";
@@ -39,8 +43,11 @@ interface DataTableProps<TData, TValue> {
   isLoading?: boolean;
   isFetching?: boolean;
   locale?: Partial<DataTableLocale>;
+  /** Layout used below the `md` breakpoint when `renderMobileItem` is provided. */
+  mobileLayout?: DataTableMobileLayout;
   onRowClick?: (row: TData) => void;
   pagination?: DataTablePaginationConfig;
+  renderMobileItem?: (item: TData, index: number) => React.ReactNode;
   rowSelection?: DataTableRowSelectionConfig<TData>;
   serverState?: DataTableServerState;
   toolbar?: DataTableToolbarConfig;
@@ -53,8 +60,10 @@ export function DataTable<TData, TValue>({
   isLoading,
   isFetching,
   locale,
+  mobileLayout = "divided",
   onRowClick,
   pagination,
+  renderMobileItem,
   rowSelection,
   serverState,
   toolbar,
@@ -180,22 +189,53 @@ export function DataTable<TData, TValue>({
           onGlobalFilterChange={serverState?.filtering?.onGlobalFilterChange}
           table={table}
         />
-        <div className="relative overflow-hidden rounded-md border">
-          <Table>
-            <DataTableHeader table={table} />
-            <DataTableBody
+        {renderMobileItem ? (
+          <>
+            <div className="relative hidden overflow-hidden rounded-md border md:block">
+              <Table>
+                <DataTableHeader table={table} />
+                <DataTableBody
+                  emptyState={emptyState}
+                  isLoading={isLoading}
+                  onRowClick={onRowClick}
+                  table={table}
+                />
+              </Table>
+              {isFetching && !isLoading && (
+                <div className="absolute inset-0 top-10 z-10 flex items-center justify-center">
+                  <Spinner />
+                </div>
+              )}
+            </div>
+            <DataTableMobileList
               emptyState={emptyState}
+              isFetching={isFetching}
               isLoading={isLoading}
+              layout={mobileLayout}
               onRowClick={onRowClick}
+              renderMobileItem={renderMobileItem}
+              rowSelection={rowSelection}
               table={table}
             />
-          </Table>
-          {isFetching && !isLoading && (
-            <div className="absolute inset-0 top-10 z-10 flex items-center justify-center">
-              <Spinner />
-            </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <div className="relative overflow-hidden rounded-md border">
+            <Table>
+              <DataTableHeader table={table} />
+              <DataTableBody
+                emptyState={emptyState}
+                isLoading={isLoading}
+                onRowClick={onRowClick}
+                table={table}
+              />
+            </Table>
+            {isFetching && !isLoading && (
+              <div className="absolute inset-0 top-10 z-10 flex items-center justify-center">
+                <Spinner />
+              </div>
+            )}
+          </div>
+        )}
         <DataTablePagination
           config={pagination}
           rowSelection={rowSelection}
@@ -205,3 +245,5 @@ export function DataTable<TData, TValue>({
     </DataTableLocaleProvider>
   );
 }
+
+export type { DataTableMobileLayout } from "./data-table-mobile-list";

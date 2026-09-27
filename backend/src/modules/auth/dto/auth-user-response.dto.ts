@@ -37,6 +37,9 @@ export class AuthorizationBranchResponseDto {
   @ApiProperty({ example: 'Chi nhánh Quận 1' })
   name: string;
 
+  @ApiProperty({ example: 'Asia/Ho_Chi_Minh' })
+  timezone: string;
+
   @ApiProperty({ enum: BranchStatus })
   status: BranchStatus;
 }

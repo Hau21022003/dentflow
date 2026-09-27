@@ -1,0 +1,77 @@
+{
+  "eyebrow": "{{tenantName}} · {{branchName}}",
+  "title": "Quản lý lịch hẹn",
+  "description": "Điều phối lịch chi nhánh, tiếp nhận bệnh nhân và bàn giao cho bác sĩ.",
+  "doctorTitle": "Lịch hẹn của tôi",
+  "doctorDescription": "Các ca được phân công cho bạn tại chi nhánh này. Mở ca đủ điều kiện để ghi nhận phiếu khám.",
+  "doctorSchedule": {
+    "previousMonth": "Tháng trước",
+    "nextMonth": "Tháng sau",
+    "daySummaryTitle": "Tổng hợp lịch hẹn",
+    "appointmentCount": "{{count}} lịch hẹn",
+    "agendaMeta": "{{count}} lịch hẹn · tổng {{duration}}",
+    "totalDuration": "{{hours}} giờ {{minutes}} phút",
+    "summaryLoadError": "Không thể tải tổng hợp lịch hẹn theo tháng của bạn.",
+    "emptyDescription": "Chọn một ngày khác để xem các ca được phân công cho bạn.",
+    "startVisit": "Bắt đầu khám",
+    "startingVisit": "Đang bắt đầu khám",
+    "continueVisit": "Tiếp tục khám",
+    "viewAppointment": "Xem"
+  },
+  "agenda": { "today": "Hôm nay", "previousDay": "Ngày trước", "nextDay": "Ngày sau", "filterStatus": "Tất cả trạng thái", "filterDentist": "Tất cả bác sĩ", "emptyTitle": "Không có lịch hẹn trong ngày", "emptyDescription": "Chọn ngày khác hoặc tạo lịch hẹn.", "loadError": "Không thể tải lịch hẹn", "retry": "Thử lại" },
+  "navigation": { "previous": "Trước", "next": "Tiếp", "today": "Hôm nay", "viewLabel": "Chế độ xem lịch hẹn" },
+  "views": {
+    "list": "Danh sách",
+    "timeline": "Dòng thời gian",
+    "month": "Tháng",
+    "compact": { "list": "Danh sách", "timeline": "Lịch ngày", "month": "Tháng" }
+  },
+  "placeholders": { "timeline": "Lịch theo ngày sẽ được bổ sung trong không gian làm việc dùng chung này ở bước tiếp theo.", "month": "Lịch tháng sẽ được bổ sung trong không gian làm việc dùng chung này ở bước tiếp theo." },
+  "month": {
+    "calendarLabel": "Lịch hẹn theo tháng",
+    "count": "{{count}} lịch hẹn",
+    "countCompact": "{{count}} lịch hẹn",
+    "emptyDay": "Không có lịch hẹn trong ngày này.",
+    "loadError": "Không thể tải tổng hợp lịch hẹn theo tháng.",
+    "selectDay": "Chọn ngày {{date}}, có {{count}} lịch hẹn",
+    "statusCount": "{{status}}: {{count}} lịch hẹn",
+    "viewDay": "Xem lịch trong ngày"
+  },
+  "list": {
+    "searchPlaceholder": "Tìm tên hoặc số điện thoại bệnh nhân...",
+    "columns": { "time": "Thời gian", "patient": "Bệnh nhân", "dentist": "Bác sĩ", "service": "Dịch vụ", "status": "Trạng thái", "actions": "Thao tác" },
+    "loadErrorTitle": "Không thể tải lịch hẹn",
+    "emptyTitle": "Không có lịch hẹn trong ngày",
+    "emptyDescription": "Chọn ngày khác, thay đổi bộ lọc hoặc tạo lịch hẹn."
+  },
+  "timeline": {
+    "gridLabel": "Lịch hẹn theo ngày",
+    "time": "Giờ",
+    "hourLabel": "{{hour}} giờ",
+    "searchPlaceholder": "Tìm tên hoặc số điện thoại bệnh nhân...",
+    "unassigned": "Chưa phân công",
+    "emptyColumn": "Không có lịch hẹn",
+    "emptyDay": "Không có lịch hẹn phù hợp với bộ lọc trong ngày này.",
+    "noDentistsTitle": "Chưa có bác sĩ khả dụng",
+    "noDentistsDescription": "Không có bác sĩ đang hoạt động để hiển thị tại chi nhánh này.",
+    "loadError": "Không thể tải lịch theo ngày.",
+    "detailPanelLabel": "Bảng chi tiết lịch hẹn",
+    "viewAppointment": "Xem lịch của {{patient}} lúc {{start}}"
+  },
+  "actions": { "create": "Tạo lịch hẹn", "save": "Lưu thay đổi", "edit": "Sửa lịch hẹn", "view": "Xem chi tiết", "confirm": "Xác nhận", "checkIn": "Check-in", "cancel": "Hủy lịch hẹn", "noShow": "Đánh dấu vắng mặt", "assign": "Phân công bác sĩ", "addPatient": "Thêm bệnh nhân", "close": "Đóng" },
+  "form": {
+    "createTitle": "Tạo lịch hẹn", "createDescription": "Đặt lịch theo múi giờ của chi nhánh đang chọn.", "editTitle": "Sửa lịch hẹn", "editDescription": "Cập nhật thông tin vận hành của lịch hẹn.",
+    "fields": { "patient": "Bệnh nhân", "source": "Nguồn đặt hẹn", "dentist": "Bác sĩ", "startAt": "Giờ bắt đầu", "endAt": "Giờ kết thúc", "service": "Dịch vụ", "visitReason": "Lý do đến khám", "operationalNote": "Ghi chú vận hành", "rescheduleReason": "Lý do đổi lịch" },
+    "patientPlaceholder": "Tìm tên hoặc số điện thoại bệnh nhân", "patientSearchPlaceholder": "Tìm bệnh nhân...", "dentistPlaceholder": "Chọn bác sĩ", "dentistSearchPlaceholder": "Tìm bác sĩ...", "servicePlaceholder": "Chọn dịch vụ", "serviceSearchPlaceholder": "Tìm dịch vụ...", "sourcePlaceholder": "Chọn nguồn", "reschedulePlaceholder": "Chọn lý do", "unassigned": "Chưa phân công", "noService": "Không chọn dịch vụ — nhập lý do khám", "searching": "Đang tìm...", "noPatients": "Không có bệnh nhân phù hợp.", "noDentists": "Không có bác sĩ phù hợp.", "noServices": "Không có dịch vụ phù hợp.", "rescheduleHint": "Đổi giờ của lịch đã xác nhận sẽ đưa lịch về trạng thái Đã đặt và cần xác nhận lại."
+  },
+  "validation": { "patientRequired": "Hãy chọn bệnh nhân.", "sourceRequired": "Hãy chọn nguồn đặt hẹn.", "startRequired": "Hãy nhập giờ bắt đầu.", "endRequired": "Hãy nhập giờ kết thúc.", "invalidTime": "Hãy nhập giờ hợp lệ theo múi giờ chi nhánh.", "endAfterStart": "Giờ kết thúc phải sau giờ bắt đầu.", "reasonRequired": "Hãy nhập lý do đến khám khi không chọn dịch vụ.", "rescheduleReasonRequired": "Hãy chọn lý do đổi lịch đã xác nhận.", "visitReasonMax": "Lý do đến khám không được quá 1.000 ký tự.", "noteMax": "Ghi chú vận hành không được quá 2.000 ký tự." },
+  "statuses": { "BOOKED": "Đã đặt", "CONFIRMED": "Đã xác nhận", "CHECKED_IN": "Đã check-in", "IN_PROGRESS": "Đang khám", "COMPLETED": "Hoàn tất", "CANCELLED": "Đã hủy", "NO_SHOW": "Vắng mặt" },
+  "sources": { "PHONE": "Điện thoại", "WALK_IN": "Đến trực tiếp", "ONLINE": "Trực tuyến", "OTHER": "Khác" },
+  "rescheduleReasons": { "PATIENT_REQUEST": "Theo yêu cầu bệnh nhân", "CLINIC_RESCHEDULE": "Phòng khám đổi lịch" },
+  "cancellationReasons": { "PATIENT_CANCELLED": "Bệnh nhân hủy", "CLINIC_CANCELLED": "Phòng khám hủy", "DUPLICATE_BOOKING": "Trùng lịch" },
+  "noShowReasons": { "PATIENT_NO_SHOW": "Bệnh nhân không đến" },
+  "detail": { "title": "Chi tiết lịch hẹn", "date": "Ngày hẹn", "time": "Thời gian", "service": "Dịch vụ", "reason": "Lý do đến khám", "note": "Ghi chú vận hành", "dentist": "Bác sĩ phụ trách", "source": "Nguồn đặt lịch", "patient": "Bệnh nhân", "notAssigned": "Chưa phân công bác sĩ", "notProvided": "Chưa cung cấp", "viewProfile": "Xem hồ sơ bệnh nhân", "more": "Tùy chọn khác", "duration": "{{count}} phút", "age": "{{count}} tuổi", "genders": { "MALE": "Nam", "FEMALE": "Nữ", "OTHER": "Khác" } },
+  "actionDialog": { "confirmTitle": "Xác nhận lịch hẹn?", "confirmDescription": "Lịch hẹn sẽ được chuyển sang đã xác nhận.", "checkInTitle": "Check-in bệnh nhân?", "checkInDescription": "Bệnh nhân sẽ sẵn sàng để bác sĩ bắt đầu Visit khi module đó được triển khai.", "cancelTitle": "Hủy lịch hẹn?", "cancelDescription": "Chọn lý do hủy lịch.", "noShowTitle": "Đánh dấu bệnh nhân vắng mặt?", "noShowDescription": "Trạng thái cuối này không thể thay đổi.", "reason": "Lý do", "submit": "Xác nhận thao tác" },
+  "assignment": { "title": "Phân công bác sĩ", "description": "Chỉ Branch Admin được đổi phân công trước khi ca bắt đầu.", "feedback": "Đã cập nhật phân công bác sĩ" },
+  "feedback": { "created": "Đã tạo lịch hẹn", "updated": "Đã cập nhật lịch hẹn", "confirmed": "Đã xác nhận lịch hẹn", "checkedIn": "Đã check-in bệnh nhân", "cancelled": "Đã hủy lịch hẹn", "noShow": "Đã đánh dấu bệnh nhân vắng mặt" }
+}

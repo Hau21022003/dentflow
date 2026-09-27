@@ -26,6 +26,8 @@
     "migration:test:revert": "cross-env NODE_ENV=test ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
     "seed:dev": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/database/seed-runner.ts",
     "seed:test": "cross-env NODE_ENV=test       ts-node -r tsconfig-paths/register src/database/seed-runner.ts",
+    "reset:dev": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/database/dev-reset-runner.ts",
+    "refresh:dev": "npm run migration:run && npm run reset:dev",
     "setup:dev": "npm run migration:run && npm run seed:dev",
     "setup:test": "npm run migration:test:run && npm run seed:test"
   },
@@ -51,6 +53,7 @@
     "cookie-parser": "^1.4.7",
     "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
+    "libphonenumber-js": "^1.13.13",
     "ms": "^2.1.3",
     "nestjs-i18n": "^10.8.5",
     "nodemailer": "^10.0.0",

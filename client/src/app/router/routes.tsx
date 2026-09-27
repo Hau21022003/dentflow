@@ -3,7 +3,7 @@ import { PERMISSIONS } from "@/features/auth/auth.types";
 import { LoginPage } from "../../pages/auth/LoginPage";
 import { AcceptTenantOwnerInvitationPage } from "../../pages/auth/AcceptTenantOwnerInvitationPage";
 import { AcceptStaffInvitationPage } from "../../pages/auth/AcceptStaffInvitationPage";
-import { PatientsListPage } from "../../pages/patients/PatientsListPage";
+import { PatientManagementPage } from "../../pages/workspace/reception/PatientManagementPage";
 import { ProfilePage } from "../../pages/profile/ProfilePage";
 import { PlatformHomePage } from "../../pages/platform/PlatformHomePage";
 import { EmailTemplateDetailPage } from "../../pages/platform/EmailTemplateDetailPage";
@@ -13,9 +13,13 @@ import { TenantManagementPage } from "../../pages/platform/TenantManagementPage"
 import { TenantDetailPage } from "../../pages/platform/TenantDetailPage";
 import { BranchWorkspaceHomePage } from "../../pages/workspace/branch/BranchWorkspaceHomePage";
 import { BranchStaffManagementPage } from "../../pages/workspace/branch/BranchStaffManagementPage";
+import { DataTableMobileDemoPage } from "../../pages/workspace/branch/DataTableMobileDemoPage";
 import { TempImageUploadTestPage } from "../../pages/workspace/branch/TempImageUploadTestPage";
 import { DoctorHomePage } from "../../pages/workspace/doctor/DoctorHomePage";
+import { DoctorPatientsPage } from "../../pages/workspace/doctor/DoctorPatientsPage";
+import { DoctorVisitPage } from "../../pages/workspace/doctor/DoctorVisitPage";
 import { AppointmentsPage } from "../../pages/workspace/reception/AppointmentsPage";
+import { TreatmentPlanAcceptancesPage } from "../../pages/workspace/reception/TreatmentPlanAcceptancesPage";
 import { BranchManagementPage } from "../../pages/workspace/tenant/BranchManagementPage";
 import { ServiceManagementPage } from "../../pages/workspace/tenant/ServiceManagementPage";
 import { TenantHomePage } from "../../pages/workspace/tenant/TenantHomePage";
@@ -180,6 +184,11 @@ export const routes: RouteObject[] = [
                         path: "branch/staff",
                         element: <LegacyBranchStaffRedirect />,
                       },
+                      // Temporary, unlinked responsive DataTable diagnostic route.
+                      {
+                        path: "data-table-mobile-demo",
+                        element: <DataTableMobileDemoPage />,
+                      },
                       // Temporary, unlinked diagnostic route for direct-storage E2E coverage.
                       {
                         path: "upload-test",
@@ -191,6 +200,15 @@ export const routes: RouteObject[] = [
                         children: [
                           { index: true, element: <TempImageUploadTestPage /> },
                         ],
+                      },
+                      {
+                        path: "reception/patients",
+                        element: (
+                          <RequireBranchPermission
+                            permission={PERMISSIONS.patientAdministrativeManage}
+                          />
+                        ),
+                        children: [{ index: true, element: <PatientManagementPage /> }],
                       },
                       {
                         path: "reception/appointments",
@@ -212,7 +230,28 @@ export const routes: RouteObject[] = [
                         ),
                         children: [
                           { index: true, element: <DoctorHomePage /> },
+                          { path: "patients", element: <DoctorPatientsPage /> },
                         ],
+                      },
+                      {
+                        path: "reception/treatment-plan-acceptances",
+                        element: (
+                          <RequireBranchPermission
+                            permission={PERMISSIONS.treatmentPlanAccept}
+                          />
+                        ),
+                        children: [
+                          { index: true, element: <TreatmentPlanAcceptancesPage /> },
+                        ],
+                      },
+                      {
+                        path: "doctor/appointments/:appointmentId/visit",
+                        element: (
+                          <RequireBranchPermission
+                            permission={PERMISSIONS.clinicalVisitWrite}
+                          />
+                        ),
+                        children: [{ index: true, element: <DoctorVisitPage /> }],
                       },
                     ],
                   },
@@ -220,7 +259,6 @@ export const routes: RouteObject[] = [
               },
             ],
           },
-          { path: PATHS.patients, element: <PatientsListPage /> },
         ],
       },
     ],

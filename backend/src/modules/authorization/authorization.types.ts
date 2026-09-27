@@ -44,5 +44,7 @@ export interface AuthorizationBranch {
   id: string;
   slug: string;
   name: string;
+  /** Resolved branch override or tenant default, safe to expose in session data. */
+  timezone: string;
   status: BranchStatus;
 }
