@@ -24,6 +24,7 @@ export enum TreatmentPlanStatus {
 export class TreatmentPlan {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({ name: 'tenant_id', type: 'uuid' }) tenantId: string;
+  @Column({ name: 'display_number', type: 'bigint' }) displayNumber: number;
   @Column({ name: 'branch_id', type: 'uuid' }) branchId: string;
   @Column({ name: 'patient_id', type: 'uuid' }) patientId: string;
   @Column({ name: 'origin_visit_id', type: 'uuid' }) originVisitId: string;

@@ -18,7 +18,97 @@ export const patientQueryKeys = {
     [...patientQueryKeys.branch(tenantSlug, branchSlug), "list", query] as const,
   assignedList: (tenantSlug: string, branchSlug: string, query: PatientListQuery) =>
     [...patientQueryKeys.branch(tenantSlug, branchSlug), "assigned-list", query] as const,
+  detail: (tenantSlug: string, branchSlug: string, patientId: string) =>
+    [...patientQueryKeys.branch(tenantSlug, branchSlug), "detail", patientId] as const,
+  overview: (tenantSlug: string, branchSlug: string, patientId: string) =>
+    [...patientQueryKeys.detail(tenantSlug, branchSlug, patientId), "overview"] as const,
+  treatmentPlan: (
+    tenantSlug: string,
+    branchSlug: string,
+    patientId: string,
+    planId: string,
+  ) =>
+    [
+      ...patientQueryKeys.detail(tenantSlug, branchSlug, patientId),
+      "treatment-plan",
+      planId,
+    ] as const,
+  alerts: (tenantSlug: string, branchSlug: string, patientId: string) =>
+    [...patientQueryKeys.detail(tenantSlug, branchSlug, patientId), "alerts"] as const,
 };
+
+export function usePatientOverviewQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  patientId: string,
+) {
+  return useQuery({
+    queryKey: patientQueryKeys.overview(tenantSlug, branchSlug, patientId),
+    queryFn: () => patientsService.overview(tenantSlug, branchSlug, patientId),
+    enabled: Boolean(tenantSlug && branchSlug && patientId),
+  });
+}
+
+export function usePatientTreatmentPlanQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  patientId: string,
+  planId: string | null,
+) {
+  return useQuery({
+    queryKey: patientQueryKeys.treatmentPlan(
+      tenantSlug,
+      branchSlug,
+      patientId,
+      planId ?? "",
+    ),
+    queryFn: () =>
+      patientsService.treatmentPlan(
+        tenantSlug,
+        branchSlug,
+        patientId,
+        planId!,
+      ),
+    enabled: Boolean(tenantSlug && branchSlug && patientId && planId),
+  });
+}
+
+export function usePatientAlertsQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  patientId: string,
+) {
+  return useQuery({
+    queryKey: patientQueryKeys.alerts(tenantSlug, branchSlug, patientId),
+    queryFn: () => patientsService.listAlerts(tenantSlug, branchSlug, patientId),
+    enabled: Boolean(tenantSlug && branchSlug && patientId),
+  });
+}
+
+function usePatientAlertMutation<
+  TVariables extends { tenantSlug: string; branchSlug: string; patientId: string },
+>(mutationFn: (variables: TVariables) => Promise<unknown>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: async (_result, command) => {
+      await queryClient.invalidateQueries({
+        queryKey: patientQueryKeys.detail(
+          command.tenantSlug,
+          command.branchSlug,
+          command.patientId,
+        ),
+      });
+    },
+  });
+}
+
+export const useCreatePatientAlertMutation = () =>
+  usePatientAlertMutation(patientsService.createAlert);
+export const useUpdatePatientAlertMutation = () =>
+  usePatientAlertMutation(patientsService.updateAlert);
+export const useResolvePatientAlertMutation = () =>
+  usePatientAlertMutation(patientsService.resolveAlert);
 
 export function useBranchPatientsQuery(
   tenantSlug: string,

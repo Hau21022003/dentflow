@@ -31,6 +31,7 @@
     "fields": {
       "fullName": "full name",
       "phone": "phone number",
+      "email": "email",
       "gender": "gender",
       "dateOfBirth": "date of birth",
       "address": "address",
@@ -75,5 +76,103 @@
   },
   "errors": {
     "listTitle": "We could not load the patient list"
+  },
+  "alertsManagement": {
+    "title": "Patient safety alerts",
+    "description": "Review alert history and manage active alerts for this assigned case.",
+    "add": "Add alert",
+    "empty": "No alert history for this patient.",
+    "resolved": "Resolved",
+    "resolve": "Resolve",
+    "createTitle": "Create patient alert",
+    "editTitle": "Edit patient alert",
+    "formDescription": "Alert content is clinical data and is not copied into the audit log.",
+    "category": "Category",
+    "severity": "Severity",
+    "message": "Message",
+    "cancel": "Cancel",
+    "resolveTitle": "Resolve this alert?",
+    "resolveDescription": "Resolved alerts remain in history and cannot be reopened.",
+    "reason": "Resolution reason",
+    "reasons": {
+      "NO_LONGER_APPLICABLE": "No longer applicable",
+      "ENTERED_IN_ERROR": "Entered in error",
+      "DUPLICATE": "Duplicate"
+    }
+  },
+  "detail": {
+    "overview": "Overview",
+    "actions": { "back": "Back to patients" },
+    "activity": { "ACTIVE": "Active", "INACTIVE": "Inactive" },
+    "notFound": {
+      "title": "Patient not found",
+      "description": "This patient does not exist or is not available in the current tenant."
+    },
+    "error": { "title": "We could not load this patient" },
+    "information": {
+      "title": "Patient information",
+      "patientCode": "Patient ID"
+    },
+    "alerts": {
+      "title": "Safety alerts",
+      "empty": "No active safety alerts.",
+      "categories": {
+        "ALLERGY": "Allergy",
+        "MEDICAL_CONDITION": "Medical condition",
+        "MEDICATION": "Medication",
+        "OTHER": "Other"
+      },
+      "severities": { "INFO": "Info", "WARNING": "Warning", "CRITICAL": "Critical" }
+    },
+    "nextAppointment": {
+      "title": "Next appointment",
+      "view": "View appointment",
+      "unassigned": "Dentist not assigned",
+      "emptyTitle": "No upcoming appointment",
+      "emptyDescription": "There is no booked or confirmed future appointment in this branch."
+    },
+    "appointmentStatuses": {
+      "BOOKED": "Booked",
+      "CONFIRMED": "Confirmed",
+      "CHECKED_IN": "Checked in",
+      "IN_PROGRESS": "In progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "NO_SHOW": "No-show"
+    },
+    "treatment": {
+      "title": "Treatment summary",
+      "activePlans": "Active plans",
+      "completedItems": "Completed items",
+      "pendingItems": "Pending items",
+      "fallbackName": "Treatment plan",
+      "created": "Created {{date}}",
+      "viewPlan": "View plan",
+      "emptyTitle": "No active treatment plan",
+      "emptyDescription": "No treatment plan is currently open in this branch.",
+      "planDetails": "Treatment plan details",
+      "readOnly": "Read-only clinical information",
+      "quantity": "Quantity",
+      "tooth": "Tooth position",
+      "price": "Final price",
+      "discount": "Discount",
+      "dentist": "Planned dentist",
+      "indication": "Indication",
+      "noItems": "This plan does not have any items."
+    },
+    "planStatuses": {
+      "DRAFT": "Draft",
+      "PROPOSED": "Proposed",
+      "ACCEPTED": "Accepted",
+      "PARTIALLY_COMPLETED": "Partially completed",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "itemStatuses": {
+      "PENDING": "Pending",
+      "IN_PROGRESS": "In progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    }
   }
 }

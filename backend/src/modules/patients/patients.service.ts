@@ -11,6 +11,10 @@ import {
   SelectQueryBuilder,
 } from 'typeorm';
 import {
+  allocateTenantDisplayNumber,
+  patientCode,
+} from '../../common/database/tenant-display-number';
+import {
   applyIlikeSearch,
   applyOffsetPagination,
   applySafeSort,
@@ -41,6 +45,7 @@ import {
 const PATIENT_CREATED_FIELDS = [
   'fullName',
   'phone',
+  'email',
   'gender',
   'dateOfBirth',
   'address',
@@ -62,8 +67,10 @@ const UPCOMING_APPOINTMENT_STATUSES = [
 
 export interface PatientResponse {
   id: string;
+  code: string;
   fullName: string;
   phone: string;
+  email: string | null;
   dateOfBirth: string | null;
   gender: PatientGender;
   address: string | null;
@@ -122,6 +129,7 @@ type PatientUpdateValues = {
   fullName?: string;
   phone?: string;
   phoneNormalized?: string;
+  email?: string | null;
   gender?: PatientGender;
   dateOfBirth?: string | null;
   address?: string | null;
@@ -323,8 +331,14 @@ export class PatientsService {
       return await this.dataSource.transaction(async (manager) => {
         const patient = manager.create(Patient, {
           tenantId: context.tenant!.id,
+          displayNumber: await allocateTenantDisplayNumber(
+            manager,
+            context.tenant!.id,
+            'patient',
+          ),
           fullName: input.fullName,
           phone: input.phone,
+          email: input.email?.toLowerCase() ?? null,
           phoneNormalized,
           gender: input.gender,
           dateOfBirth: input.dateOfBirth ?? null,
@@ -406,6 +420,9 @@ export class PatientsService {
     const values: PatientUpdateValues = {
       ...(input.fullName !== undefined ? { fullName: input.fullName } : {}),
       ...(input.gender !== undefined ? { gender: input.gender } : {}),
+      ...(input.email !== undefined
+        ? { email: input.email?.toLowerCase() ?? null }
+        : {}),
       ...(input.dateOfBirth !== undefined
         ? { dateOfBirth: input.dateOfBirth }
         : {}),
@@ -437,6 +454,9 @@ export class PatientsService {
     }
     if (values.phone !== undefined && patient.phone !== values.phone) {
       changedFields.push('phone');
+    }
+    if (values.email !== undefined && patient.email !== values.email) {
+      changedFields.push('email');
     }
     if (values.gender !== undefined && patient.gender !== values.gender) {
       changedFields.push('gender');
@@ -540,8 +560,10 @@ export class PatientsService {
   private toResponse(patient: Patient): PatientResponse {
     return {
       id: patient.id,
+      code: patientCode(Number(patient.displayNumber)),
       fullName: patient.fullName,
       phone: patient.phone,
+      email: patient.email,
       dateOfBirth: patient.dateOfBirth,
       gender: patient.gender,
       address: patient.address,
@@ -559,16 +581,15 @@ export class PatientsService {
     };
   }
 
-  private toListSummary(raw: Record<string, unknown>): Pick<
-    PatientListResponse,
-    'nextAppointment' | 'lastVisit'
-  > {
-    const nextStartAt = raw.next_appointment_start_at;
-    const lastCompletedAt = raw.last_visit_completed_at;
+  private toListSummary(
+    raw: Record<string, unknown>,
+  ): Pick<PatientListResponse, 'nextAppointment' | 'lastVisit'> {
+    const nextStartAt = this.rawDate(raw.next_appointment_start_at);
+    const lastCompletedAt = this.rawDate(raw.last_visit_completed_at);
     return {
       nextAppointment: nextStartAt
         ? {
-            startAt: new Date(String(nextStartAt)),
+            startAt: nextStartAt,
             serviceName:
               typeof raw.next_appointment_service_name === 'string'
                 ? raw.next_appointment_service_name
@@ -579,19 +600,23 @@ export class PatientsService {
                 : null,
           }
         : null,
-      lastVisit: lastCompletedAt
-        ? { completedAt: new Date(String(lastCompletedAt)) }
-        : null,
+      lastVisit: lastCompletedAt ? { completedAt: lastCompletedAt } : null,
     };
   }
 
   private toResponseFromRaw(raw: Record<string, unknown>): PatientResponse {
-    const emergencyContactName = this.rawString(raw.patient_emergency_contact_name);
-    const emergencyContactPhone = this.rawString(raw.patient_emergency_contact_phone);
+    const emergencyContactName = this.rawString(
+      raw.patient_emergency_contact_name,
+    );
+    const emergencyContactPhone = this.rawString(
+      raw.patient_emergency_contact_phone,
+    );
     return {
       id: String(raw.patient_id),
+      code: patientCode(Number(raw.patient_display_number)),
       fullName: String(raw.patient_full_name),
       phone: String(raw.patient_phone),
+      email: this.rawString(raw.patient_email),
       dateOfBirth: this.rawString(raw.patient_date_of_birth),
       gender: raw.patient_gender as PatientGender,
       address: this.rawString(raw.patient_address),
@@ -609,6 +634,13 @@ export class PatientsService {
       createdAt: new Date(String(raw.patient_created_at)),
       updatedAt: new Date(String(raw.patient_updated_at)),
     };
+  }
+
+  private rawDate(value: unknown): Date | null {
+    if (value instanceof Date) return value;
+    if (typeof value !== 'string' && typeof value !== 'number') return null;
+    const result = new Date(value);
+    return Number.isNaN(result.valueOf()) ? null : result;
   }
 
   private rawString(value: unknown): string | null {

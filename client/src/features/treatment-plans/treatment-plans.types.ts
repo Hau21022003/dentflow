@@ -44,6 +44,7 @@ export type TreatmentPlanItem = {
 
 export type TreatmentPlan = {
   id: string;
+  code: string;
   originVisitId: string;
   patientId: string;
   status: TreatmentPlanStatus;

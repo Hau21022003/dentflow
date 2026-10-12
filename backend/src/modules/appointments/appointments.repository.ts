@@ -20,7 +20,8 @@ export class AppointmentsRepository {
     return repository
       .createQueryBuilder('appointment')
       .innerJoinAndSelect('appointment.patient', 'patient')
-      .leftJoinAndSelect('appointment.assignedDentist', 'assignedDentist');
+      .leftJoinAndSelect('appointment.assignedDentist', 'assignedDentist')
+      .leftJoinAndSelect('appointment.operatory', 'operatory');
   }
 
   findByTenantBranchAndId(

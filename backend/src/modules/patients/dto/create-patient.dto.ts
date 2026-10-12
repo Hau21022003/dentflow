@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
+  IsEmail,
   IsEnum,
   IsNotEmpty,
   IsObject,
@@ -30,6 +31,13 @@ export class CreatePatientDto {
   @IsNotEmpty()
   @MaxLength(30)
   phone: string;
+
+  @ApiPropertyOptional({ maxLength: 254, nullable: true })
+  @Trim()
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(254)
+  email?: string | null;
 
   @ApiProperty({ enum: PatientGender })
   @IsEnum(PatientGender)

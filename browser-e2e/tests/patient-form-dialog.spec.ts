@@ -126,6 +126,7 @@ test("Branch Admin creates, edits, and receives duplicate feedback for a patient
   expect(create.postDataJSON()).toEqual({
     fullName: "Synthetic Browser Patient",
     phone: "090 123 4567",
+    email: null,
     gender: "FEMALE",
     dateOfBirth: "1999-04-20",
     address: "500 Synthetic Browser Street",

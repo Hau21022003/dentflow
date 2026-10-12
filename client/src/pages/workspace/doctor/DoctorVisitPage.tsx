@@ -23,6 +23,7 @@ import { AppointmentStatusBadge } from "@/features/appointments/components/Appoi
 import { VisitAddendumForm } from "@/features/visits/components/VisitAddendumForm";
 import { VisitClinicalForm } from "@/features/visits/components/VisitClinicalForm";
 import { TreatmentPlansPanel } from "@/features/treatment-plans/components/TreatmentPlansPanel";
+import { PatientAlertsPanel } from "@/features/patients/components/PatientAlertsPanel";
 import {
   useStartVisitMutation,
   useVisitQuery,
@@ -271,6 +272,15 @@ export function DoctorVisitPage() {
       ) : (
         <>
           <AppointmentSummary appointment={appointment} locale={locale} timeZone={timeZone} />
+          {!["COMPLETED", "CANCELLED", "NO_SHOW"].includes(
+            appointment.status,
+          ) && (
+            <PatientAlertsPanel
+              branchSlug={branchSlug}
+              patientId={appointment.patient.id}
+              tenantSlug={tenantSlug}
+            />
+          )}
           {appointment.status === "CHECKED_IN" && !visit && (
             <Card>
               <CardHeader>

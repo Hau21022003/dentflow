@@ -8,6 +8,10 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import {
+  allocateTenantDisplayNumber,
+  treatmentPlanCode,
+} from '../../common/database/tenant-display-number';
+import {
   applyOffsetPagination,
   toPageMeta,
 } from '../../common/database/query-builder-list.util';
@@ -25,7 +29,6 @@ import {
   RoleAssignment,
   TenantRoleCode,
 } from '../authorization/entities/role-assignment.entity';
-import { Patient } from '../patients/entities/patient.entity';
 import { Service } from '../services/entities/service.entity';
 import { TenantUserMembershipStatus } from '../staff/entities/tenant-user-membership.entity';
 import { Visit, VisitStatus } from '../visits/entities/visit.entity';
@@ -54,6 +57,7 @@ import { TreatmentPlansRepository } from './treatment-plans.repository';
 type CurrentCase = { appointment: Appointment; visit: Visit };
 export interface TreatmentPlanResponse {
   id: string;
+  code: string;
   originVisitId: string;
   patientId: string;
   status: TreatmentPlanStatus;
@@ -132,6 +136,11 @@ export class TreatmentPlansService {
       const plan = await manager.save(
         manager.create(TreatmentPlan, {
           tenantId: context.tenant!.id,
+          displayNumber: await allocateTenantDisplayNumber(
+            manager,
+            context.tenant!.id,
+            'treatmentPlan',
+          ),
           branchId: context.branch!.id,
           patientId: current.appointment.patientId,
           originVisitId: current.visit.id,
@@ -747,6 +756,7 @@ export class TreatmentPlansService {
     const resolved = await items;
     return {
       id: plan.id,
+      code: treatmentPlanCode(plan.displayNumber),
       originVisitId: plan.originVisitId,
       patientId: plan.patientId,
       status: plan.status,

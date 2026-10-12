@@ -69,7 +69,14 @@ test("Branch Admin creates an appointment from the daily agenda and confirms it"
   await expect(detailSheet).toContainText(/Female.*years old/);
   await expect(detailSheet.getByRole("button", { name: "Edit appointment" })).toBeVisible();
   await expect(detailSheet.getByRole("button", { name: "More options" })).toBeVisible();
-  await expect(detailSheet.getByRole("link", { name: "View patient profile" })).toHaveAttribute("href", "/");
+  await expect(
+    detailSheet.getByRole("link", { name: "View patient profile" }),
+  ).toHaveAttribute(
+    "href",
+    new RegExp(
+      `^/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/reception/patients/[0-9a-f-]+$`,
+    ),
+  );
   await detailSheet.getByRole("button", { name: "More options" }).click();
   await expect(page.getByRole("menuitem", { name: "Assign dentist" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Mark no-show" })).toBeVisible();

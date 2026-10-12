@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
+  IsEmail,
   IsEnum,
   IsNotEmpty,
   IsObject,
@@ -33,6 +34,13 @@ export class UpdatePatientDto {
   @IsNotEmpty()
   @MaxLength(30)
   phone?: string;
+
+  @ApiPropertyOptional({ maxLength: 254, nullable: true })
+  @Trim()
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(254)
+  email?: string | null;
 
   @ApiPropertyOptional({ enum: PatientGender })
   @ValidateIf((_object, value: unknown) => value !== undefined)

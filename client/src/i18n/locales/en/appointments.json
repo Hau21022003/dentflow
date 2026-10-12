@@ -63,6 +63,7 @@
       "time": "Time",
       "patient": "Patient",
       "dentist": "Dentist",
+      "operatory": "Room / chair",
       "service": "Service",
       "status": "Status",
       "actions": "Actions"
@@ -107,6 +108,7 @@
       "patient": "Patient",
       "source": "Booking source",
       "dentist": "Dentist",
+      "operatory": "Room / chair",
       "startAt": "Start time",
       "endAt": "End time",
       "service": "Service",
@@ -120,6 +122,8 @@
     "dentistSearchPlaceholder": "Search dentists...",
     "servicePlaceholder": "Choose service",
     "serviceSearchPlaceholder": "Search services...",
+    "operatoryPlaceholder": "Choose room or chair",
+    "operatorySearchPlaceholder": "Search rooms or chairs...",
     "sourcePlaceholder": "Choose source",
     "reschedulePlaceholder": "Choose reason",
     "unassigned": "Unassigned",
@@ -128,6 +132,8 @@
     "noPatients": "No matching patients.",
     "noDentists": "No matching dentists.",
     "noServices": "No matching services.",
+    "noOperatories": "No active rooms or chairs.",
+    "noOperatory": "No room or chair",
     "rescheduleHint": "Changing a confirmed appointment time returns it to Booked and it must be confirmed again."
   },
   "validation": {
@@ -155,7 +161,7 @@
   "rescheduleReasons": { "PATIENT_REQUEST": "Patient request", "CLINIC_RESCHEDULE": "Clinic reschedule" },
   "cancellationReasons": { "PATIENT_CANCELLED": "Patient cancelled", "CLINIC_CANCELLED": "Clinic cancelled", "DUPLICATE_BOOKING": "Duplicate booking" },
   "noShowReasons": { "PATIENT_NO_SHOW": "Patient did not attend" },
-  "detail": { "title": "Appointment details", "date": "Date", "time": "Time", "service": "Service", "reason": "Visit reason", "note": "Operational note", "dentist": "Assigned dentist", "source": "Booking source", "patient": "Patient", "notAssigned": "No dentist assigned", "notProvided": "Not provided", "viewProfile": "View patient profile", "more": "More options", "duration": "{{count}} min", "age": "{{count}} years old", "genders": { "MALE": "Male", "FEMALE": "Female", "OTHER": "Other" } },
+  "detail": { "title": "Appointment details", "date": "Date", "time": "Time", "service": "Service", "reason": "Visit reason", "note": "Operational note", "dentist": "Assigned dentist", "operatory": "Room / chair", "source": "Booking source", "patient": "Patient", "notAssigned": "No dentist assigned", "notProvided": "Not provided", "viewProfile": "View patient profile", "more": "More options", "duration": "{{count}} min", "age": "{{count}} years old", "genders": { "MALE": "Male", "FEMALE": "Female", "OTHER": "Other" } },
   "actionDialog": { "confirmTitle": "Confirm appointment?", "confirmDescription": "The appointment will be marked as confirmed.", "checkInTitle": "Check in patient?", "checkInDescription": "The patient will be ready for a Dentist to start the Visit when that module is available.", "cancelTitle": "Cancel appointment?", "cancelDescription": "Choose the reason for cancellation.", "noShowTitle": "Mark appointment as no-show?", "noShowDescription": "This terminal status cannot be changed.", "reason": "Reason", "submit": "Confirm action" },
   "assignment": { "title": "Assign dentist", "description": "Only Branch Admins can change assignment before the appointment is in progress.", "feedback": "Dentist assignment updated" },
   "feedback": { "created": "Appointment created", "updated": "Appointment updated", "confirmed": "Appointment confirmed", "checkedIn": "Patient checked in", "cancelled": "Appointment cancelled", "noShow": "Appointment marked as no-show" }

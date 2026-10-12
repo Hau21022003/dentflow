@@ -29,6 +29,8 @@ export const appointmentQueryKeys = {
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "dentists", query] as const,
   services: (tenantSlug: string, branchSlug: string, query: BookingOptionQuery) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "services", query] as const,
+  operatories: (tenantSlug: string, branchSlug: string, query: BookingOptionQuery) =>
+    [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "operatories", query] as const,
 };
 
 async function loadAllPages<T>(
@@ -151,6 +153,19 @@ export function useAppointmentServicesQuery(
   return useQuery({
     queryKey: appointmentQueryKeys.services(tenantSlug, branchSlug, query),
     queryFn: () => appointmentsService.listServices({ tenantSlug, branchSlug }, query),
+    enabled: Boolean(tenantSlug && branchSlug),
+  });
+}
+
+export function useAppointmentOperatoriesQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  query: BookingOptionQuery,
+) {
+  return useQuery({
+    queryKey: appointmentQueryKeys.operatories(tenantSlug, branchSlug, query),
+    queryFn: () =>
+      appointmentsService.listOperatories({ tenantSlug, branchSlug }, query),
     enabled: Boolean(tenantSlug && branchSlug),
   });
 }

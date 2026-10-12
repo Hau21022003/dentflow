@@ -27,6 +27,7 @@ MVP dùng role cố định `TENANT_ADMIN`. Tenant Admin có phạm vi toàn ten
 | ---------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Tenant settings  | Cập nhật display name, logo, thông tin liên hệ, locale, timezone mặc định và quy ước hiển thị   | Không đổi `tenantSlug`, trạng thái tenant hay cấu hình hạ tầng Platform                       |
 | Branch           | Tạo, cập nhật, ngừng hoạt động branch; đặt giờ làm việc và cấu hình lịch hẹn cơ bản             | Không truy cập hoặc quản lý branch của tenant khác                                            |
+| Operatory        | Quản lý mã/tên và trạng thái phòng hoặc ghế tại từng branch                                    | Không đổi mã sau khi tạo; không deactivate khi còn lịch chưa terminal đang gán                |
 | Service catalog  | Quản lý `ServiceGroup`, mã, tên, giá niêm yết, thời lượng và trạng thái hoạt động của `Service` | Không thay đổi hồi tố khoản đã invoiced/paid chỉ bằng việc sửa giá dịch vụ                    |
 | Nhân sự và quyền | Mời, vô hiệu hóa user; gán/thu hồi role cố định và branch scope trong tenant                    | Không tạo role/permission tuỳ ý, không tự mở rộng quyền ngoài policy                          |
 | Báo cáo và audit | Xem số liệu tổng hợp toàn tenant và audit log nghiệp vụ                                         | Không tự có quyền đọc/ghi clinical detail chỉ vì role quản trị                                |
@@ -40,7 +41,7 @@ Mọi thay đổi quyền, branch, cấu hình tenant, danh mục dịch vụ v�
 1. Tenant Admin nhận lời mời từ tenant đã được `PLATFORM_ADMIN` provision, kích hoạt tài khoản và đăng nhập.
 2. Rà soát display name, locale, timezone mặc định, logo và thông tin liên hệ của tenant.
 3. Tạo chi nhánh đầu tiên với tên, địa chỉ, số điện thoại, giờ hoạt động và cấu hình lịch hẹn cơ bản.
-4. Khai báo danh mục `Service`: mã, tên, nhóm, giá niêm yết, thời lượng dự kiến và trạng thái hoạt động.
+4. Khai báo danh mục `Service` và Operatory (một phòng hoặc ghế) cho từng branch.
 5. Mời `BRANCH_ADMIN`, `RECEPTIONIST` và `DENTIST`; gán branch scope ngay trong lời mời hoặc assignment. Chỉ role danh mục cố định mới được gán.
 6. Kiểm tra trial/subscription, chọn plan hoặc mở Stripe Checkout khi cần. Tenant chỉ được vận hành khi Subscription Guard cho phép.
 

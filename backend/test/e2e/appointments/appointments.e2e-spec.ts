@@ -167,10 +167,12 @@ describe('Appointment workflow (e2e)', () => {
       fixture.branch,
       TenantRoleCode.DENTIST,
     );
-    await dataSource.getRepository(TenantUserMembership).update(
-      { tenantId: fixture.tenant.id, userId: inactiveDentist.user.id },
-      { status: TenantUserMembershipStatus.INACTIVE },
-    );
+    await dataSource
+      .getRepository(TenantUserMembership)
+      .update(
+        { tenantId: fixture.tenant.id, userId: inactiveDentist.user.id },
+        { status: TenantUserMembershipStatus.INACTIVE },
+      );
     const otherBranch = await authFixtures.createBranch(fixture.tenant, {
       slug: 'other-branch',
     });
@@ -214,7 +216,9 @@ describe('Appointment workflow (e2e)', () => {
     );
 
     const dentistsResponse = await fixture.receptionist.agent
-      .get(`${fixture.route}/booking-options/dentists?search=Synthetic%20DENTIST`)
+      .get(
+        `${fixture.route}/booking-options/dentists?search=Synthetic%20DENTIST`,
+      )
       .expect(200);
     expect(dentistsResponse.body.items).toEqual(
       expect.arrayContaining([
@@ -263,7 +267,10 @@ describe('Appointment workflow (e2e)', () => {
       .expect(200);
     expect(servicesResponse.body.items).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: fixture.service.id, name: 'Synthetic Exam' }),
+        expect.objectContaining({
+          id: fixture.service.id,
+          name: 'Synthetic Exam',
+        }),
       ]),
     );
     expect(servicesResponse.body.items).not.toEqual(
@@ -281,9 +288,11 @@ describe('Appointment workflow (e2e)', () => {
       'name',
     ]);
 
-    const meResponse = await fixture.receptionist.agent.get('/auth/me').expect(200);
-    const branchSnapshot = meResponse.body.user.authorization.tenants[0].branches[0]
-      .branch;
+    const meResponse = await fixture.receptionist.agent
+      .get('/auth/me')
+      .expect(200);
+    const branchSnapshot =
+      meResponse.body.user.authorization.tenants[0].branches[0].branch;
     expect(branchSnapshot).toMatchObject({
       id: fixture.branch.id,
       timezone: fixture.branch.timezone ?? fixture.tenant.defaultTimezone,
@@ -393,11 +402,16 @@ describe('Appointment workflow (e2e)', () => {
 
   it('returns a monthly summary only for the authenticated Dentist assignments', async () => {
     const fixture = await createFixture('assigned-calendar-summary');
-    const otherDentist = await createActor(fixture.branch, TenantRoleCode.DENTIST);
-    await dataSource.getRepository(Patient).update(
-      { id: fixture.patient.id },
-      { gender: PatientGender.FEMALE, dateOfBirth: '2000-01-15' },
+    const otherDentist = await createActor(
+      fixture.branch,
+      TenantRoleCode.DENTIST,
     );
+    await dataSource
+      .getRepository(Patient)
+      .update(
+        { id: fixture.patient.id },
+        { gender: PatientGender.FEMALE, dateOfBirth: '2000-01-15' },
+      );
 
     await createStoredAppointment({
       tenant: fixture.tenant,
@@ -622,10 +636,9 @@ describe('Appointment workflow (e2e)', () => {
           timeZone: fixture.tenant.defaultTimezone,
         });
       });
-    await dataSource.getRepository(Branch).update(
-      { id: fixture.branch.id },
-      { timezone: 'America/New_York' },
-    );
+    await dataSource
+      .getRepository(Branch)
+      .update({ id: fixture.branch.id }, { timezone: 'America/New_York' });
     fixture.branch.timezone = 'America/New_York';
     const otherBranch = await authFixtures.createBranch(fixture.tenant, {
       slug: 'other-branch',
@@ -694,9 +707,7 @@ describe('Appointment workflow (e2e)', () => {
       ]),
     );
     expect(summary.body.days).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ date: '2026-10-31' }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ date: '2026-10-31' })]),
     );
 
     await fixture.receptionist.agent
@@ -712,6 +723,96 @@ describe('Appointment workflow (e2e)', () => {
         `/tenants/${otherTenant.slug}/branches/${otherTenantBranch.slug}/appointments/calendar-summary?month=2026-11`,
       )
       .expect(403);
+  });
+
+  it('manages branch operatories and rejects overlapping room assignments independently', async () => {
+    const fixture = await createFixture('appointment-operatory');
+    const operatoryRoute = `/tenants/${fixture.tenant.slug}/branches/${fixture.branch.slug}/operatories`;
+    const created = await fixture.branchAdmin.agent
+      .post(operatoryRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ code: 'R-01', name: 'Synthetic Room 01', type: 'ROOM' })
+      .expect(201);
+    const operatory = created.body as {
+      id: string;
+      code: string;
+      type: string;
+      isActive: boolean;
+    };
+    expect(operatory).toMatchObject({
+      code: 'R-01',
+      type: 'ROOM',
+      isActive: true,
+    });
+
+    await fixture.receptionist.agent.get(operatoryRoute).expect(403);
+    await fixture.receptionist.agent
+      .get(`${fixture.route}/booking-options/operatories?page=1&limit=20`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as { items: Array<Record<string, unknown>> };
+        expect(body.items).toEqual([
+          expect.objectContaining({ id: operatory.id, isActive: true }),
+        ]);
+      });
+
+    const first = await fixture.receptionist.agent
+      .post(fixture.route)
+      .set('Idempotency-Key', randomUUID())
+      .send(
+        appointmentPayload(fixture, {
+          startAt: '2027-10-10T02:00:00.000Z',
+          endAt: '2027-10-10T03:00:00.000Z',
+          operatoryId: operatory.id,
+        }),
+      )
+      .expect(201);
+    expect(first.body).toMatchObject({
+      operatory: { id: operatory.id, code: 'R-01' },
+    });
+
+    await fixture.receptionist.agent
+      .post(fixture.route)
+      .set('Idempotency-Key', randomUUID())
+      .send(
+        appointmentPayload(fixture, {
+          startAt: '2027-10-10T02:30:00.000Z',
+          endAt: '2027-10-10T03:30:00.000Z',
+          operatoryId: operatory.id,
+        }),
+      )
+      .expect(409)
+      .expect((response) => {
+        const body = response.body as { message: string };
+        expect(body.message).toContain('Operatory');
+      });
+
+    await fixture.branchAdmin.agent
+      .post(`${operatoryRoute}/${operatory.id}/deactivate`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reason: 'Synthetic maintenance' })
+      .expect(409);
+
+    await fixture.receptionist.agent
+      .post(`${fixture.route}/${(first.body as { id: string }).id}/cancel`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reasonCode: 'CLINIC_CANCELLED' })
+      .expect(200);
+    await fixture.branchAdmin.agent
+      .post(`${operatoryRoute}/${operatory.id}/deactivate`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reason: 'Synthetic maintenance' })
+      .expect(200)
+      .expect((response) =>
+        expect(response.body).toMatchObject({ isActive: false }),
+      );
+    await fixture.receptionist.agent
+      .get(`${fixture.route}/booking-options/operatories?page=1&limit=20`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as { items: unknown[] };
+        expect(body.items).toEqual([]);
+      });
   });
 
   async function createFixture(slug: string) {

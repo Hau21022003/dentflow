@@ -30,6 +30,8 @@ Plan catalog dùng `PLAN_CREATED`, `PLAN_UPDATED`, `PLAN_DEACTIVATED` và `PLAN_
 
 Service catalog tenant dùng `SERVICE_CREATED`, `SERVICE_UPDATED`, `SERVICE_DEACTIVATED`, `SERVICE_ACTIVATED`, `SERVICE_GROUP_CREATED`, `SERVICE_GROUP_UPDATED`, `SERVICE_GROUP_DEACTIVATED` và `SERVICE_GROUP_ACTIVATED`. Snapshot Service chỉ chứa `changedFields`, `isActive`, `amount`, `currency` và `durationMinutes`; thay đổi nhóm chỉ ghi tên field `serviceGroupId`. Snapshot ServiceGroup chỉ chứa `changedFields` và `isActive`. Đổi `amount`/`currency`, hoặc deactivate/activate Service/ServiceGroup lưu free-text `reason` theo policy Tenant Admin. Không ghi code, tên hoặc nhóm dịch vụ trực tiếp trong payload audit.
 
+Operatory dùng `OPERATORY_CREATED`, `OPERATORY_UPDATED`, `OPERATORY_DEACTIVATED` và `OPERATORY_ACTIVATED`. Snapshot chỉ chứa `code`, loại `ROOM`/`CHAIR`, `isActive` và `changedFields`; không ghi tên Operatory. Thay đổi lifecycle lưu free-text `reason` theo policy Tenant Admin.
+
 Email template global dùng `EMAIL_TEMPLATE_DRAFT_SAVED` và `EMAIL_TEMPLATE_PUBLISHED`, resource type `EMAIL_TEMPLATE_REVISION`, domain `PLATFORM`. Snapshot chỉ có `templateKey`, `locale`, `version`, `status` và `changedFields`; tuyệt đối không ghi subject, text, HTML, recipient hoặc giá trị biến đã render.
 
 ## 3. API đọc

@@ -34,12 +34,18 @@ export class Patient {
   @Column({ name: 'tenant_id', type: 'uuid' })
   tenantId: string;
 
+  @Column({ name: 'display_number', type: 'bigint' })
+  displayNumber: number;
+
   @Column({ name: 'full_name', type: 'varchar', length: 150 })
   fullName: string;
 
   /** The display value supplied by the user; never use it for uniqueness. */
   @Column({ type: 'varchar', length: 30 })
   phone: string;
+
+  @Column({ type: 'varchar', length: 254, nullable: true })
+  email: string | null;
 
   /** Canonical E.164 value used internally for tenant-scoped duplicate checks. */
   @Column({ name: 'phone_normalized', type: 'varchar', length: 20 })

@@ -72,6 +72,7 @@ describe('Patient administrative management (e2e)', () => {
     const payload = {
       fullName: '  Synthetic   Minh Anh ',
       phone: '090 123 4567',
+      email: ' Synthetic.Patient@Example.Test ',
       gender: PatientGender.FEMALE,
       dateOfBirth: '1999-04-20',
       address: '  1 Synthetic Street ',
@@ -89,10 +90,17 @@ describe('Patient administrative management (e2e)', () => {
       .set('Idempotency-Key', idempotencyKey)
       .send(payload)
       .expect(201);
-    const body = response.body as { id: string; phone: string };
+    const body = response.body as {
+      id: string;
+      code: string;
+      phone: string;
+      email: string;
+    };
     expect(body).toMatchObject({
+      code: 'PAT-000001',
       fullName: 'Synthetic Minh Anh',
       phone: '090 123 4567',
+      email: 'synthetic.patient@example.test',
       gender: PatientGender.FEMALE,
       dateOfBirth: '1999-04-20',
       address: '1 Synthetic Street',
@@ -136,6 +144,7 @@ describe('Patient administrative management (e2e)', () => {
       changedFields: [
         'fullName',
         'phone',
+        'email',
         'gender',
         'dateOfBirth',
         'address',
@@ -145,6 +154,98 @@ describe('Patient administrative management (e2e)', () => {
     });
     expect(JSON.stringify(auditLog)).not.toContain('Synthetic Minh Anh');
     expect(JSON.stringify(auditLog)).not.toContain('090 123 4567');
+    expect(JSON.stringify(auditLog)).not.toContain(
+      'synthetic.patient@example.test',
+    );
+  });
+
+  it('allocates tenant-local patient codes concurrently and returns a branch-scoped overview', async () => {
+    const fixture = await createBranchActor(
+      'patient-overview',
+      TenantRoleCode.RECEPTIONIST,
+    );
+    const route = patientRoute(fixture.tenant, fixture.branch);
+    const create = (suffix: string) =>
+      fixture.agent
+        .post(route)
+        .set('Idempotency-Key', randomUUID())
+        .send({
+          fullName: `Synthetic Concurrent ${suffix}`,
+          phone: `+8491000000${suffix}`,
+          gender: PatientGender.OTHER,
+        })
+        .expect(201);
+    const [first, second] = await Promise.all([create('1'), create('2')]);
+    const patients = [
+      first.body as { id: string; code: string },
+      second.body as { id: string; code: string },
+    ];
+    expect(new Set(patients.map((patient) => patient.code))).toEqual(
+      new Set(['PAT-000001', 'PAT-000002']),
+    );
+
+    await appointmentsRepository.save(
+      appointmentsRepository.create({
+        tenantId: fixture.tenant.id,
+        branchId: fixture.branch.id,
+        patientId: patients[0].id,
+        status: AppointmentStatus.BOOKED,
+        source: AppointmentSource.PHONE,
+        startAt: new Date('2027-10-10T02:00:00.000Z'),
+        endAt: new Date('2027-10-10T02:30:00.000Z'),
+        assignedDentistUserId: null,
+        operatoryId: null,
+        serviceId: null,
+        serviceCode: null,
+        serviceName: null,
+        serviceAmount: null,
+        serviceCurrency: null,
+        serviceDurationMinutes: null,
+        visitReason: 'Synthetic overview appointment',
+        operationalNote: null,
+      }),
+    );
+
+    await fixture.agent
+      .get(`${route}/${patients[0].id}/overview`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          activityStatus: 'ACTIVE',
+          activeAlerts: [],
+          patient: { id: patients[0].id, code: patients[0].code },
+          nextAppointment: {
+            status: AppointmentStatus.BOOKED,
+            visitReason: 'Synthetic overview appointment',
+          },
+          treatmentSummary: {
+            activePlanCount: 0,
+            totalItems: 0,
+            completedItems: 0,
+            pendingItems: 0,
+            featuredPlan: null,
+          },
+        });
+      });
+
+    const other = await createBranchActor(
+      'patient-overview-other',
+      TenantRoleCode.RECEPTIONIST,
+    );
+    const otherPatient = await createPatient(
+      other.agent,
+      patientRoute(other.tenant, other.branch),
+      {
+        fullName: 'Synthetic Other Tenant',
+        phone: '+84920000001',
+        gender: PatientGender.OTHER,
+      },
+    );
+    const storedOther = await patientsRepository.findOneByOrFail({
+      id: otherPatient.id,
+    });
+    expect(Number(storedOther.displayNumber)).toBe(1);
+    await fixture.agent.get(`${route}/${otherPatient.id}/overview`).expect(404);
   });
 
   it('supports Branch Admin, validates profile input, and prevents normalized-phone duplicates only within a tenant', async () => {
@@ -495,7 +596,9 @@ describe('Patient administrative management (e2e)', () => {
 
     await agent.get(`${route}/assigned`).expect(403);
     await dentistSession.agent
-      .get(`${route}/assigned?scheduleFilter=WITH_UPCOMING&sortBy=nextAppointmentAt&sortOrder=ASC`)
+      .get(
+        `${route}/assigned?scheduleFilter=WITH_UPCOMING&sortBy=nextAppointmentAt&sortOrder=ASC`,
+      )
       .expect(200)
       .expect((response) => {
         const body = response.body as {
@@ -521,7 +624,9 @@ describe('Patient administrative management (e2e)', () => {
           fullName: 'Synthetic Assigned Patient',
           phone: '0901234580',
           nextAppointment: { visitReason: 'Synthetic follow-up' },
-          lastVisit: expect.objectContaining({ completedAt: expect.any(String) }),
+          lastVisit: expect.objectContaining({
+            completedAt: expect.any(String),
+          }),
         });
         expect(body.items[0]).not.toHaveProperty('address');
         expect(body.items[0]).not.toHaveProperty('emergencyContact');

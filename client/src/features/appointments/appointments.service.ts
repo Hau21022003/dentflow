@@ -7,6 +7,7 @@ import type {
   AppointmentDetail,
   AppointmentDentistOption,
   AppointmentListQuery,
+  AppointmentOperatoryOption,
   AppointmentPage,
   AppointmentServiceOption,
   AssignedAppointment,
@@ -95,6 +96,17 @@ export const appointmentsService = {
   ): Promise<AppointmentPage<AppointmentServiceOption>> {
     const { payload } = await http.get<AppointmentPage<AppointmentServiceOption>>(
       `${appointmentsRoute(scope)}/booking-options/services`,
+      { params: query },
+    );
+    return payload;
+  },
+
+  async listOperatories(
+    scope: AppointmentScope,
+    query: BookingOptionQuery,
+  ): Promise<AppointmentPage<AppointmentOperatoryOption>> {
+    const { payload } = await http.get<AppointmentPage<AppointmentOperatoryOption>>(
+      `${appointmentsRoute(scope)}/booking-options/operatories`,
       { params: query },
     );
     return payload;

@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
@@ -298,8 +299,21 @@ export function PatientListPage({ mode }: { mode: PatientListMode }) {
               size="sm"
               type="button"
               variant="secondary"
+              {...(!isDoctorView ? { asChild: true } : {})}
             >
-              {t("actions.view")}
+              {!isDoctorView ? (
+                <Link
+                  to={pathFor.workspaceReceptionPatientDetail(
+                    tenantSlug,
+                    branchSlug,
+                    row.original.id,
+                  )}
+                >
+                  {t("actions.view")}
+                </Link>
+              ) : (
+                t("actions.view")
+              )}
             </Button>
             {!isDoctorView && (
               <DropdownMenu>
@@ -329,7 +343,7 @@ export function PatientListPage({ mode }: { mode: PatientListMode }) {
         ),
       },
     ],
-    [dateFormatter, dateTimeFormatter, isDoctorView, t],
+    [branchSlug, dateFormatter, dateTimeFormatter, isDoctorView, t, tenantSlug],
   );
 
   function resetToFirstPage() {
@@ -567,3 +581,4 @@ export function PatientListPage({ mode }: { mode: PatientListMode }) {
     </div>
   );
 }
+import { pathFor } from "@/app/router/paths";

@@ -44,11 +44,11 @@ Một người dùng có thể được cấp nhiều vai trò/phạm vi, ví d�
 1. Lễ tân tìm kiếm theo số điện thoại để tránh tạo trùng hồ sơ trong cùng tenant.
 2. Nếu là bệnh nhân mới, tạo hồ sơ với thông tin liên hệ, ngày sinh, giới tính, địa chỉ, người liên hệ khẩn cấp và nguồn biết đến phòng khám.
 3. Bệnh nhân có thể có nhiều lần đến khám tại các chi nhánh khác nhau của cùng một tenant; hồ sơ hành chính vẫn thống nhất ở cấp tenant. Lịch sử clinical của từng branch chỉ Dentist có ca được phân công tại branch đó xem được.
-4. Cảnh báo như dị ứng thuốc là `PatientAlert` clinical-only: chỉ Dentist đang có ca được phân công mới tạo, xem hoặc sửa; alert không xuất hiện trong audit payload.
+4. Cảnh báo như dị ứng thuốc là `PatientAlert`: chỉ Dentist đang có ca chưa terminal được phân công mới tạo, sửa hoặc resolve. Receptionist và Branch Admin chỉ đọc alert đang hiệu lực trong Patient Overview như một ngoại lệ an toàn tenant-wide; nội dung alert không xuất hiện trong audit payload.
 
 ### 3.2 Lịch hẹn và check-in
 
-Lịch hẹn bao gồm bệnh nhân, chi nhánh, bác sĩ dự kiến tùy chọn, dịch vụ/lý do đến khám, khoảng thời gian, ghi chú và nguồn đặt hẹn. Ca chưa có Dentist vẫn check-in được nhưng không thể bắt đầu. Backend chặn cứng lịch giao nhau của Dentist đã được gán; chair/room scheduling là giai đoạn sau.
+Lịch hẹn bao gồm bệnh nhân, chi nhánh, bác sĩ dự kiến tùy chọn, Operatory tùy chọn, dịch vụ/lý do đến khám, khoảng thời gian, ghi chú và nguồn đặt hẹn. Ca chưa có Dentist vẫn check-in được nhưng không thể bắt đầu. Backend chặn cứng lịch giao nhau độc lập cho Dentist đã được gán và Operatory; lịch terminal không giữ slot.
 
 Vòng đời lịch hẹn:
 
@@ -118,8 +118,8 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 | Tổ chức   | Branch, User, RoleAssignment                     | RoleAssignment có phạm vi branch tùy chọn                                                                                 |
 | Xác thực  | User, AuthSession, TotpFactor, PasskeyCredential | User là identity toàn hệ thống; có `fullName` và avatar cá nhân tùy chọn; session theo từng thiết bị, TOTP secret và refresh token chỉ lưu dạng mã hóa/hash         |
 | Danh mục  | ServiceGroup, Service                            | Nhóm dịch vụ tenant-scoped và Service có mã bất biến, giá hiện hành theo ISO currency, thời lượng và trạng thái hoạt động |
-| Bệnh nhân | Patient, PatientAlert                            | Patient thuộc tenant, không bị giới hạn branch; alert clinical-only                                                       |
-| Điều phối | Appointment, Visit, FollowUpRecommendation       | Appointment/Visit thuộc branch; start tạo Visit duy nhất; follow-up tạo lịch tái khám có nguồn                            |
+| Bệnh nhân | Patient, PatientAlert                            | Patient thuộc tenant, có email tùy chọn và mã `PAT-*`; alert được đọc an toàn tenant-wide nhưng chỉ Dentist theo case assignment được ghi |
+| Điều phối | Appointment, Operatory, Visit, FollowUpRecommendation | Appointment/Operatory/Visit thuộc branch; Operatory là một phòng hoặc ghế và chống trùng lịch ở database; start tạo Visit duy nhất |
 | Điều trị  | TreatmentPlan, TreatmentItem, TreatmentItemEvent, TreatmentNote | Plan thuộc Patient + Tenant + Branch với origin Visit bất biến; event giữ Visit/Dentist thực hiện, item snapshot Service |
 | Thu phí   | PatientInvoice, PatientInvoiceItem, Payment      | Tách biệt với hóa đơn SaaS; payment/refund/adjustment là immutable ledger records                                         |
 | Tuân thủ  | AuditLog                                         | Ai làm gì, trên bản ghi nào, khi nào                                                                                      |

@@ -56,7 +56,10 @@ export class AppointmentsController {
     @RequestContext() context: AuthorizationContext,
     @Query() query: GetAppointmentCalendarSummaryQueryDto,
   ) {
-    return this.appointmentsService.assignedCalendarSummary(context, query.month);
+    return this.appointmentsService.assignedCalendarSummary(
+      context,
+      query.month,
+    );
   }
 
   @Get('booking-options/dentists')
@@ -81,6 +84,15 @@ export class AppointmentsController {
     @Query() query: ListAppointmentBookingOptionsQueryDto,
   ) {
     return this.appointmentsService.listBookingServices(context, query);
+  }
+
+  @Get('booking-options/operatories')
+  @RequirePermissions(Permission.APPOINTMENT_MANAGE)
+  listBookingOperatories(
+    @RequestContext() context: AuthorizationContext,
+    @Query() query: ListAppointmentBookingOptionsQueryDto,
+  ) {
+    return this.appointmentsService.listBookingOperatories(context, query);
   }
 
   @Get('calendar-summary')

@@ -70,6 +70,11 @@ navigation và authorization nhất quán; giao diện không bao giờ là lớ
 Sau thay đổi, bổ sung/chỉnh E2E phù hợp (đặc biệt tenant/branch ngoài scope)
 và chạy `npm run lint`, `npm run build`.
 
+Các route branch mới của Patient/Operatory:
+
+- `/workspace/:tenantSlug/branches/:branchSlug/reception/patients/:patientId` dùng đồng thời `patient.administrative.manage` và `patient.clinical.read`; chỉ render Overview và deep-link Appointment bằng query `appointmentId`.
+- `/workspace/:tenantSlug/branches/:branchSlug/operatories` dùng `operatory.manage`, xuất hiện trong sidebar cho Tenant Admin/Branch Admin. Receptionist không thấy route quản lý nhưng picker lịch hẹn vẫn lấy Operatory active từ booking-options API.
+
 ## Quy ước frontend
 
 - Dùng alias `@/` cho `src/`; utilities là `@/shared/lib/utils`.

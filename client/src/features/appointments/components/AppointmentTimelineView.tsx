@@ -461,6 +461,11 @@ export function AppointmentTimelineView({
                               locale,
                             )}
                           </span>
+                          {appointment.operatory && (
+                            <span className="block truncate text-[10px] text-slate-600">
+                              {appointment.operatory.name}
+                            </span>
+                          )}
                         </button>
                       );
                     },

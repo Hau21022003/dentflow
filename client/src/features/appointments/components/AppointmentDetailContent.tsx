@@ -1,5 +1,5 @@
 import { IconDental, IconNotes, IconUser } from "@tabler/icons-react";
-import { PATHS } from "@/app/router/paths";
+import { pathFor } from "@/app/router/paths";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,9 +26,10 @@ import {
   Phone,
   Radio,
   X,
+  MapPin,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import type { AppointmentAction } from "./AppointmentActionDialog";
 import { AppointmentStatusBadge } from "./AppointmentStatusBadge";
 
@@ -127,6 +128,7 @@ export function AppointmentDetailContent({
   onRetry,
   timeZone,
 }: Props) {
+  const { tenantSlug = "", branchSlug = "" } = useParams();
   const { i18n, t } = useTranslation("appointments");
   const locale = localeForLanguage(i18n.resolvedLanguage);
   const editable =
@@ -291,6 +293,14 @@ export function AppointmentDetailContent({
                 {appointment.assignedDentist?.fullName ?? t("detail.notAssigned")}
               </DetailField>
               <DetailField
+                icon={<MapPin aria-hidden="true" className="size-5" />}
+                label={t("detail.operatory")}
+              >
+                {appointment.operatory
+                  ? `${appointment.operatory.code} · ${appointment.operatory.name}`
+                  : t("detail.notProvided")}
+              </DetailField>
+              <DetailField
                 icon={<IconDental aria-hidden="true" size={20} stroke={2} />}
                 label={t("detail.service")}
               >
@@ -324,7 +334,15 @@ export function AppointmentDetailContent({
       {appointment && (
         <footer className="space-y-2 border-t bg-muted/40 p-4">
           <Button asChild className="w-full" type="button" variant="outline">
-            <Link to={PATHS.root}>{t("detail.viewProfile")}</Link>
+            <Link
+              to={pathFor.workspaceReceptionPatientDetail(
+                tenantSlug,
+                branchSlug,
+                appointment.patient.id,
+              )}
+            >
+              {t("detail.viewProfile")}
+            </Link>
           </Button>
           {primaryAction && (
             <Button

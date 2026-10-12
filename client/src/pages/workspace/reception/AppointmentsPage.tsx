@@ -74,6 +74,8 @@ export function AppointmentsPage() {
   const tenantName = tenant?.tenant.displayName ?? tenantSlug;
   const branchName = branch?.branch.name ?? branchSlug;
   const isDesktopTimeline = useDesktopTimeline();
+  const requestedAppointmentId = searchParams.get("appointmentId");
+  const activeDetailId = detailId ?? requestedAppointmentId;
 
   useEffect(() => {
     if (isValidDate(dateParam) && viewParam === view) return;
@@ -194,14 +196,21 @@ export function AppointmentsPage() {
         timeZone={timeZone}
       />
       <AppointmentDetailSheet
-        appointmentId={detailId}
+        appointmentId={activeDetailId}
         branchSlug={branchSlug}
         canAssign={canAssign}
         onAction={(action, appointment) => setActionSelection({ action, appointment })}
         onAssign={setAssigning}
         onEdit={setEditing}
-        onOpenChange={(open) => !open && setDetailId(null)}
-        open={Boolean(detailId)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailId(null);
+            const params = new URLSearchParams(searchParams);
+            params.delete("appointmentId");
+            setSearchParams(params, { replace: true });
+          }
+        }}
+        open={Boolean(activeDetailId)}
         tenantSlug={tenantSlug}
         timeZone={timeZone}
       />

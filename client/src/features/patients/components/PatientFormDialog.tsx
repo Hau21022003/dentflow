@@ -36,6 +36,7 @@ import { z } from "zod";
 type PatientFormValues = {
   fullName: string;
   phone: string;
+  email: string;
   gender: string;
   dateOfBirth: string;
   address: string;
@@ -60,7 +61,10 @@ function isValidDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
 
   const parsed = new Date(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === value;
+  return (
+    !Number.isNaN(parsed.valueOf()) &&
+    parsed.toISOString().slice(0, 10) === value
+  );
 }
 
 function createPatientFormSchema(
@@ -81,6 +85,14 @@ function createPatientFormSchema(
         .trim()
         .min(1, validation.required(fields("phone")))
         .max(30, validation.maxLength(fields("phone"), 30)),
+      email: z
+        .string()
+        .trim()
+        .max(254, validation.maxLength(fields("email"), 254))
+        .refine(
+          (value) => value.length === 0 || z.email().safeParse(value).success,
+          validation.invalid(fields("email")),
+        ),
       gender: z
         .string()
         .min(1, validation.selectionRequired(fields("gender")))
@@ -96,7 +108,9 @@ function createPatientFormSchema(
           validation.invalid(fields("dateOfBirth")),
         )
         .refine(
-          (value) => value.length === 0 || value <= new Date().toISOString().slice(0, 10),
+          (value) =>
+            value.length === 0 ||
+            value <= new Date().toISOString().slice(0, 10),
           tPatients("form.dateOfBirthNotFuture"),
         ),
       address: z
@@ -152,6 +166,7 @@ function getInitialValues(patient?: Patient): PatientFormValues {
   return {
     fullName: patient?.fullName ?? "",
     phone: patient?.phone ?? "",
+    email: patient?.email ?? "",
     gender: patient?.gender ?? "",
     dateOfBirth: patient?.dateOfBirth ?? "",
     address: patient?.address ?? "",
@@ -176,6 +191,7 @@ function buildInput(values: PatientFormValues): CreatePatientInput {
   return {
     fullName: values.fullName.trim(),
     phone: values.phone.trim(),
+    email: blankToNull(values.email)?.toLowerCase() ?? null,
     gender: values.gender as PatientGender,
     dateOfBirth: blankToNull(values.dateOfBirth),
     address: blankToNull(values.address),
@@ -200,8 +216,10 @@ function buildUpdateInput(
 
   if (next.fullName !== patient.fullName) input.fullName = next.fullName;
   if (next.phone !== patient.phone) input.phone = next.phone;
+  if (next.email !== patient.email) input.email = next.email;
   if (next.gender !== patient.gender) input.gender = next.gender;
-  if (next.dateOfBirth !== patient.dateOfBirth) input.dateOfBirth = next.dateOfBirth;
+  if (next.dateOfBirth !== patient.dateOfBirth)
+    input.dateOfBirth = next.dateOfBirth;
   if (next.address !== patient.address) input.address = next.address;
   if (next.referralSource !== patient.referralSource) {
     input.referralSource = next.referralSource;
@@ -306,13 +324,13 @@ export function PatientFormDialog({
           input,
         });
         setIdempotencyIntent(nextIntent);
-          const created = await createMutation.mutateAsync({
-            tenantSlug,
-            branchSlug,
-            input,
-            idempotencyKey: nextIntent.key,
-          });
-          onCreated?.(created);
+        const created = await createMutation.mutateAsync({
+          tenantSlug,
+          branchSlug,
+          input,
+          idempotencyKey: nextIntent.key,
+        });
+        onCreated?.(created);
       }
       handleOpenChange(false);
     } catch (error) {
@@ -379,6 +397,18 @@ export function PatientFormDialog({
             type="date"
           />
           <div className="sm:col-span-2">
+            <RHFTextField
+              autoComplete="email"
+              control={control}
+              fullWidth
+              inputMode="email"
+              label={tPatients("form.fields.email")}
+              maxLength={254}
+              name="email"
+              type="email"
+            />
+          </div>
+          <div className="sm:col-span-2">
             <RHFTextarea
               control={control}
               fullWidth
@@ -392,7 +422,9 @@ export function PatientFormDialog({
 
         <section className="space-y-4 border-t border-border/70 pt-5">
           <div>
-            <h3 className="font-semibold">{tPatients("form.emergencyContact.title")}</h3>
+            <h3 className="font-semibold">
+              {tPatients("form.emergencyContact.title")}
+            </h3>
             <p className="mt-1 text-sm text-muted-foreground">
               {tPatients("form.emergencyContact.description")}
             </p>

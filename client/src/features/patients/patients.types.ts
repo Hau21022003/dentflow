@@ -10,8 +10,10 @@ export type PatientEmergencyContact = {
 
 export type Patient = {
   id: string;
+  code: string;
   fullName: string;
   phone: string;
+  email: string | null;
   dateOfBirth: string | null;
   gender: PatientGender;
   address: string | null;
@@ -82,6 +84,7 @@ export type PatientPage<TPatient = PatientListItem> = {
 export type CreatePatientInput = {
   fullName: string;
   phone: string;
+  email?: string | null;
   gender: PatientGender;
   dateOfBirth?: string | null;
   address?: string | null;
@@ -90,3 +93,79 @@ export type CreatePatientInput = {
 };
 
 export type UpdatePatientInput = Partial<CreatePatientInput>;
+
+export type PatientAlert = {
+  id: string;
+  category: "ALLERGY" | "MEDICAL_CONDITION" | "MEDICATION" | "OTHER";
+  severity: "INFO" | "WARNING" | "CRITICAL";
+  message: string;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PatientAlertInput = Pick<
+  PatientAlert,
+  "category" | "severity" | "message"
+>;
+export type ResolvePatientAlertReasonCode =
+  | "NO_LONGER_APPLICABLE"
+  | "ENTERED_IN_ERROR"
+  | "DUPLICATE";
+
+export type PatientOverview = {
+  patient: Patient;
+  activityStatus: "ACTIVE" | "INACTIVE";
+  activeAlerts: PatientAlert[];
+  nextAppointment: {
+    id: string;
+    status: string;
+    startAt: string;
+    endAt: string;
+    serviceName: string | null;
+    visitReason: string | null;
+    assignedDentist: { id: string; fullName: string } | null;
+    operatory: { id: string; code: string; name: string } | null;
+  } | null;
+  treatmentSummary: {
+    activePlanCount: number;
+    totalItems: number;
+    completedItems: number;
+    pendingItems: number;
+    featuredPlan: {
+      id: string;
+      code: string;
+      status: string;
+      createdAt: string;
+      updatedAt: string;
+      serviceName: string | null;
+      totalItems: number;
+      completedItems: number;
+      pendingItems: number;
+    } | null;
+  };
+};
+
+export type PatientTreatmentPlan = {
+  id: string;
+  code: string;
+  patientId: string;
+  originVisitId: string;
+  status: string;
+  acceptedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: Array<{
+    id: string;
+    service: { id: string; code: string; name: string };
+    listUnitAmount: number;
+    finalUnitAmount: number;
+    discountAmount: number;
+    currency: string;
+    quantity: number;
+    toothPosition: string | null;
+    indication: string | null;
+    status: string;
+    plannedDentist: { id: string; fullName: string } | null;
+  }>;
+};

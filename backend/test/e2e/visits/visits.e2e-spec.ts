@@ -257,6 +257,114 @@ describe('Visit workflow (e2e)', () => {
       .expect(403);
   });
 
+  it('lets only an assigned Dentist manage Patient Alerts without leaking message content to audit', async () => {
+    const fixture = await createFixture('patient-alert-access');
+    const assignedAppointment = await createAppointment(fixture, {
+      status: AppointmentStatus.BOOKED,
+      assignedDentistUserId: fixture.dentist.user.id,
+    });
+    const otherDentist = await createActor(
+      fixture.branch,
+      TenantRoleCode.DENTIST,
+    );
+    const patientRoute = `/tenants/${fixture.tenant.slug}/branches/${fixture.branch.slug}/patients/${fixture.patient.id}`;
+    const alertPayload = {
+      category: 'ALLERGY',
+      severity: 'CRITICAL',
+      message: 'Synthetic penicillin allergy',
+    };
+
+    await fixture.branchAdmin.agent
+      .post(`${patientRoute}/alerts`)
+      .set('Idempotency-Key', randomUUID())
+      .send(alertPayload)
+      .expect(403);
+    await otherDentist.agent
+      .post(`${patientRoute}/alerts`)
+      .set('Idempotency-Key', randomUUID())
+      .send(alertPayload)
+      .expect(403);
+
+    const createKey = randomUUID();
+    const created = await fixture.dentist.agent
+      .post(`${patientRoute}/alerts`)
+      .set('Idempotency-Key', createKey)
+      .send(alertPayload)
+      .expect(201);
+    await fixture.dentist.agent
+      .post(`${patientRoute}/alerts`)
+      .set('Idempotency-Key', createKey)
+      .send(alertPayload)
+      .expect(201)
+      .expect('Idempotency-Replayed', 'true');
+    const alertId = (created.body as { id: string }).id;
+
+    await fixture.receptionist.agent
+      .get(`${patientRoute}/overview`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as {
+          activeAlerts: Array<Record<string, unknown>>;
+        };
+        expect(body.activeAlerts).toEqual([
+          expect.objectContaining({
+            id: alertId,
+            category: 'ALLERGY',
+            severity: 'CRITICAL',
+            message: alertPayload.message,
+          }),
+        ]);
+      });
+
+    const updatedMessage = 'Synthetic severe penicillin allergy';
+    await fixture.dentist.agent
+      .patch(`${patientRoute}/alerts/${alertId}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ ...alertPayload, message: updatedMessage })
+      .expect(200);
+    const alertAudits = await auditLogs.find({
+      where: { resourceId: alertId },
+    });
+    expect(alertAudits.map((record) => record.action)).toEqual(
+      expect.arrayContaining([
+        AuditAction.PATIENT_ALERT_CREATED,
+        AuditAction.PATIENT_ALERT_UPDATED,
+      ]),
+    );
+    expect(JSON.stringify(alertAudits)).not.toContain(alertPayload.message);
+    expect(JSON.stringify(alertAudits)).not.toContain(updatedMessage);
+
+    const resolveKey = randomUUID();
+    await fixture.dentist.agent
+      .post(`${patientRoute}/alerts/${alertId}/resolve`)
+      .set('Idempotency-Key', resolveKey)
+      .send({ reasonCode: 'NO_LONGER_APPLICABLE' })
+      .expect(200);
+    await fixture.dentist.agent
+      .post(`${patientRoute}/alerts/${alertId}/resolve`)
+      .set('Idempotency-Key', resolveKey)
+      .send({ reasonCode: 'NO_LONGER_APPLICABLE' })
+      .expect(200)
+      .expect('Idempotency-Replayed', 'true');
+    await fixture.receptionist.agent
+      .get(`${patientRoute}/overview`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as { activeAlerts: unknown[] };
+        expect(body.activeAlerts).toEqual([]);
+      });
+
+    await appointments.update(
+      { id: assignedAppointment.id },
+      { status: AppointmentStatus.CANCELLED },
+    );
+    await fixture.dentist.agent
+      .post(`${patientRoute}/alerts`)
+      .set('Idempotency-Key', randomUUID())
+      .send(alertPayload)
+      .expect(403);
+  });
+
   async function createFixture(slug: string) {
     const tenant = await authFixtures.createTenant({ slug });
     const branch = await authFixtures.createBranch(tenant, { slug: 'main' });

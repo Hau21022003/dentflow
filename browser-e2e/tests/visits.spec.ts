@@ -97,6 +97,75 @@ test("Dentist starts, saves, completes, and adds to a Visit", async ({ page }) =
   await expect(page.getByText("Synthetic completed Visit addendum", { exact: true })).toBeVisible();
 });
 
+test("assigned Dentist creates, edits, and resolves a Patient safety alert", async ({
+  page,
+}) => {
+  await grantDentistRole(page);
+  await loginAsDentistReceptionist(page);
+  await createAndCheckInAssignedAppointment(page);
+
+  await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
+  await page.getByRole("button", { name: "Start Visit" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Patient safety alerts" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Add alert" }).click();
+  const createDialog = page.getByRole("dialog", {
+    name: "Create patient alert",
+  });
+  await createDialog.getByLabel("Category").selectOption("ALLERGY");
+  await createDialog.getByLabel("Severity").selectOption("CRITICAL");
+  await createDialog
+    .getByLabel("Message")
+    .fill("Synthetic browser penicillin allergy");
+  const createRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname.endsWith("/alerts"),
+  );
+  await createDialog.getByRole("button", { name: "Save changes" }).click();
+  expectIdempotencyKey((await createRequest).headers()["idempotency-key"]);
+  await expect(createDialog).toHaveCount(0);
+  const alertCard = page
+    .locator("article")
+    .filter({ hasText: "Synthetic browser penicillin allergy" });
+  await expect(alertCard).toContainText("Critical");
+  await expect(alertCard).toContainText("Allergy");
+
+  await alertCard.getByRole("button", { name: "Edit" }).click();
+  const editDialog = page.getByRole("dialog", {
+    name: "Edit patient alert",
+  });
+  await editDialog
+    .getByLabel("Message")
+    .fill("Synthetic browser severe penicillin allergy");
+  await editDialog.getByRole("button", { name: "Save changes" }).click();
+  await expect(editDialog).toHaveCount(0);
+  const updatedAlertCard = page
+    .locator("article")
+    .filter({ hasText: "Synthetic browser severe penicillin allergy" });
+  await updatedAlertCard.getByRole("button", { name: "Resolve" }).click();
+  const resolveDialog = page.getByRole("dialog", {
+    name: "Resolve this alert?",
+  });
+  await resolveDialog
+    .getByLabel("Resolution reason")
+    .selectOption("NO_LONGER_APPLICABLE");
+  const resolveRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname.endsWith("/resolve"),
+  );
+  await resolveDialog.getByRole("button", { name: "Resolve" }).click();
+  expectIdempotencyKey((await resolveRequest).headers()["idempotency-key"]);
+  await expect(resolveDialog).toHaveCount(0);
+  await expect(updatedAlertCard.getByText("Resolved", { exact: true })).toBeVisible();
+  await expect(updatedAlertCard.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await expect(
+    updatedAlertCard.getByRole("button", { name: "Resolve" }),
+  ).toHaveCount(0);
+});
+
 test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", async ({ page }) => {
   await grantDentistRole(page);
   await loginAsDentistReceptionist(page);
