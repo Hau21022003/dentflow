@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { appointmentsService } from "./appointments.service";
 import type {
   AppointmentAgendaQuery,
+  AppointmentAvailabilityQuery,
   AppointmentCalendarSummary,
   AppointmentListQuery,
   BookingOptionQuery,
@@ -25,6 +26,12 @@ export const appointmentQueryKeys = {
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "calendar-summary", month] as const,
   detail: (tenantSlug: string, branchSlug: string, appointmentId: string) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "detail", appointmentId] as const,
+  availability: (
+    tenantSlug: string,
+    branchSlug: string,
+    query: AppointmentAvailabilityQuery | null,
+  ) =>
+    [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "availability", query] as const,
   dentists: (tenantSlug: string, branchSlug: string, query: BookingOptionQuery) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "dentists", query] as const,
   services: (tenantSlug: string, branchSlug: string, query: BookingOptionQuery) =>
@@ -130,6 +137,23 @@ export function useAppointmentDetailQuery(
     queryKey: appointmentQueryKeys.detail(tenantSlug, branchSlug, appointmentId ?? ""),
     queryFn: () => appointmentsService.get({ tenantSlug, branchSlug }, appointmentId!),
     enabled: Boolean(tenantSlug && branchSlug && appointmentId),
+  });
+}
+
+export function useAppointmentAvailabilityQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  query: AppointmentAvailabilityQuery | null,
+) {
+  return useQuery({
+    queryKey: appointmentQueryKeys.availability(tenantSlug, branchSlug, query),
+    queryFn: () =>
+      appointmentsService.checkAvailability(
+        { tenantSlug, branchSlug },
+        query!,
+      ),
+    enabled: Boolean(tenantSlug && branchSlug && query),
+    staleTime: 5_000,
   });
 }
 

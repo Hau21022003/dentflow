@@ -28,6 +28,7 @@ import {
 import { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import { AssignAppointmentDto } from './dto/assign-appointment.dto';
+import { CheckAppointmentAvailabilityQueryDto } from './dto/check-appointment-availability-query.dto';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { ListAppointmentsQueryDto } from './dto/list-appointments-query.dto';
 import { ListAppointmentBookingOptionsQueryDto } from './dto/list-appointment-booking-options-query.dto';
@@ -42,6 +43,12 @@ const SCHEDULING_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.CONFIRMED,
   AppointmentStatus.CHECKED_IN,
 ]);
+const CONFLICTING_STATUSES = [
+  AppointmentStatus.BOOKED,
+  AppointmentStatus.CONFIRMED,
+  AppointmentStatus.CHECKED_IN,
+  AppointmentStatus.IN_PROGRESS,
+] as const;
 const TERMINAL_REASON_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.BOOKED,
   AppointmentStatus.CONFIRMED,
@@ -373,6 +380,57 @@ export class AppointmentsService {
       throw new NotFoundException('Appointment was not found.');
     }
     return this.toDetailResponse(appointment);
+  }
+
+  async checkAvailability(
+    context: AuthorizationContext,
+    query: CheckAppointmentAvailabilityQueryDto,
+  ): Promise<{ dentistConflict: boolean; operatoryConflict: boolean }> {
+    const { startAt, endAt } = this.parseAppointmentRange(
+      query.startAt,
+      query.endAt,
+    );
+    const conflictQuery = () => {
+      const queryBuilder = this.appointmentsRepository.ormRepository
+        .createQueryBuilder('appointment')
+        .where('appointment.tenantId = :tenantId', {
+          tenantId: context.tenant!.id,
+        })
+        .andWhere('appointment.branchId = :branchId', {
+          branchId: context.branch!.id,
+        })
+        .andWhere('appointment.status IN (:...statuses)', {
+          statuses: CONFLICTING_STATUSES,
+        })
+        .andWhere('appointment.startAt < :endAt', { endAt })
+        .andWhere('appointment.endAt > :startAt', { startAt });
+
+      if (query.excludeAppointmentId) {
+        queryBuilder.andWhere('appointment.id != :excludeAppointmentId', {
+          excludeAppointmentId: query.excludeAppointmentId,
+        });
+      }
+      return queryBuilder;
+    };
+
+    const [dentistConflict, operatoryConflict] = await Promise.all([
+      query.dentistUserId
+        ? conflictQuery()
+            .andWhere('appointment.assignedDentistUserId = :dentistUserId', {
+              dentistUserId: query.dentistUserId,
+            })
+            .getExists()
+        : false,
+      query.operatoryId
+        ? conflictQuery()
+            .andWhere('appointment.operatoryId = :operatoryId', {
+              operatoryId: query.operatoryId,
+            })
+            .getExists()
+        : false,
+    ]);
+
+    return { dentistConflict, operatoryConflict };
   }
 
   async listBookingDentists(

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { resetDatabase } from "./support/database";
 import { E2E_USERS, login } from "./support/login";
@@ -31,9 +31,16 @@ test("Branch Admin creates an appointment from the daily agenda and confirms it"
   await patientDialog.getByRole("button", { name: "Add patient" }).click();
   await expect(patientDialog).toHaveCount(0);
 
-  await appointmentDialog.getByLabel("Start time").fill("2030-01-15T09:00");
-  await appointmentDialog.getByLabel("End time").fill("2030-01-15T09:30");
+  await setAppointmentTime(page, appointmentDialog, "2030-01-15", "09:00", "09:30");
   await appointmentDialog.getByLabel("Visit reason").fill("Synthetic agenda reason");
+  await appointmentDialog.getByLabel("End time").click();
+  await page.getByRole("option", { name: "08:45", exact: true }).click();
+  await appointmentDialog.getByRole("button", { name: "Create appointment" }).click();
+  await expect(
+    appointmentDialog.getByText("End time must be after start time."),
+  ).toBeVisible();
+  await appointmentDialog.getByLabel("End time").click();
+  await page.getByRole("option", { name: "09:30", exact: true }).click();
 
   const createRequest = page.waitForRequest(
     (request) => request.method() === "POST" && request.url().endsWith(APPOINTMENTS_ROUTE),
@@ -45,6 +52,8 @@ test("Branch Admin creates an appointment from the daily agenda and confirms it"
   );
   expect(create.postDataJSON()).toMatchObject({
     source: "PHONE",
+    startAt: "2030-01-15T09:00:00.000+07:00",
+    endAt: "2030-01-15T09:30:00.000+07:00",
     serviceId: null,
     visitReason: "Synthetic agenda reason",
   });
@@ -128,8 +137,7 @@ test("appointment detail omits age when the patient has no date of birth", async
   await patientDialog.getByRole("button", { name: "Add patient" }).click();
   await expect(patientDialog).toHaveCount(0);
 
-  await appointmentDialog.getByLabel("Start time").fill("2030-01-16T09:00");
-  await appointmentDialog.getByLabel("End time").fill("2030-01-16T09:30");
+  await setAppointmentTime(page, appointmentDialog, "2030-01-16", "09:00", "09:30");
   await appointmentDialog.getByLabel("Visit reason").fill("Synthetic appointment without date of birth");
   await appointmentDialog.getByRole("button", { name: "Create appointment" }).click();
   await expect(appointmentDialog).toHaveCount(0);
@@ -206,8 +214,7 @@ test("timeline keeps the selected day, filters a dentist column, opens its deskt
   await patientDialog.getByRole("button", { name: "Add patient" }).click();
   await expect(patientDialog).toHaveCount(0);
 
-  await appointmentDialog.getByLabel("Start time").fill("2030-01-16T09:00");
-  await appointmentDialog.getByLabel("End time").fill("2030-01-16T09:30");
+  await setAppointmentTime(page, appointmentDialog, "2030-01-16", "09:00", "09:30");
   await appointmentDialog.getByLabel("Visit reason").fill("Synthetic timeline reason");
   await appointmentDialog.getByRole("combobox", { name: "Dentist" }).click();
   await page.getByRole("option", { name: "Synthetic Test Branch Admin", exact: true }).click();
@@ -224,11 +231,21 @@ test("timeline keeps the selected day, filters a dentist column, opens its deskt
   await page.getByRole("option", { name: "Other", exact: true }).click();
   await shortPatientDialog.getByRole("button", { name: "Add patient" }).click();
   await expect(shortPatientDialog).toHaveCount(0);
-  await shortAppointmentDialog.getByLabel("Start time").fill("2030-01-16T09:30");
-  await shortAppointmentDialog.getByLabel("End time").fill("2030-01-16T09:45");
+  await setAppointmentTime(page, shortAppointmentDialog, "2030-01-16", "09:15", "09:45");
   await shortAppointmentDialog.getByLabel("Visit reason").fill("Synthetic short timeline reason");
   await shortAppointmentDialog.getByRole("combobox", { name: "Dentist" }).click();
   await page.getByRole("option", { name: "Synthetic Test Branch Admin", exact: true }).click();
+  await expect(
+    shortAppointmentDialog.getByText(
+      "The dentist already has an appointment during this time.",
+    ),
+  ).toBeVisible();
+  await setAppointmentTime(page, shortAppointmentDialog, "2030-01-16", "09:30", "09:45");
+  await expect(
+    shortAppointmentDialog.getByText(
+      "The dentist already has an appointment during this time.",
+    ),
+  ).toHaveCount(0);
   await shortAppointmentDialog.getByRole("button", { name: "Create appointment" }).click();
   await expect(shortAppointmentDialog).toHaveCount(0);
 
@@ -368,6 +385,24 @@ test("mobile navigation keeps its left-side Sheet", async ({ page }) => {
 
 async function switchToEnglish(page: Page): Promise<void> {
   await switchLanguage(page, "EN");
+}
+
+async function setAppointmentTime(
+  page: Page,
+  dialog: Locator,
+  date: string,
+  startTime: string,
+  endTime: string,
+): Promise<void> {
+  await dialog.getByLabel("Appointment date").fill(date);
+  await dialog.getByLabel("Start time").click();
+  await page.getByRole("option", { name: startTime, exact: true }).click();
+  const [hours, minutes] = startTime.split(":").map(Number);
+  const suggestedMinutes = hours * 60 + minutes + 30;
+  const suggestedEnd = `${String(Math.floor(suggestedMinutes / 60)).padStart(2, "0")}:${String(suggestedMinutes % 60).padStart(2, "0")}`;
+  await expect(dialog.getByLabel("End time")).toContainText(suggestedEnd);
+  await dialog.getByLabel("End time").click();
+  await page.getByRole("option", { name: endTime, exact: true }).click();
 }
 
 async function switchLanguage(page: Page, language: "EN" | "VI"): Promise<void> {

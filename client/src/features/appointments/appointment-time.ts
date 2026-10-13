@@ -76,6 +76,25 @@ export function fromDateTimeLocal(value: string, timeZone: string): string | nul
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
+export function fromAppointmentDateAndTime(
+  dateInput: string,
+  timeInput: string,
+  timeZone: string,
+): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) return null;
+  if (timeInput === "24:00") {
+    try {
+      return fromDateTimeLocal(
+        `${addDaysInTimeZone(dateInput, 1, timeZone)}T00:00`,
+        timeZone,
+      );
+    } catch {
+      return null;
+    }
+  }
+  return fromDateTimeLocal(`${dateInput}T${timeInput}`, timeZone);
+}
+
 export function formatAppointmentTime(
   isoTimestamp: string,
   timeZone: string,

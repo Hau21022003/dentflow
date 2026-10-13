@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { resetDatabase } from "./support/database";
 import { E2E_USERS, login } from "./support/login";
 
@@ -338,8 +338,7 @@ async function createAndCheckInAssignedAppointment(page: Page): Promise<void> {
   await patientDialog.getByRole("button", { name: "Add patient" }).click();
   await expect(patientDialog).toHaveCount(0);
 
-  await appointmentDialog.getByLabel("Start time").fill(`${APPOINTMENT_DATE}T09:00`);
-  await appointmentDialog.getByLabel("End time").fill(`${APPOINTMENT_DATE}T09:30`);
+  await setAppointmentTime(page, appointmentDialog, APPOINTMENT_DATE, "09:00", "09:30");
   await appointmentDialog.getByLabel("Visit reason").fill("Synthetic Visit reason");
   await appointmentDialog.getByLabel("Dentist").click();
   await page.getByRole("option", { name: DENTIST_NAME, exact: true }).click();
@@ -369,6 +368,24 @@ function expectIdempotencyKey(value: string | undefined): void {
   expect(value).toMatch(
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   );
+}
+
+async function setAppointmentTime(
+  page: Page,
+  dialog: Locator,
+  date: string,
+  startTime: string,
+  endTime: string,
+): Promise<void> {
+  await dialog.getByLabel("Appointment date").fill(date);
+  await dialog.getByLabel("Start time").click();
+  await page.getByRole("option", { name: startTime, exact: true }).click();
+  const [hours, minutes] = startTime.split(":").map(Number);
+  const suggestedMinutes = hours * 60 + minutes + 30;
+  const suggestedEnd = `${String(Math.floor(suggestedMinutes / 60)).padStart(2, "0")}:${String(suggestedMinutes % 60).padStart(2, "0")}`;
+  await expect(dialog.getByLabel("End time")).toContainText(suggestedEnd);
+  await dialog.getByLabel("End time").click();
+  await page.getByRole("option", { name: endTime, exact: true }).click();
 }
 
 async function switchToEnglish(page: Page): Promise<void> {

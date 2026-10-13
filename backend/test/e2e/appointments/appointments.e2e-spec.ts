@@ -127,6 +127,27 @@ describe('Appointment workflow (e2e)', () => {
     expect(JSON.stringify(audit)).not.toContain('Synthetic operational note');
 
     await fixture.receptionist.agent
+      .get(`${fixture.route}/availability`)
+      .query({
+        startAt: '2026-10-10T02:30:00.000Z',
+        endAt: '2026-10-10T03:30:00.000Z',
+        dentistUserId: fixture.dentist.user.id,
+      })
+      .expect(200)
+      .expect({ dentistConflict: true, operatoryConflict: false });
+
+    await fixture.receptionist.agent
+      .get(`${fixture.route}/availability`)
+      .query({
+        startAt: '2026-10-10T02:30:00.000Z',
+        endAt: '2026-10-10T03:30:00.000Z',
+        dentistUserId: fixture.dentist.user.id,
+        excludeAppointmentId: body.id,
+      })
+      .expect(200)
+      .expect({ dentistConflict: false, operatoryConflict: false });
+
+    await fixture.receptionist.agent
       .post(fixture.route)
       .set('Idempotency-Key', randomUUID())
       .send(
@@ -770,6 +791,16 @@ describe('Appointment workflow (e2e)', () => {
     expect(first.body).toMatchObject({
       operatory: { id: operatory.id, code: 'R-01' },
     });
+
+    await fixture.receptionist.agent
+      .get(`${fixture.route}/availability`)
+      .query({
+        startAt: '2027-10-10T02:30:00.000Z',
+        endAt: '2027-10-10T03:30:00.000Z',
+        operatoryId: operatory.id,
+      })
+      .expect(200)
+      .expect({ dentistConflict: false, operatoryConflict: true });
 
     await fixture.receptionist.agent
       .post(fixture.route)

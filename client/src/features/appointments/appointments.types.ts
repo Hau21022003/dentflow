@@ -126,6 +126,19 @@ export type BookingOptionQuery = {
   search?: string;
 };
 
+export type AppointmentAvailabilityQuery = {
+  startAt: string;
+  endAt: string;
+  dentistUserId?: string;
+  operatoryId?: string;
+  excludeAppointmentId?: string;
+};
+
+export type AppointmentAvailability = {
+  dentistConflict: boolean;
+  operatoryConflict: boolean;
+};
+
 export type CreateAppointmentInput = {
   patientId: string;
   source: AppointmentSource;
