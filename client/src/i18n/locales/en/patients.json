@@ -102,6 +102,11 @@
   },
   "detail": {
     "overview": "Overview",
+    "tabs": {
+      "label": "Patient profile sections",
+      "overview": "Overview",
+      "appointments": "Appointments"
+    },
     "actions": { "back": "Back to patients" },
     "activity": { "ACTIVE": "Active", "INACTIVE": "Inactive" },
     "notFound": {
@@ -130,6 +135,30 @@
       "unassigned": "Dentist not assigned",
       "emptyTitle": "No upcoming appointment",
       "emptyDescription": "There is no booked or confirmed future appointment in this branch."
+    },
+    "appointments": {
+      "upcomingTitle": "Upcoming appointment",
+      "listTitle": "Appointment history",
+      "searchPlaceholder": "Search services, dentists, operatories, or notes…",
+      "allStatuses": "All statuses",
+      "allDentists": "All dentists",
+      "dateRangePlaceholder": "Select a date range",
+      "dateRangeValue": "{{from}} – {{to}}",
+      "clearFilters": "Clear filters",
+      "viewDetails": "View details",
+      "loadErrorTitle": "Could not load appointment history",
+      "emptyTitle": "No appointments",
+      "emptyDescription": "This patient has no appointments matching the current filters in this branch.",
+      "columns": {
+        "dateTime": "Date and time",
+        "service": "Appointment type",
+        "dentist": "Dentist",
+        "operatory": "Room / chair",
+        "duration": "Duration",
+        "status": "Status",
+        "note": "Note",
+        "actions": "Actions"
+      }
     },
     "appointmentStatuses": {
       "BOOKED": "Booked",

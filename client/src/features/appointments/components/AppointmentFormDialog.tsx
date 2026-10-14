@@ -31,6 +31,7 @@ import {
 } from "@/features/appointments/appointments.types";
 import { PatientFormDialog } from "@/features/patients/components/PatientFormDialog";
 import { useBranchPatientsQuery } from "@/features/patients/patients.hooks";
+import type { Patient } from "@/features/patients/patients.types";
 import { handleApiError } from "@/shared/lib/error";
 import {
   idempotencyKeyForIntent,
@@ -102,6 +103,8 @@ type AppointmentFormDialogProps = {
   appointment?: Appointment;
   branchSlug: string;
   defaultDate: string;
+  initialPatient?: Pick<Patient, "id" | "fullName" | "phone">;
+  lockPatient?: boolean;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   tenantSlug: string;
@@ -126,6 +129,7 @@ function initialValues(
   appointment: Appointment | undefined,
   defaultDate: string,
   timeZone: string,
+  initialPatientId: string,
 ): AppointmentFormValues {
   if (appointment) {
     const startAt = toDateTimeLocal(appointment.startAt, timeZone);
@@ -151,7 +155,7 @@ function initialValues(
     };
   }
   return {
-    patientId: "",
+    patientId: initialPatientId,
     source: "PHONE",
     appointmentDate: defaultDate,
     startAt: "09:00",
@@ -179,6 +183,8 @@ export function AppointmentFormDialog({
   appointment,
   branchSlug,
   defaultDate,
+  initialPatient,
+  lockPatient = false,
   onOpenChange,
   open,
   tenantSlug,
@@ -195,8 +201,8 @@ export function AppointmentFormDialog({
   const dentistTerm = useDebouncedValue(dentistSearch.trim());
   const operatoryTerm = useDebouncedValue(operatorySearch.trim());
   const defaults = useMemo(
-    () => initialValues(appointment, defaultDate, timeZone),
-    [appointment, defaultDate, timeZone],
+    () => initialValues(appointment, defaultDate, timeZone, initialPatient?.id ?? ""),
+    [appointment, defaultDate, initialPatient?.id, timeZone],
   );
   const schema = useMemo(
     () =>
@@ -325,11 +331,16 @@ export function AppointmentFormDialog({
     timeZone,
   ]);
   const debouncedAvailabilityInput = useDebouncedValue(availabilityInput);
-  const patientsQuery = useBranchPatientsQuery(tenantSlug, branchSlug, {
-    page: 1,
-    limit: 20,
-    ...(patientTerm ? { search: patientTerm } : {}),
-  });
+  const patientsQuery = useBranchPatientsQuery(
+    tenantSlug,
+    branchSlug,
+    {
+      page: 1,
+      limit: 20,
+      ...(patientTerm ? { search: patientTerm } : {}),
+    },
+    !appointment && !lockPatient,
+  );
   const servicesQuery = useAppointmentServicesQuery(tenantSlug, branchSlug, {
     page: 1,
     limit: 20,
@@ -370,9 +381,11 @@ export function AppointmentFormDialog({
       selectedPatientId,
       appointment?.patient.id === selectedPatientId
         ? appointment.patient.fullName
-        : null,
+        : initialPatient?.id === selectedPatientId
+          ? initialPatient.fullName
+          : null,
     );
-  }, [appointment, patientsQuery.data?.items, selectedPatientId]);
+  }, [appointment, initialPatient, patientsQuery.data?.items, selectedPatientId]);
   const serviceOptions = useMemo(() => {
     const options = (servicesQuery.data?.items ?? []).map((service) => ({
       value: service.id,
@@ -599,7 +612,7 @@ export function AppointmentFormDialog({
                     *
                   </span>
                 </span>
-                {!appointment && (
+                {!appointment && !lockPatient && (
                   <button
                     className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                     onClick={() => setCreatePatientOpen(true)}
@@ -612,7 +625,7 @@ export function AppointmentFormDialog({
               </div>
               <RHFCombobox
                 control={control}
-                disabled={Boolean(appointment)}
+                disabled={Boolean(appointment) || lockPatient}
                 emptyMessage={
                   patientsQuery.isFetching
                     ? t("form.searching")

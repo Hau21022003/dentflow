@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { patientsService } from "./patients.service";
 import type {
+  PatientAppointmentListQuery,
   PatientListQuery,
   UpdatePatientInput,
 } from "./patients.types";
@@ -32,6 +33,17 @@ export const patientQueryKeys = {
       ...patientQueryKeys.detail(tenantSlug, branchSlug, patientId),
       "treatment-plan",
       planId,
+    ] as const,
+  appointments: (
+    tenantSlug: string,
+    branchSlug: string,
+    patientId: string,
+    query: PatientAppointmentListQuery,
+  ) =>
+    [
+      ...patientQueryKeys.detail(tenantSlug, branchSlug, patientId),
+      "appointments",
+      query,
     ] as const,
   alerts: (tenantSlug: string, branchSlug: string, patientId: string) =>
     [...patientQueryKeys.detail(tenantSlug, branchSlug, patientId), "alerts"] as const,
@@ -70,6 +82,31 @@ export function usePatientTreatmentPlanQuery(
         planId!,
       ),
     enabled: Boolean(tenantSlug && branchSlug && patientId && planId),
+  });
+}
+
+export function usePatientAppointmentsQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  patientId: string,
+  query: PatientAppointmentListQuery,
+) {
+  return useQuery({
+    queryKey: patientQueryKeys.appointments(
+      tenantSlug,
+      branchSlug,
+      patientId,
+      query,
+    ),
+    queryFn: () =>
+      patientsService.listAppointments(
+        tenantSlug,
+        branchSlug,
+        patientId,
+        query,
+      ),
+    enabled: Boolean(tenantSlug && branchSlug && patientId),
+    placeholderData: keepPreviousData,
   });
 }
 

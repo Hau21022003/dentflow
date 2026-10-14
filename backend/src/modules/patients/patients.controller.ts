@@ -17,6 +17,7 @@ import type { AuthorizationContext } from '../authorization/authorization-contex
 import { Permission } from '../authorization/authorization.policy';
 import { Idempotent } from '../idempotency/idempotent.decorator';
 import { CreatePatientDto } from './dto/create-patient.dto';
+import { ListPatientAppointmentsQueryDto } from './dto/list-patient-appointments-query.dto';
 import { ListPatientsQueryDto } from './dto/list-patients-query.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import {
@@ -25,6 +26,7 @@ import {
   UpdatePatientAlertDto,
 } from './dto/patient-alert.dto';
 import { PatientAlertsService } from './patient-alerts.service';
+import { PatientAppointmentsService } from './patient-appointments.service';
 import { PatientDetailsService } from './patient-details.service';
 import { PatientsService } from './patients.service';
 
@@ -34,6 +36,7 @@ export class PatientsController {
   constructor(
     private readonly patientsService: PatientsService,
     private readonly patientAlertsService: PatientAlertsService,
+    private readonly patientAppointmentsService: PatientAppointmentsService,
     private readonly patientDetailsService: PatientDetailsService,
   ) {}
 
@@ -53,6 +56,16 @@ export class PatientsController {
     @Query() query: ListPatientsQueryDto,
   ) {
     return this.patientsService.listAssigned(context, query);
+  }
+
+  @Get(':patientId/appointments')
+  @RequirePermissions(Permission.APPOINTMENT_MANAGE)
+  listAppointments(
+    @RequestContext() context: AuthorizationContext,
+    @Param('patientId', ParseUUIDPipe) patientId: string,
+    @Query() query: ListPatientAppointmentsQueryDto,
+  ) {
+    return this.patientAppointmentsService.list(context, patientId, query);
   }
 
   @Get(':patientId')

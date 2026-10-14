@@ -54,6 +54,13 @@ export enum AppointmentSource {
   'startAt',
   'id',
 ])
+@Index('idx_appointments_patient_start_at_id', [
+  'tenantId',
+  'branchId',
+  'patientId',
+  'startAt',
+  'id',
+])
 @Check('chk_appointments_time_range', '"start_at" < "end_at"')
 @Check(
   'chk_appointments_reason_without_service',

@@ -1,3 +1,8 @@
+import type {
+  AppointmentSource,
+  AppointmentStatus,
+} from "@/features/appointments/appointments.types";
+
 export const PATIENT_GENDERS = ["MALE", "FEMALE", "OTHER"] as const;
 
 export type PatientGender = (typeof PATIENT_GENDERS)[number];
@@ -81,6 +86,55 @@ export type PatientPage<TPatient = PatientListItem> = {
   };
 };
 
+export type PatientAppointmentListQuery = {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: AppointmentStatus;
+  dentistUserId?: string;
+  from?: string;
+  to?: string;
+  sortBy?: "startAt";
+  sortOrder?: SortOrder;
+};
+
+export type PatientAppointmentListItem = {
+  id: string;
+  status: AppointmentStatus;
+  source: AppointmentSource;
+  startAt: string;
+  endAt: string;
+  assignedDentist: { id: string; fullName: string } | null;
+  operatory: {
+    id: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+  } | null;
+  service: {
+    id: string;
+    code: string;
+    name: string;
+    amount: number;
+    currency: string;
+    durationMinutes: number;
+  } | null;
+  visitReason: string | null;
+  operationalNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PatientAppointmentPage = {
+  items: PatientAppointmentListItem[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 export type CreatePatientInput = {
   fullName: string;
   phone: string;
@@ -119,7 +173,7 @@ export type PatientOverview = {
   activeAlerts: PatientAlert[];
   nextAppointment: {
     id: string;
-    status: string;
+    status: AppointmentStatus;
     startAt: string;
     endAt: string;
     serviceName: string | null;

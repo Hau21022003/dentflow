@@ -102,6 +102,11 @@
   },
   "detail": {
     "overview": "Tổng quan",
+    "tabs": {
+      "label": "Nội dung hồ sơ bệnh nhân",
+      "overview": "Tổng quan",
+      "appointments": "Lịch hẹn"
+    },
     "actions": { "back": "Quay lại danh sách bệnh nhân" },
     "activity": { "ACTIVE": "Đang hoạt động", "INACTIVE": "Không hoạt động" },
     "notFound": {
@@ -130,6 +135,30 @@
       "unassigned": "Chưa phân công nha sĩ",
       "emptyTitle": "Chưa có lịch hẹn sắp tới",
       "emptyDescription": "Không có lịch đã đặt hoặc xác nhận trong tương lai tại chi nhánh này."
+    },
+    "appointments": {
+      "upcomingTitle": "Lịch hẹn sắp tới",
+      "listTitle": "Danh sách lịch hẹn",
+      "searchPlaceholder": "Tìm dịch vụ, bác sĩ, phòng ghế hoặc ghi chú…",
+      "allStatuses": "Tất cả trạng thái",
+      "allDentists": "Tất cả bác sĩ",
+      "dateRangePlaceholder": "Chọn khoảng thời gian",
+      "dateRangeValue": "{{from}} – {{to}}",
+      "clearFilters": "Xóa bộ lọc",
+      "viewDetails": "Xem chi tiết",
+      "loadErrorTitle": "Không thể tải lịch sử lịch hẹn",
+      "emptyTitle": "Chưa có lịch hẹn",
+      "emptyDescription": "Bệnh nhân chưa có lịch hẹn phù hợp với bộ lọc tại chi nhánh này.",
+      "columns": {
+        "dateTime": "Ngày giờ",
+        "service": "Loại lịch hẹn",
+        "dentist": "Bác sĩ",
+        "operatory": "Phòng / ghế",
+        "duration": "Thời lượng",
+        "status": "Trạng thái",
+        "note": "Ghi chú",
+        "actions": "Thao tác"
+      }
     },
     "appointmentStatuses": {
       "BOOKED": "Đã đặt",

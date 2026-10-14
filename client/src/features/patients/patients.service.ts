@@ -4,6 +4,8 @@ import type {
   AssignedPatientListItem,
   CreatePatientInput,
   Patient,
+  PatientAppointmentListQuery,
+  PatientAppointmentPage,
   PatientOverview,
   PatientAlert,
   PatientAlertInput,
@@ -64,6 +66,19 @@ export const patientsService = {
   ): Promise<PatientTreatmentPlan> {
     const { payload } = await http.get<PatientTreatmentPlan>(
       `${patientRoute(tenantSlug, branchSlug, patientId)}/treatment-plans/${encodeURIComponent(planId)}`,
+    );
+    return payload;
+  },
+
+  async listAppointments(
+    tenantSlug: string,
+    branchSlug: string,
+    patientId: string,
+    query: PatientAppointmentListQuery,
+  ): Promise<PatientAppointmentPage> {
+    const { payload } = await http.get<PatientAppointmentPage>(
+      `${patientRoute(tenantSlug, branchSlug, patientId)}/appointments`,
+      { params: query },
     );
     return payload;
   },

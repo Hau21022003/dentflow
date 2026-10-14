@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { patientQueryKeys } from "@/features/patients/patients.hooks";
 import { appointmentsService } from "./appointments.service";
 import type {
   AppointmentAgendaQuery,
@@ -200,12 +201,26 @@ function useAppointmentMutation<TVariables, TResult>(
   const queryClient = useQueryClient();
   return useMutation<TResult, Error, TVariables>({
     mutationFn,
-    onSuccess: async (_result, command) => {
+    onSuccess: async (result, command) => {
       const scoped = command as { tenantSlug?: string; branchSlug?: string };
       if (scoped.tenantSlug && scoped.branchSlug) {
-        await queryClient.invalidateQueries({
-          queryKey: appointmentQueryKeys.branch(scoped.tenantSlug, scoped.branchSlug),
-        });
+        const patientId = (result as { patient?: { id?: string } })?.patient?.id;
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: appointmentQueryKeys.branch(scoped.tenantSlug, scoped.branchSlug),
+          }),
+          ...(patientId
+            ? [
+                queryClient.invalidateQueries({
+                  queryKey: patientQueryKeys.detail(
+                    scoped.tenantSlug,
+                    scoped.branchSlug,
+                    patientId,
+                  ),
+                }),
+              ]
+            : []),
+        ]);
       }
     },
   });
