@@ -88,6 +88,18 @@ describe('Treatment plan V1 (e2e)', () => {
         isActive: true,
       }),
     );
+    const usdService = await dataSource.manager.save(
+      dataSource.manager.create(Service, {
+        tenantId: tenant.id,
+        code: 'synthetic-whitening',
+        name: 'Synthetic whitening',
+        serviceGroupId: serviceGroup.id,
+        amount: 5000,
+        currency: 'USD',
+        durationMinutes: 45,
+        isActive: true,
+      }),
+    );
     const appointment = await dataSource.manager.save(
       dataSource.manager.create(Appointment, {
         tenantId: tenant.id,
@@ -142,15 +154,31 @@ describe('Treatment plan V1 (e2e)', () => {
             indication: 'Synthetic indication',
             plannedDentistUserId: dentist.user.id,
           },
+          {
+            serviceId: usdService.id,
+            quantity: 2,
+            discountAmount: 500,
+            toothPosition: null,
+            indication: 'Synthetic whitening indication',
+            plannedDentistUserId: dentist.user.id,
+          },
         ],
       })
       .expect(200)
       .expect((response) =>
-        expect(response.body.items[0]).toMatchObject({
-          serviceName: service.name,
-          finalUnitAmount: 100000,
-          toothPosition: '26',
-        }),
+        expect(response.body.items).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              serviceName: service.name,
+              finalUnitAmount: 100000,
+              toothPosition: '26',
+            }),
+            expect.objectContaining({
+              serviceName: usdService.name,
+              finalUnitAmount: 4500,
+            }),
+          ]),
+        ),
       );
     await dentist.agent
       .post(`${root}/visits/${visit.id}/treatment-plans/${planId}/propose`)
@@ -160,9 +188,73 @@ describe('Treatment plan V1 (e2e)', () => {
       .post(`${root}/visits/${visit.id}/treatment-plans`)
       .set('Idempotency-Key', randomUUID())
       .expect(201);
-    await dentist.agent
-      .get(`${root}/treatment-plan-acceptances`)
-      .expect(403);
+    const patientPlansRoute = `${root}/patients/${patient.id}/treatment-plans`;
+    const patientPlans = await receptionist.agent
+      .get(patientPlansRoute)
+      .expect(200);
+    expect(patientPlans.body.meta).toMatchObject({
+      page: 1,
+      limit: 20,
+      total: 2,
+      totalPages: 1,
+    });
+    expect(patientPlans.body.filterOptions.dentists).toEqual([
+      { id: dentist.user.id, fullName: dentist.user.fullName },
+    ]);
+    expect(patientPlans.body.items[0]).toMatchObject({
+      code: 'TP-0002',
+      status: TreatmentPlanStatus.DRAFT,
+      primaryItem: null,
+      plannedDentists: [],
+      progress: { completedItems: 0, totalItems: 0 },
+      totals: [],
+    });
+    expect(patientPlans.body.items[1]).toMatchObject({
+      id: planId,
+      code: 'TP-0001',
+      status: TreatmentPlanStatus.PROPOSED,
+      originVisit: { id: visit.id },
+      plannedDentists: [
+        { id: dentist.user.id, fullName: dentist.user.fullName },
+      ],
+      progress: { completedItems: 0, totalItems: 2 },
+      totals: [
+        { currency: 'USD', amount: 9000 },
+        { currency: 'VND', amount: 100000 },
+      ],
+    });
+    expect([service.name, usdService.name]).toContain(
+      patientPlans.body.items[1].primaryItem.serviceName,
+    );
+    await receptionist.agent
+      .get(`${patientPlansRoute}?search=whitening%20indication`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.meta.total).toBe(1);
+        expect(response.body.items[0].id).toBe(planId);
+      });
+    await receptionist.agent
+      .get(`${patientPlansRoute}?status=DRAFT`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.meta.total).toBe(1);
+        expect(response.body.items[0].code).toBe('TP-0002');
+      });
+    await receptionist.agent
+      .get(`${patientPlansRoute}?dentistUserId=${dentist.user.id}`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.meta.total).toBe(1);
+        expect(response.body.items[0].id).toBe(planId);
+      });
+    await receptionist.agent
+      .get(`${patientPlansRoute}?sortBy=createdAt&sortOrder=ASC`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.items[0].id).toBe(planId);
+      });
+    await dentist.agent.get(patientPlansRoute).expect(403);
+    await dentist.agent.get(`${root}/treatment-plan-acceptances`).expect(403);
     const queue = await receptionist.agent
       .get(`${root}/treatment-plan-acceptances?page=1&limit=10`)
       .expect(200);
@@ -190,7 +282,15 @@ describe('Treatment plan V1 (e2e)', () => {
       TenantRoleCode.RECEPTIONIST,
     );
     await otherBranchReceptionist.agent
-      .get(`/tenants/${tenant.slug}/branches/${otherBranch.slug}/treatment-plan-acceptances`)
+      .get(
+        `/tenants/${tenant.slug}/branches/${otherBranch.slug}/treatment-plan-acceptances`,
+      )
+      .expect(200)
+      .expect((response) => expect(response.body.items).toHaveLength(0));
+    await otherBranchReceptionist.agent
+      .get(
+        `/tenants/${tenant.slug}/branches/${otherBranch.slug}/patients/${patient.id}/treatment-plans`,
+      )
       .expect(200)
       .expect((response) => expect(response.body.items).toHaveLength(0));
     const otherTenant = await fixtures.createTenant({
@@ -204,9 +304,16 @@ describe('Treatment plan V1 (e2e)', () => {
       TenantRoleCode.RECEPTIONIST,
     );
     await otherTenantReceptionist.agent
-      .get(`/tenants/${otherTenant.slug}/branches/${otherTenantBranch.slug}/treatment-plan-acceptances`)
+      .get(
+        `/tenants/${otherTenant.slug}/branches/${otherTenantBranch.slug}/treatment-plan-acceptances`,
+      )
       .expect(200)
       .expect((response) => expect(response.body.items).toHaveLength(0));
+    await otherTenantReceptionist.agent
+      .get(
+        `/tenants/${otherTenant.slug}/branches/${otherTenantBranch.slug}/patients/${patient.id}/treatment-plans`,
+      )
+      .expect(404);
     const acceptKey = randomUUID();
     const receipt = await receptionist.agent
       .post(`${root}/treatment-plans/${planId}/accept`)

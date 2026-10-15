@@ -72,7 +72,7 @@ và chạy `npm run lint`, `npm run build`.
 
 Các route branch mới của Patient/Operatory:
 
-- `/workspace/:tenantSlug/branches/:branchSlug/reception/patients/:patientId` dùng đồng thời `patient.administrative.manage` và `patient.clinical.read`; render ba tab `?tab=overview|appointments|visits`. Tab Appointments dùng patient-scoped history API, giữ Appointment detail bằng `appointmentId`, và tái sử dụng các dialog create/edit/action hiện có với Patient hiện tại bị khóa khi tạo mới. Tab Visits là danh sách read-only branch-scoped, có filter/sort/pagination server-side và chưa mở Visit Details, addendum hoặc Create Visit.
+- `/workspace/:tenantSlug/branches/:branchSlug/reception/patients/:patientId` dùng đồng thời `patient.administrative.manage` và `patient.clinical.read`; render bốn tab `?tab=overview|appointments|visits|treatment-plans`. Tab Appointments dùng patient-scoped history API, giữ Appointment detail bằng `appointmentId`, và tái sử dụng các dialog create/edit/action hiện có với Patient hiện tại bị khóa khi tạo mới. Tab Visits là danh sách read-only branch-scoped, có filter/sort/pagination server-side và chưa mở Visit Details, addendum hoặc Create Visit. Tab Treatment Plans cũng read-only, dùng filter/sort/pagination server-side, giữ sheet chi tiết bằng `planId`, không có lọc thời gian và không thay thế workflow tạo/sửa Plan trong Visit đang mở của Dentist.
 - `/workspace/:tenantSlug/branches/:branchSlug/operatories` dùng `operatory.manage`, xuất hiện trong sidebar cho Tenant Admin/Branch Admin. Receptionist không thấy route quản lý nhưng picker lịch hẹn vẫn lấy Operatory active từ booking-options API.
 
 ## Quy ước frontend

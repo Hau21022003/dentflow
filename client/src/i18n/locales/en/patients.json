@@ -106,7 +106,8 @@
       "label": "Patient profile sections",
       "overview": "Overview",
       "appointments": "Appointments",
-      "visits": "Visits"
+      "visits": "Visits",
+      "treatment-plans": "Treatment plans"
     },
     "actions": { "back": "Back to patients" },
     "activity": { "ACTIVE": "Active", "INACTIVE": "Inactive" },
@@ -203,6 +204,37 @@
       "noResults": {
         "title": "No matching visits",
         "description": "Change or clear the filters to see other visits."
+      }
+    },
+    "treatmentPlans": {
+      "title": "Treatment plans",
+      "description": "Review this patient's treatment plans in the current branch.",
+      "searchPlaceholder": "Search plan code, service, indication, or tooth…",
+      "allStatuses": "All statuses",
+      "allDentists": "All dentists",
+      "clearFilters": "Clear filters",
+      "viewDetails": "View details",
+      "visitLabel": "Visit {{date}}",
+      "sortNewest": "Newest first",
+      "sortOldest": "Oldest first",
+      "loadErrorTitle": "Could not load treatment plans",
+      "columns": {
+        "plan": "Plan",
+        "dentist": "Dentist",
+        "visit": "Visit",
+        "createdAt": "Created",
+        "status": "Status",
+        "progress": "Progress",
+        "total": "Planned total",
+        "actions": "Actions"
+      },
+      "empty": {
+        "title": "No treatment plans",
+        "description": "No treatment plans have been created for this patient in the current branch."
+      },
+      "noResults": {
+        "title": "No matching treatment plans",
+        "description": "Change or clear the filters to view other treatment plans."
       }
     },
     "appointmentStatuses": {

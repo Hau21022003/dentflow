@@ -1,7 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, In } from 'typeorm';
+import { Brackets, DataSource, In } from 'typeorm';
 import { treatmentPlanCode } from '../../common/database/tenant-display-number';
+import {
+  applyOffsetPagination,
+  toPageMeta,
+} from '../../common/database/query-builder-list.util';
+import { SortOrder } from '../../common/dto/page-list-query.dto';
 import type { AuthorizationContext } from '../authorization/authorization-context';
 import {
   Appointment,
@@ -16,6 +21,8 @@ import {
   TreatmentPlanStatus,
 } from '../treatment-plans/entities/treatment-plan.entity';
 import { User } from '../users/entities/user.entity';
+import { Visit } from '../visits/entities/visit.entity';
+import type { ListPatientTreatmentPlansQueryDto } from './dto/list-patient-treatment-plans-query.dto';
 import {
   PatientAlertsService,
   type PatientAlertResponse,
@@ -71,6 +78,34 @@ export type PatientOverviewResponse = {
       completedItems: number;
       pendingItems: number;
     } | null;
+  };
+};
+
+export type PatientTreatmentPlanListResponse = {
+  items: Array<{
+    id: string;
+    code: string;
+    status: TreatmentPlanStatus;
+    createdAt: Date;
+    updatedAt: Date;
+    originVisit: { id: string; startedAt: Date };
+    primaryItem: {
+      serviceName: string;
+      indication: string | null;
+      toothPosition: string | null;
+    } | null;
+    plannedDentists: Array<{ id: string; fullName: string }>;
+    progress: { completedItems: number; totalItems: number };
+    totals: Array<{ currency: string; amount: number }>;
+  }>;
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  filterOptions: {
+    dentists: Array<{ id: string; fullName: string }>;
   };
 };
 
@@ -209,6 +244,188 @@ export class PatientDetailsService {
               pendingItems: featuredPending,
             }
           : null,
+      },
+    };
+  }
+
+  async listTreatmentPlans(
+    context: AuthorizationContext,
+    patientId: string,
+    query: ListPatientTreatmentPlansQueryDto,
+  ): Promise<PatientTreatmentPlanListResponse> {
+    await this.patientsService.get(context, patientId);
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const sortOrder = query.sortOrder ?? SortOrder.DESC;
+    const tenantId = context.tenant!.id;
+    const branchId = context.branch!.id;
+    const plansRepository = this.dataSource.getRepository(TreatmentPlan);
+    const itemsRepository = this.dataSource.getRepository(TreatmentItem);
+    const usersRepository = this.dataSource.getRepository(User);
+    const visitsRepository = this.dataSource.getRepository(Visit);
+    const plansQuery = plansRepository
+      .createQueryBuilder('plan')
+      .where('plan.tenantId = :tenantId', { tenantId })
+      .andWhere('plan.branchId = :branchId', { branchId })
+      .andWhere('plan.patientId = :patientId', { patientId });
+
+    const search = query.search?.trim();
+    if (search) {
+      plansQuery.andWhere(
+        new Brackets((searchQuery) => {
+          searchQuery
+            .where(
+              "('TP-' || LPAD(CAST(plan.displayNumber AS text), 4, '0')) ILIKE :planSearch",
+              { planSearch: `%${search}%` },
+            )
+            .orWhere(
+              `EXISTS (
+                SELECT 1
+                FROM treatment_items search_item
+                WHERE search_item.treatment_plan_id = plan.id
+                  AND (
+                    search_item.service_code ILIKE :planSearch
+                    OR search_item.service_name ILIKE :planSearch
+                    OR search_item.indication ILIKE :planSearch
+                    OR search_item.tooth_position ILIKE :planSearch
+                  )
+              )`,
+            );
+        }),
+      );
+    }
+    if (query.status) {
+      plansQuery.andWhere('plan.status = :planStatus', {
+        planStatus: query.status,
+      });
+    }
+    if (query.dentistUserId) {
+      plansQuery.andWhere(
+        `EXISTS (
+          SELECT 1
+          FROM treatment_items dentist_item
+          WHERE dentist_item.treatment_plan_id = plan.id
+            AND dentist_item.planned_dentist_user_id = :dentistUserId
+        )`,
+        { dentistUserId: query.dentistUserId },
+      );
+    }
+    plansQuery
+      .orderBy('plan.createdAt', sortOrder)
+      .addOrderBy('plan.id', sortOrder);
+    applyOffsetPagination(plansQuery, { page, limit });
+
+    const dentistOptionsQuery = usersRepository
+      .createQueryBuilder('dentist')
+      .innerJoin(
+        TreatmentItem,
+        'filter_item',
+        'filter_item.plannedDentistUserId = dentist.id',
+      )
+      .innerJoin(
+        TreatmentPlan,
+        'filter_plan',
+        'filter_plan.id = filter_item.treatmentPlanId',
+      )
+      .where('filter_plan.tenantId = :tenantId', { tenantId })
+      .andWhere('filter_plan.branchId = :branchId', { branchId })
+      .andWhere('filter_plan.patientId = :patientId', { patientId })
+      .select('dentist.id', 'id')
+      .addSelect('dentist.fullName', 'fullName')
+      .distinct(true)
+      .orderBy('dentist.fullName', 'ASC')
+      .addOrderBy('dentist.id', 'ASC');
+
+    const [[plans, total], dentistRows] = await Promise.all([
+      plansQuery.getManyAndCount(),
+      dentistOptionsQuery.getRawMany<{ id: string; fullName: string }>(),
+    ]);
+    const planIds = plans.map((plan) => plan.id);
+    const visitIds = plans.map((plan) => plan.originVisitId);
+    const items = planIds.length
+      ? await itemsRepository.find({
+          where: { treatmentPlanId: In(planIds) },
+          order: { createdAt: 'ASC', id: 'ASC' },
+        })
+      : [];
+    const dentistIds = [
+      ...new Set(items.map((item) => item.plannedDentistUserId)),
+    ];
+    const [dentists, visits] = await Promise.all([
+      dentistIds.length
+        ? usersRepository.find({ where: { id: In(dentistIds) } })
+        : Promise.resolve([]),
+      visitIds.length
+        ? visitsRepository.find({ where: { id: In(visitIds) } })
+        : Promise.resolve([]),
+    ]);
+    const itemsByPlan = new Map<string, TreatmentItem[]>();
+    for (const item of items) {
+      const planItems = itemsByPlan.get(item.treatmentPlanId) ?? [];
+      planItems.push(item);
+      itemsByPlan.set(item.treatmentPlanId, planItems);
+    }
+    const dentistById = new Map(
+      dentists.map((dentist) => [dentist.id, dentist]),
+    );
+    const visitById = new Map(visits.map((visit) => [visit.id, visit]));
+
+    return {
+      items: plans.map((plan) => {
+        const planItems = itemsByPlan.get(plan.id) ?? [];
+        const primaryItem = planItems[0] ?? null;
+        const plannedDentists: Array<{ id: string; fullName: string }> = [];
+        const seenDentists = new Set<string>();
+        const totalsByCurrency = new Map<string, number>();
+        for (const item of planItems) {
+          const dentist = dentistById.get(item.plannedDentistUserId);
+          if (dentist && !seenDentists.has(dentist.id)) {
+            seenDentists.add(dentist.id);
+            plannedDentists.push({
+              id: dentist.id,
+              fullName: dentist.fullName,
+            });
+          }
+          totalsByCurrency.set(
+            item.currency,
+            (totalsByCurrency.get(item.currency) ?? 0) +
+              item.finalUnitAmount * item.quantity,
+          );
+        }
+        const originVisit = visitById.get(plan.originVisitId)!;
+        return {
+          id: plan.id,
+          code: treatmentPlanCode(Number(plan.displayNumber)),
+          status: plan.status,
+          createdAt: plan.createdAt,
+          updatedAt: plan.updatedAt,
+          originVisit: {
+            id: plan.originVisitId,
+            startedAt: originVisit.createdAt,
+          },
+          primaryItem: primaryItem
+            ? {
+                serviceName: primaryItem.serviceName,
+                indication: primaryItem.indication,
+                toothPosition: primaryItem.toothPosition,
+              }
+            : null,
+          plannedDentists,
+          progress: {
+            completedItems: planItems.filter(
+              (item) => item.status === TreatmentItemStatus.COMPLETED,
+            ).length,
+            totalItems: planItems.length,
+          },
+          totals: [...totalsByCurrency.entries()]
+            .sort(([left], [right]) => left.localeCompare(right))
+            .map(([currency, amount]) => ({ currency, amount })),
+        };
+      }),
+      meta: toPageMeta({ page, limit }, total),
+      filterOptions: {
+        dentists: dentistRows,
       },
     };
   }

@@ -6,6 +6,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { PatientAppointmentsTab } from "@/features/patients/components/PatientAppointmentsTab";
 import { PatientFormDialog } from "@/features/patients/components/PatientFormDialog";
 import { PatientOverviewTab } from "@/features/patients/components/PatientOverviewTab";
+import { PatientTreatmentPlansTab } from "@/features/patients/components/PatientTreatmentPlansTab";
 import { PatientVisitsTab } from "@/features/patients/components/PatientVisitsTab";
 import { usePatientOverviewQuery } from "@/features/patients/patients.hooks";
 import { ApiError, getErrorMessage } from "@/shared/lib/error";
@@ -17,12 +18,17 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useRouteWorkspaceContext } from "../workspace/use-route-workspace-context";
 
-type PatientDetailTab = "overview" | "appointments" | "visits";
+type PatientDetailTab =
+  | "overview"
+  | "appointments"
+  | "visits"
+  | "treatment-plans";
 
 const PATIENT_DETAIL_TABS: PatientDetailTab[] = [
   "overview",
   "appointments",
   "visits",
+  "treatment-plans",
 ];
 
 function initials(name: string): string {
@@ -89,6 +95,7 @@ export function PatientDetailPage() {
     const params = new URLSearchParams(searchParams);
     params.set("tab", tab);
     if (tab !== "appointments") params.delete("appointmentId");
+    if (tab !== "treatment-plans") params.delete("planId");
     setSearchParams(params);
   }
 
@@ -208,6 +215,22 @@ export function PatientDetailPage() {
       {activeTab === "visits" && (
         <div aria-labelledby="patient-detail-tab-visits" id="patient-detail-panel-visits" role="tabpanel" tabIndex={0}>
           <PatientVisitsTab branchSlug={branchSlug} locale={locale} patientId={patientId} tenantSlug={tenantSlug} timeZone={timeZone} />
+        </div>
+      )}
+      {activeTab === "treatment-plans" && (
+        <div
+          aria-labelledby="patient-detail-tab-treatment-plans"
+          id="patient-detail-panel-treatment-plans"
+          role="tabpanel"
+          tabIndex={0}
+        >
+          <PatientTreatmentPlansTab
+            branchSlug={branchSlug}
+            locale={locale}
+            patientId={patientId}
+            tenantSlug={tenantSlug}
+            timeZone={timeZone}
+          />
         </div>
       )}
 

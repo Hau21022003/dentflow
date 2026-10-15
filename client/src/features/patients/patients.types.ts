@@ -2,6 +2,10 @@ import type {
   AppointmentSource,
   AppointmentStatus,
 } from "@/features/appointments/appointments.types";
+import type {
+  TreatmentItemStatus,
+  TreatmentPlanStatus,
+} from "@/features/treatment-plans/treatment-plans.types";
 import type { VisitStatus } from "@/features/visits/visits.types";
 
 export const PATIENT_GENDERS = ["MALE", "FEMALE", "OTHER"] as const;
@@ -181,6 +185,46 @@ export type PatientVisitPage = {
   };
 };
 
+export type PatientTreatmentPlanListQuery = {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: TreatmentPlanStatus;
+  dentistUserId?: string;
+  sortBy?: "createdAt";
+  sortOrder?: SortOrder;
+};
+
+export type PatientTreatmentPlanListItem = {
+  id: string;
+  code: string;
+  status: TreatmentPlanStatus;
+  createdAt: string;
+  updatedAt: string;
+  originVisit: { id: string; startedAt: string };
+  primaryItem: {
+    serviceName: string;
+    indication: string | null;
+    toothPosition: string | null;
+  } | null;
+  plannedDentists: Array<{ id: string; fullName: string }>;
+  progress: { completedItems: number; totalItems: number };
+  totals: Array<{ currency: string; amount: number }>;
+};
+
+export type PatientTreatmentPlanPage = {
+  items: PatientTreatmentPlanListItem[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  filterOptions: {
+    dentists: Array<{ id: string; fullName: string }>;
+  };
+};
+
 export type CreatePatientInput = {
   fullName: string;
   phone: string;
@@ -251,7 +295,7 @@ export type PatientTreatmentPlan = {
   code: string;
   patientId: string;
   originVisitId: string;
-  status: string;
+  status: TreatmentPlanStatus;
   acceptedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -265,7 +309,7 @@ export type PatientTreatmentPlan = {
     quantity: number;
     toothPosition: string | null;
     indication: string | null;
-    status: string;
+    status: TreatmentItemStatus;
     plannedDentist: { id: string; fullName: string } | null;
   }>;
 };

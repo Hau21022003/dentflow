@@ -16,8 +16,8 @@ Tenant Admin → Branch Admin → Receptionist → Dental Assistant → Dentist 
 | Vai trò | Phạm vi mặc định | Trách nhiệm chính | Ranh giới bắt buộc |
 | --- | --- | --- | --- |
 | Tenant Admin | Toàn bộ branch trong tenant | Cấu hình chuỗi, người dùng, plan SaaS, báo cáo tổng hợp | Không ghi clinical note nếu không có thêm role Dentist |
-| Branch Admin | Một hoặc nhiều branch được gán | Điều phối vận hành, hồ sơ Patient, Operatory và nhân sự tại branch | Clinical Patient Overview và danh sách Visit/diagnosis cùng branch chỉ đọc; không mở full Visit, ghi alert/plan hoặc truy cập branch ngoài assignment |
-| Receptionist | Một hoặc nhiều branch được gán | Tiếp nhận, Patient Overview, lịch hẹn, invoice và thu tiền | Clinical overview và danh sách Visit/diagnosis cùng branch chỉ đọc; không chẩn đoán, mở full Visit hay ghi alert/plan/note |
+| Branch Admin | Một hoặc nhiều branch được gán | Điều phối vận hành, hồ sơ Patient, Operatory và nhân sự tại branch | Clinical Patient Overview, danh sách Visit/diagnosis và hồ sơ Treatment Plan cùng branch chỉ đọc; không mở full Visit, ghi alert/plan hoặc truy cập branch ngoài assignment |
+| Receptionist | Một hoặc nhiều branch được gán | Tiếp nhận, Patient Overview, lịch hẹn, invoice và thu tiền | Clinical overview, danh sách Visit/diagnosis và hồ sơ Treatment Plan cùng branch chỉ đọc; không chẩn đoán, mở full Visit hay ghi alert/plan/note |
 | Dentist | Một hoặc nhiều branch được gán, ca được phân công | Khám, chẩn đoán, điều trị và tái khám | Không chỉnh sửa payment hoặc ca không được gán |
 | Dental Assistant | Một hoặc nhiều branch được gán, ca được phân công | Chuẩn bị/ghi nhận hỗ trợ ghế nha khoa | Không kết luận chẩn đoán hoặc duyệt điều trị |
 
@@ -265,7 +265,7 @@ Migration `1786060800005-CreateAuthorizationRoleAssignments` và module `authori
 
 Permission đã được định nghĩa bằng policy map bất biến tại `modules/authorization/authorization.policy.ts`; không lưu thành entity/database enum và không có endpoint CRUD. Snapshot auth trả platform permission và effective permission theo tenant/branch để client ẩn/hiện UI, nhưng policy backend vẫn là nguồn quyết định quyền.
 
-Policy có `patient.administrative.manage` và `patient.clinical.read` cho `RECEPTIONIST`/`BRANCH_ADMIN`; `patient.clinical.read` cho phép đọc Patient Overview và danh sách Visit branch-scoped gồm diagnosis, nhưng không cấp full Visit, addendum hoặc quyền ghi clinical. `patient-alert.manage` chỉ cho `DENTIST` và luôn kết hợp case assignment tại service. `operatory.manage` dành cho `TENANT_ADMIN`/`BRANCH_ADMIN`; `appointment.manage` chỉ cho phép Receptionist chọn Operatory active khi đặt lịch. Tenant Admin không tự có `patient.clinical.read`. Mỗi action mới phải được thêm có chủ đích vào policy, guard và test; mặc định không khớp permission là `403`.
+Policy có `patient.administrative.manage` và `patient.clinical.read` cho `RECEPTIONIST`/`BRANCH_ADMIN`; cặp quyền này cho phép đọc Patient Overview, danh sách Visit branch-scoped gồm diagnosis và danh sách/detail Treatment Plan read-only trong hồ sơ Patient, nhưng không cấp full Visit, addendum hoặc quyền ghi clinical. `patient-alert.manage` chỉ cho `DENTIST` và luôn kết hợp case assignment tại service. `operatory.manage` dành cho `TENANT_ADMIN`/`BRANCH_ADMIN`; `appointment.manage` chỉ cho phép Receptionist chọn Operatory active khi đặt lịch. Tenant Admin không tự có `patient.clinical.read`. Mỗi action mới phải được thêm có chủ đích vào policy, guard và test; mặc định không khớp permission là `403`.
 
 ### 10.5 Entity nghiệp vụ dùng làm điều kiện quyền
 

@@ -18,6 +18,7 @@ import { Permission } from '../authorization/authorization.policy';
 import { Idempotent } from '../idempotency/idempotent.decorator';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { ListPatientAppointmentsQueryDto } from './dto/list-patient-appointments-query.dto';
+import { ListPatientTreatmentPlansQueryDto } from './dto/list-patient-treatment-plans-query.dto';
 import { ListPatientVisitsQueryDto } from './dto/list-patient-visits-query.dto';
 import { ListPatientsQueryDto } from './dto/list-patients-query.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
@@ -116,6 +117,23 @@ export class PatientsController {
       context,
       patientId,
       planId,
+    );
+  }
+
+  @Get(':patientId/treatment-plans')
+  @RequirePermissions(
+    Permission.PATIENT_ADMINISTRATIVE_MANAGE,
+    Permission.PATIENT_CLINICAL_READ,
+  )
+  listTreatmentPlans(
+    @RequestContext() context: AuthorizationContext,
+    @Param('patientId', ParseUUIDPipe) patientId: string,
+    @Query() query: ListPatientTreatmentPlansQueryDto,
+  ) {
+    return this.patientDetailsService.listTreatmentPlans(
+      context,
+      patientId,
+      query,
     );
   }
 

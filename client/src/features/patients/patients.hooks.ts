@@ -8,6 +8,7 @@ import { patientsService } from "./patients.service";
 import type {
   PatientAppointmentListQuery,
   PatientListQuery,
+  PatientTreatmentPlanListQuery,
   PatientVisitListQuery,
   UpdatePatientInput,
 } from "./patients.types";
@@ -34,6 +35,17 @@ export const patientQueryKeys = {
       ...patientQueryKeys.detail(tenantSlug, branchSlug, patientId),
       "treatment-plan",
       planId,
+    ] as const,
+  treatmentPlans: (
+    tenantSlug: string,
+    branchSlug: string,
+    patientId: string,
+    query: PatientTreatmentPlanListQuery,
+  ) =>
+    [
+      ...patientQueryKeys.detail(tenantSlug, branchSlug, patientId),
+      "treatment-plans",
+      query,
     ] as const,
   appointments: (
     tenantSlug: string,
@@ -94,6 +106,31 @@ export function usePatientTreatmentPlanQuery(
         planId!,
       ),
     enabled: Boolean(tenantSlug && branchSlug && patientId && planId),
+  });
+}
+
+export function usePatientTreatmentPlansQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  patientId: string,
+  query: PatientTreatmentPlanListQuery,
+) {
+  return useQuery({
+    queryKey: patientQueryKeys.treatmentPlans(
+      tenantSlug,
+      branchSlug,
+      patientId,
+      query,
+    ),
+    queryFn: () =>
+      patientsService.listTreatmentPlans(
+        tenantSlug,
+        branchSlug,
+        patientId,
+        query,
+      ),
+    enabled: Boolean(tenantSlug && branchSlug && patientId),
+    placeholderData: keepPreviousData,
   });
 }
 

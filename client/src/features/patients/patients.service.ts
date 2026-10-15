@@ -11,6 +11,8 @@ import type {
   PatientAlertInput,
   ResolvePatientAlertReasonCode,
   PatientTreatmentPlan,
+  PatientTreatmentPlanListQuery,
+  PatientTreatmentPlanPage,
   PatientListQuery,
   PatientPage,
   PatientVisitListQuery,
@@ -68,6 +70,19 @@ export const patientsService = {
   ): Promise<PatientTreatmentPlan> {
     const { payload } = await http.get<PatientTreatmentPlan>(
       `${patientRoute(tenantSlug, branchSlug, patientId)}/treatment-plans/${encodeURIComponent(planId)}`,
+    );
+    return payload;
+  },
+
+  async listTreatmentPlans(
+    tenantSlug: string,
+    branchSlug: string,
+    patientId: string,
+    query: PatientTreatmentPlanListQuery,
+  ): Promise<PatientTreatmentPlanPage> {
+    const { payload } = await http.get<PatientTreatmentPlanPage>(
+      `${patientRoute(tenantSlug, branchSlug, patientId)}/treatment-plans`,
+      { params: query },
     );
     return payload;
   },

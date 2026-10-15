@@ -106,7 +106,8 @@
       "label": "Nội dung hồ sơ bệnh nhân",
       "overview": "Tổng quan",
       "appointments": "Lịch hẹn",
-      "visits": "Lần khám"
+      "visits": "Lần khám",
+      "treatment-plans": "Kế hoạch điều trị"
     },
     "actions": { "back": "Quay lại danh sách bệnh nhân" },
     "activity": { "ACTIVE": "Đang hoạt động", "INACTIVE": "Không hoạt động" },
@@ -203,6 +204,37 @@
       "noResults": {
         "title": "Không tìm thấy lần khám phù hợp",
         "description": "Hãy thay đổi hoặc xóa bộ lọc để xem các lần khám khác."
+      }
+    },
+    "treatmentPlans": {
+      "title": "Kế hoạch điều trị",
+      "description": "Theo dõi các kế hoạch điều trị của bệnh nhân tại chi nhánh hiện tại.",
+      "searchPlaceholder": "Tìm theo mã, dịch vụ, chỉ định hoặc vị trí răng…",
+      "allStatuses": "Tất cả trạng thái",
+      "allDentists": "Tất cả bác sĩ",
+      "clearFilters": "Xóa bộ lọc",
+      "viewDetails": "Xem chi tiết",
+      "visitLabel": "Lần khám {{date}}",
+      "sortNewest": "Mới nhất trước",
+      "sortOldest": "Cũ nhất trước",
+      "loadErrorTitle": "Không thể tải kế hoạch điều trị",
+      "columns": {
+        "plan": "Kế hoạch",
+        "dentist": "Bác sĩ",
+        "visit": "Lần khám",
+        "createdAt": "Ngày tạo",
+        "status": "Trạng thái",
+        "progress": "Tiến độ",
+        "total": "Tổng chi phí dự kiến",
+        "actions": "Thao tác"
+      },
+      "empty": {
+        "title": "Chưa có kế hoạch điều trị",
+        "description": "Bệnh nhân chưa có kế hoạch điều trị tại chi nhánh hiện tại."
+      },
+      "noResults": {
+        "title": "Không tìm thấy kế hoạch phù hợp",
+        "description": "Hãy thay đổi hoặc xóa bộ lọc để xem các kế hoạch khác."
       }
     },
     "appointmentStatuses": {
