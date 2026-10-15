@@ -105,7 +105,8 @@
     "tabs": {
       "label": "Patient profile sections",
       "overview": "Overview",
-      "appointments": "Appointments"
+      "appointments": "Appointments",
+      "visits": "Visits"
     },
     "actions": { "back": "Back to patients" },
     "activity": { "ACTIVE": "Active", "INACTIVE": "Inactive" },
@@ -158,6 +159,50 @@
         "status": "Status",
         "note": "Note",
         "actions": "Actions"
+      }
+    },
+    "visits": {
+      "title": "Visit history",
+      "description": "Review this patient's visits in the current branch.",
+      "viewDetails": "View details",
+      "comingSoon": "Feature under development",
+      "loadErrorTitle": "Could not load visit history",
+      "summary": {
+        "total": "Total visits",
+        "completed": "Completed",
+        "inProgress": "In progress"
+      },
+      "statuses": {
+        "OPEN": "In progress",
+        "COMPLETED": "Completed"
+      },
+      "filters": {
+        "status": "Status",
+        "dentist": "Dentist",
+        "dateRange": "Date range",
+        "dateRangePlaceholder": "Select a date range",
+        "dateRangeValue": "{{from}} – {{to}}",
+        "allStatuses": "All statuses",
+        "allDentists": "All dentists",
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "clear": "Clear filters"
+      },
+      "columns": {
+        "dateTime": "Visit date",
+        "dentist": "Dentist",
+        "operatory": "Room / chair",
+        "diagnosis": "Diagnosis",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "empty": {
+        "title": "No visits yet",
+        "description": "This patient has no visits in the current branch."
+      },
+      "noResults": {
+        "title": "No matching visits",
+        "description": "Change or clear the filters to see other visits."
       }
     },
     "appointmentStatuses": {

@@ -2,6 +2,7 @@ import type {
   AppointmentSource,
   AppointmentStatus,
 } from "@/features/appointments/appointments.types";
+import type { VisitStatus } from "@/features/visits/visits.types";
 
 export const PATIENT_GENDERS = ["MALE", "FEMALE", "OTHER"] as const;
 
@@ -132,6 +133,51 @@ export type PatientAppointmentPage = {
     limit: number;
     total: number;
     totalPages: number;
+  };
+};
+
+export type PatientVisitListQuery = {
+  page: number;
+  limit: number;
+  status?: VisitStatus;
+  dentistUserId?: string;
+  from?: string;
+  to?: string;
+  sortOrder?: SortOrder;
+};
+
+export type PatientVisitListItem = {
+  id: string;
+  appointmentId: string;
+  status: VisitStatus;
+  startedAt: string | null;
+  completedAt: string | null;
+  durationMinutes: number | null;
+  dentist: { id: string; fullName: string };
+  operatory: {
+    id: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+  } | null;
+  diagnosisSummary: string | null;
+};
+
+export type PatientVisitPage = {
+  items: PatientVisitListItem[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  summary: {
+    total: number;
+    completed: number;
+    inProgress: number;
+  };
+  filterOptions: {
+    dentists: Array<{ id: string; fullName: string }>;
   };
 };
 

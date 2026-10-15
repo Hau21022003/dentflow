@@ -18,6 +18,7 @@ import { Permission } from '../authorization/authorization.policy';
 import { Idempotent } from '../idempotency/idempotent.decorator';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { ListPatientAppointmentsQueryDto } from './dto/list-patient-appointments-query.dto';
+import { ListPatientVisitsQueryDto } from './dto/list-patient-visits-query.dto';
 import { ListPatientsQueryDto } from './dto/list-patients-query.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import {
@@ -28,6 +29,7 @@ import {
 import { PatientAlertsService } from './patient-alerts.service';
 import { PatientAppointmentsService } from './patient-appointments.service';
 import { PatientDetailsService } from './patient-details.service';
+import { PatientVisitsService } from './patient-visits.service';
 import { PatientsService } from './patients.service';
 
 @Controller('tenants/:tenantSlug/branches/:branchSlug/patients')
@@ -37,6 +39,7 @@ export class PatientsController {
     private readonly patientsService: PatientsService,
     private readonly patientAlertsService: PatientAlertsService,
     private readonly patientAppointmentsService: PatientAppointmentsService,
+    private readonly patientVisitsService: PatientVisitsService,
     private readonly patientDetailsService: PatientDetailsService,
   ) {}
 
@@ -66,6 +69,16 @@ export class PatientsController {
     @Query() query: ListPatientAppointmentsQueryDto,
   ) {
     return this.patientAppointmentsService.list(context, patientId, query);
+  }
+
+  @Get(':patientId/visits')
+  @RequirePermissions(Permission.PATIENT_CLINICAL_READ)
+  listVisits(
+    @RequestContext() context: AuthorizationContext,
+    @Param('patientId', ParseUUIDPipe) patientId: string,
+    @Query() query: ListPatientVisitsQueryDto,
+  ) {
+    return this.patientVisitsService.list(context, patientId, query);
   }
 
   @Get(':patientId')

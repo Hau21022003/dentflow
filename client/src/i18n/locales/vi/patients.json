@@ -105,7 +105,8 @@
     "tabs": {
       "label": "Nội dung hồ sơ bệnh nhân",
       "overview": "Tổng quan",
-      "appointments": "Lịch hẹn"
+      "appointments": "Lịch hẹn",
+      "visits": "Lần khám"
     },
     "actions": { "back": "Quay lại danh sách bệnh nhân" },
     "activity": { "ACTIVE": "Đang hoạt động", "INACTIVE": "Không hoạt động" },
@@ -158,6 +159,50 @@
         "status": "Trạng thái",
         "note": "Ghi chú",
         "actions": "Thao tác"
+      }
+    },
+    "visits": {
+      "title": "Lịch sử lần khám",
+      "description": "Theo dõi các lần khám của bệnh nhân tại chi nhánh hiện tại.",
+      "viewDetails": "Xem chi tiết",
+      "comingSoon": "Tính năng đang phát triển",
+      "loadErrorTitle": "Không thể tải lịch sử lần khám",
+      "summary": {
+        "total": "Tổng lần khám",
+        "completed": "Đã hoàn thành",
+        "inProgress": "Đang thực hiện"
+      },
+      "statuses": {
+        "OPEN": "Đang thực hiện",
+        "COMPLETED": "Đã hoàn thành"
+      },
+      "filters": {
+        "status": "Trạng thái",
+        "dentist": "Bác sĩ",
+        "dateRange": "Khoảng thời gian",
+        "dateRangePlaceholder": "Chọn khoảng thời gian",
+        "dateRangeValue": "{{from}} – {{to}}",
+        "allStatuses": "Tất cả trạng thái",
+        "allDentists": "Tất cả bác sĩ",
+        "newest": "Mới nhất trước",
+        "oldest": "Cũ nhất trước",
+        "clear": "Xóa bộ lọc"
+      },
+      "columns": {
+        "dateTime": "Ngày khám",
+        "dentist": "Bác sĩ",
+        "operatory": "Phòng / ghế",
+        "diagnosis": "Chẩn đoán",
+        "status": "Trạng thái",
+        "actions": "Thao tác"
+      },
+      "empty": {
+        "title": "Chưa có lần khám",
+        "description": "Bệnh nhân chưa có lần khám tại chi nhánh này."
+      },
+      "noResults": {
+        "title": "Không tìm thấy lần khám phù hợp",
+        "description": "Hãy thay đổi hoặc xóa bộ lọc để xem các lần khám khác."
       }
     },
     "appointmentStatuses": {

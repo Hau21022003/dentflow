@@ -6,6 +6,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { PatientAppointmentsTab } from "@/features/patients/components/PatientAppointmentsTab";
 import { PatientFormDialog } from "@/features/patients/components/PatientFormDialog";
 import { PatientOverviewTab } from "@/features/patients/components/PatientOverviewTab";
+import { PatientVisitsTab } from "@/features/patients/components/PatientVisitsTab";
 import { usePatientOverviewQuery } from "@/features/patients/patients.hooks";
 import { ApiError, getErrorMessage } from "@/shared/lib/error";
 import { localeForLanguage } from "@/shared/lib/money";
@@ -16,9 +17,13 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useRouteWorkspaceContext } from "../workspace/use-route-workspace-context";
 
-type PatientDetailTab = "overview" | "appointments";
+type PatientDetailTab = "overview" | "appointments" | "visits";
 
-const PATIENT_DETAIL_TABS: PatientDetailTab[] = ["overview", "appointments"];
+const PATIENT_DETAIL_TABS: PatientDetailTab[] = [
+  "overview",
+  "appointments",
+  "visits",
+];
 
 function initials(name: string): string {
   return name
@@ -66,8 +71,12 @@ export function PatientDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const overviewQuery = usePatientOverviewQuery(tenantSlug, branchSlug, patientId);
   const [editOpen, setEditOpen] = useState(false);
-  const activeTab: PatientDetailTab =
-    searchParams.get("tab") === "appointments" ? "appointments" : "overview";
+  const requestedTab = searchParams.get("tab");
+  const activeTab: PatientDetailTab = PATIENT_DETAIL_TABS.includes(
+    requestedTab as PatientDetailTab,
+  )
+    ? (requestedTab as PatientDetailTab)
+    : "overview";
   const locale = localeForLanguage(i18n.resolvedLanguage);
   const timeZone = branch?.branch.timezone ?? "Asia/Ho_Chi_Minh";
   const canAssign = branch?.roles.includes("BRANCH_ADMIN") ?? false;
@@ -186,13 +195,19 @@ export function PatientDetailPage() {
         </div>
       </Card>
 
-      {activeTab === "overview" ? (
+      {activeTab === "overview" && (
         <div aria-labelledby="patient-detail-tab-overview" id="patient-detail-panel-overview" role="tabpanel" tabIndex={0}>
           <PatientOverviewTab branchSlug={branchSlug} locale={locale} overview={overview} patientId={patientId} tenantSlug={tenantSlug} timeZone={timeZone} />
         </div>
-      ) : (
+      )}
+      {activeTab === "appointments" && (
         <div aria-labelledby="patient-detail-tab-appointments" id="patient-detail-panel-appointments" role="tabpanel" tabIndex={0}>
           <PatientAppointmentsTab branchSlug={branchSlug} canAssign={canAssign} nextAppointment={overview.nextAppointment} patient={patient} tenantSlug={tenantSlug} timeZone={timeZone} />
+        </div>
+      )}
+      {activeTab === "visits" && (
+        <div aria-labelledby="patient-detail-tab-visits" id="patient-detail-panel-visits" role="tabpanel" tabIndex={0}>
+          <PatientVisitsTab branchSlug={branchSlug} locale={locale} patientId={patientId} tenantSlug={tenantSlug} timeZone={timeZone} />
         </div>
       )}
 

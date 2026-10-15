@@ -13,6 +13,8 @@ import type {
   PatientTreatmentPlan,
   PatientListQuery,
   PatientPage,
+  PatientVisitListQuery,
+  PatientVisitPage,
   UpdatePatientInput,
 } from "./patients.types";
 
@@ -78,6 +80,19 @@ export const patientsService = {
   ): Promise<PatientAppointmentPage> {
     const { payload } = await http.get<PatientAppointmentPage>(
       `${patientRoute(tenantSlug, branchSlug, patientId)}/appointments`,
+      { params: query },
+    );
+    return payload;
+  },
+
+  async listVisits(
+    tenantSlug: string,
+    branchSlug: string,
+    patientId: string,
+    query: PatientVisitListQuery,
+  ): Promise<PatientVisitPage> {
+    const { payload } = await http.get<PatientVisitPage>(
+      `${patientRoute(tenantSlug, branchSlug, patientId)}/visits`,
       { params: query },
     );
     return payload;
