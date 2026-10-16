@@ -32,6 +32,8 @@ export const PATHS = {
     "/workspace/:tenantSlug/branches/:branchSlug/doctor/patients",
   workspaceDoctorVisit:
     "/workspace/:tenantSlug/branches/:branchSlug/doctor/appointments/:appointmentId/visit",
+  workspaceDoctorTreatmentPlan:
+    "/workspace/:tenantSlug/branches/:branchSlug/doctor/appointments/:appointmentId/visit/treatment-plans/:planId",
   workspaceUploadTest:
     "/workspace/:tenantSlug/branches/:branchSlug/upload-test",
   workspaceDataTableMobileDemo:
@@ -85,6 +87,14 @@ export const pathFor = {
     date: string,
   ) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/doctor/appointments/${toPathSegment(appointmentId)}/visit?date=${toPathSegment(date)}`,
+  workspaceDoctorTreatmentPlan: (
+    tenantSlug: string,
+    branchSlug: string,
+    appointmentId: string,
+    planId: string,
+    date: string,
+  ) =>
+    `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/doctor/appointments/${toPathSegment(appointmentId)}/visit/treatment-plans/${toPathSegment(planId)}?date=${toPathSegment(date)}`,
   workspaceUploadTest: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/upload-test`,
   workspaceDataTableMobileDemo: (tenantSlug: string, branchSlug: string) =>

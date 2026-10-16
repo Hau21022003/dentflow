@@ -5,15 +5,20 @@ import type { TreatmentPlan } from "./treatment-plans.types";
 export const treatmentPlanQueryKeys = {
   all: ["treatment-plans"] as const,
   branch: (tenantSlug: string, branchSlug: string) => [...treatmentPlanQueryKeys.all, "branch", tenantSlug, branchSlug] as const,
-  list: (scope: TreatmentPlanScope) => [...treatmentPlanQueryKeys.branch(scope.tenantSlug, scope.branchSlug), "visit", scope.visitId, "list"] as const,
-  detail: (scope: TreatmentPlanScope, planId: string) => [...treatmentPlanQueryKeys.list(scope), "detail", planId] as const,
+  lists: (scope: TreatmentPlanScope) => [...treatmentPlanQueryKeys.branch(scope.tenantSlug, scope.branchSlug), "visit", scope.visitId, "list"] as const,
+  list: (scope: TreatmentPlanScope, page: number, limit: number) => [...treatmentPlanQueryKeys.lists(scope), { page, limit }] as const,
+  detail: (scope: TreatmentPlanScope, planId: string) => [...treatmentPlanQueryKeys.lists(scope), "detail", planId] as const,
   events: (scope: TreatmentPlanScope, planId: string, itemId: string) => [...treatmentPlanQueryKeys.detail(scope, planId), "item", itemId, "events"] as const,
 };
 
-export function useTreatmentPlansQuery(scope: TreatmentPlanScope, enabled = true) {
+export function useTreatmentPlansQuery(
+  scope: TreatmentPlanScope,
+  pagination: { page: number; limit: number } = { page: 1, limit: 100 },
+  enabled = true,
+) {
   return useQuery({
-    queryKey: treatmentPlanQueryKeys.list(scope),
-    queryFn: () => treatmentPlansService.list(scope),
+    queryKey: treatmentPlanQueryKeys.list(scope, pagination.page, pagination.limit),
+    queryFn: () => treatmentPlansService.list(scope, pagination.page, pagination.limit),
     enabled: Boolean(scope.tenantSlug && scope.branchSlug && scope.visitId && enabled),
   });
 }
@@ -47,7 +52,7 @@ function usePlanMutation<TVariables, TResult extends TreatmentPlan>(
       if (!scope.tenantSlug || !scope.branchSlug || !scope.visitId) return;
       const resolvedScope = scope as TreatmentPlanScope;
       queryClient.setQueryData(treatmentPlanQueryKeys.detail(resolvedScope, plan.id), plan);
-      await queryClient.invalidateQueries({ queryKey: treatmentPlanQueryKeys.list(resolvedScope) });
+      await queryClient.invalidateQueries({ queryKey: treatmentPlanQueryKeys.lists(resolvedScope) });
     },
   });
 }
@@ -64,7 +69,7 @@ export function useRecordTreatmentItemEventMutation() {
     mutationFn: treatmentPlansService.recordEvent,
     onSuccess: async (_result, command) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: treatmentPlanQueryKeys.list(command) }),
+        queryClient.invalidateQueries({ queryKey: treatmentPlanQueryKeys.lists(command) }),
         queryClient.invalidateQueries({ queryKey: treatmentPlanQueryKeys.detail(command, command.planId) }),
         queryClient.invalidateQueries({ queryKey: treatmentPlanQueryKeys.events(command, command.planId, command.itemId) }),
       ]);

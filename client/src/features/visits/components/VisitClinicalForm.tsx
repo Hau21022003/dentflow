@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,25 +26,33 @@ import {
   type VisitClinicalField,
 } from "@/features/visits/visits.types";
 import { handleApiError } from "@/shared/lib/error";
-import { toast } from "sonner";
 import {
   idempotencyKeyForIntent,
   type IdempotencyIntent,
 } from "@/shared/lib/idempotency";
+import { cn } from "@/shared/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, ClipboardPenLine, CloudUpload } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { z } from "zod";
 
 const CLINICAL_TEXT_MAX_LENGTH = 10_000;
+const FORM_ID = "visit-clinical-form";
 
 type VisitFormValues = Record<VisitClinicalField, string>;
 
 type VisitClinicalFormProps = {
   appointmentId: string;
+  aside?: ReactNode;
   branchSlug: string;
+  completedExtras?: ReactNode;
+  locale: string;
   tenantSlug: string;
+  timeZone: string;
+  visible?: boolean;
   visit: Visit;
 };
 
@@ -62,12 +71,10 @@ function updateInputForVisit(
   values: VisitFormValues,
 ): UpdateVisitInput {
   const input: UpdateVisitInput = {};
-
   for (const field of VISIT_CLINICAL_FIELDS) {
     const next = values[field].trim() || null;
     if (next !== visit[field]) input[field] = next;
   }
-
   return input;
 }
 
@@ -77,8 +84,13 @@ function hasClinicalContent(visit: Visit): boolean {
 
 export function VisitClinicalForm({
   appointmentId,
+  aside,
   branchSlug,
+  completedExtras,
+  locale,
   tenantSlug,
+  timeZone,
+  visible = true,
   visit,
 }: VisitClinicalFormProps) {
   const { t } = useTranslation("visits");
@@ -120,6 +132,15 @@ export function VisitClinicalForm({
   });
   const isPending = updateMutation.isPending || completeMutation.isPending;
   const canComplete = hasClinicalContent(visit) && !isDirty && !isPending;
+  const savedTime = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone,
+      }).format(new Date(visit.updatedAt)),
+    [locale, timeZone, visit.updatedAt],
+  );
 
   useEffect(() => {
     reset(defaults);
@@ -132,7 +153,6 @@ export function VisitClinicalForm({
       reset(defaults);
       return;
     }
-
     try {
       const nextIntent = idempotencyKeyForIntent(saveIntent, {
         operation: "clinical.visit.update",
@@ -151,7 +171,7 @@ export function VisitClinicalForm({
       });
       setSaveIntent(null);
       reset(formValuesForVisit(saved));
-      toast.success(t("feedback.saved"));
+      toast.success(t("feedback.saved"), { position: "top-right" });
     } catch (error) {
       handleApiError<VisitFormValues>({ error, setError });
     }
@@ -175,7 +195,7 @@ export function VisitClinicalForm({
       });
       setCompleteIntent(null);
       setCompleteDialogOpen(false);
-      toast.success(t("feedback.completed"));
+      toast.success(t("feedback.completed"), { position: "top-right" });
     } catch (error) {
       handleApiError({ error, onMessage: setCompleteError });
     }
@@ -183,84 +203,168 @@ export function VisitClinicalForm({
 
   if (visit.status === "COMPLETED") {
     return (
-      <section className="space-y-5" aria-labelledby="visit-original-content">
-        <div>
-          <h2 className="text-lg font-semibold" id="visit-original-content">
-            {t("completed.originalContent")}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("completed.originalContentDescription")}
-          </p>
-        </div>
-        <div className="grid gap-5">
-          {VISIT_CLINICAL_FIELDS.map((field) => {
-            const textareaId = `visit-${field}`;
-            return (
-              <div className="grid gap-2" key={field}>
-                <Label htmlFor={textareaId}>{t(`fields.${field}`)}</Label>
-                <Textarea
-                  id={textareaId}
-                  readOnly
-                  rows={4}
-                  value={visit[field] ?? ""}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      <Card className={cn(!visible && "hidden")}>
+        <CardContent className="space-y-6 p-5 sm:p-6">
+          <section className="space-y-5" aria-labelledby="visit-original-content">
+            <div>
+              <h2 className="text-lg font-semibold" id="visit-original-content">
+                {t("completed.originalContent")}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("completed.originalContentDescription")}
+              </p>
+            </div>
+            <div className="grid gap-5 md:grid-cols-2">
+              {VISIT_CLINICAL_FIELDS.map((field, index) => {
+                const textareaId = `visit-${field}`;
+                const fullWidth = index === 0 || index >= 3;
+                return (
+                  <div
+                    className={cn("grid gap-2", fullWidth && "md:col-span-2")}
+                    key={field}
+                  >
+                    <Label htmlFor={textareaId}>{t(`fields.${field}`)}</Label>
+                    <Textarea
+                      id={textareaId}
+                      readOnly
+                      rows={field === "clinicalNote" ? 4 : 3}
+                      value={visit[field] ?? ""}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+          {completedExtras}
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <>
-      <form className="space-y-6" noValidate onSubmit={handleSubmit(saveDraft)}>
-        <div>
-          <h2 className="text-lg font-semibold">{t("open.title")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("open.description")}
-          </p>
-        </div>
-        {errors.root?.server?.message && (
-          <Alert variant="destructive">{errors.root.server.message}</Alert>
+      <form
+        className={cn(
+          "grid items-start gap-4 lg:grid-cols-[minmax(0,13fr)_minmax(18rem,7fr)]",
+          !visible && "hidden",
         )}
-        <div className="grid gap-5">
-          {VISIT_CLINICAL_FIELDS.map((field) => (
+        id={FORM_ID}
+        noValidate
+        onSubmit={handleSubmit(saveDraft)}
+      >
+        <Card>
+          <CardHeader className="flex-row items-start gap-3 border-b">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+              <ClipboardPenLine aria-hidden="true" className="size-5" />
+            </span>
+            <div>
+              <CardTitle>{t("open.title")}</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("open.description")}
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5 pt-5">
+            {errors.root?.server?.message && (
+              <Alert variant="destructive">{errors.root.server.message}</Alert>
+            )}
             <RHFTextarea
               control={control}
               fullWidth
-              key={field}
-              label={t(`fields.${field}`)}
+              label={t("fields.symptoms")}
               maxLength={CLINICAL_TEXT_MAX_LENGTH}
-              name={field}
+              name="symptoms"
+              rows={3}
+            />
+            <div className="grid gap-5 md:grid-cols-2">
+              <RHFTextarea
+                control={control}
+                fullWidth
+                label={t("fields.relevantHistory")}
+                maxLength={CLINICAL_TEXT_MAX_LENGTH}
+                name="relevantHistory"
+                rows={3}
+              />
+              <RHFTextarea
+                control={control}
+                fullWidth
+                label={t("fields.examination")}
+                maxLength={CLINICAL_TEXT_MAX_LENGTH}
+                name="examination"
+                rows={3}
+              />
+            </div>
+            <RHFTextarea
+              control={control}
+              fullWidth
+              label={t("fields.diagnosis")}
+              maxLength={CLINICAL_TEXT_MAX_LENGTH}
+              name="diagnosis"
+              rows={3}
+            />
+            <RHFTextarea
+              control={control}
+              fullWidth
+              label={t("fields.clinicalNote")}
+              maxLength={CLINICAL_TEXT_MAX_LENGTH}
+              name="clinicalNote"
               rows={4}
             />
-          ))}
-        </div>
-        {!hasClinicalContent(visit) && (
-          <p className="text-sm text-muted-foreground">
-            {t("open.completeRequiresContent")}
-          </p>
-        )}
-        {isDirty && (
-          <p className="text-sm text-muted-foreground">
-            {t("open.saveBeforeComplete")}
-          </p>
-        )}
-        <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:justify-end">
-          <Button disabled={!isDirty || isPending} type="submit" variant="outline">
-            {updateMutation.isPending && <Spinner aria-label={t("actions.saving")} />}
-            {t("actions.saveDraft")}
-          </Button>
-          <Button
-            disabled={!canComplete}
-            onClick={() => setCompleteDialogOpen(true)}
-            type="button"
-          >
-            {t("actions.complete")}
-          </Button>
-        </div>
+            {!hasClinicalContent(visit) && (
+              <p className="text-sm text-muted-foreground">
+                {t("open.completeRequiresContent")}
+              </p>
+            )}
+            {isDirty && (
+              <p className="text-sm text-muted-foreground">
+                {t("open.saveBeforeComplete")}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+        <aside className="min-w-0 space-y-4">{aside}</aside>
       </form>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 shadow-[0_-8px_30px_-20px_rgba(15,23,42,0.35)] backdrop-blur lg:left-[17rem]">
+        <div className="mx-auto flex max-w-[96rem] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground sm:mr-2">
+            {updateMutation.isPending ? (
+              <Spinner aria-label={t("actions.saving")} />
+            ) : isDirty ? (
+              <CloudUpload aria-hidden="true" className="size-4 text-amber-600" />
+            ) : (
+              <CheckCircle2 aria-hidden="true" className="size-4 text-primary" />
+            )}
+            <span>
+              {updateMutation.isPending
+                ? t("saveStatus.saving")
+                : isDirty
+                  ? t("saveStatus.unsaved")
+                  : t("saveStatus.savedAt", { time: savedTime })}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <Button
+              disabled={!isDirty || isPending}
+              form={FORM_ID}
+              type="submit"
+              variant="outline"
+            >
+              {updateMutation.isPending && (
+                <Spinner aria-label={t("actions.saving")} />
+              )}
+              {t("actions.saveDraft")}
+            </Button>
+            <Button
+              disabled={!canComplete}
+              onClick={() => setCompleteDialogOpen(true)}
+              type="button"
+            >
+              {t("actions.complete")}
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <AlertDialog
         onOpenChange={(open) => {

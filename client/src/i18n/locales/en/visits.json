@@ -8,6 +8,7 @@
   "actions": {
     "open": "Open Visit",
     "backToSchedule": "Back to my schedule",
+    "backToVisit": "Back to Visit",
     "retry": "Try again",
     "start": "Start visit",
     "starting": "Starting visit",
@@ -18,6 +19,36 @@
     "confirmComplete": "Complete Visit",
     "cancel": "Cancel",
     "addAddendum": "Add addendum"
+  },
+  "header": {
+    "age": "{{count}} years",
+    "viewPatientProfile": "View patient profile",
+    "visitTime": "Visit date and time",
+    "operatory": "Room / chair",
+    "noOperatory": "No room / chair assigned",
+    "dentist": "Dentist in charge",
+    "status": "Visit status"
+  },
+  "tabs": {
+    "label": "Visit sections",
+    "clinical": "Clinical record",
+    "safety": "Safety notes",
+    "treatmentPlans": "Related treatment plans"
+  },
+  "references": {
+    "safetyTitle": "Important safety alerts",
+    "plansTitle": "Related treatment plans",
+    "viewAll": "View all",
+    "alertLoadError": "Could not load safety alerts.",
+    "planLoadError": "Could not load treatment plans.",
+    "noActiveAlerts": "No active safety alerts.",
+    "noPlans": "No related treatment plans yet.",
+    "planWithoutItems": "No items yet"
+  },
+  "saveStatus": {
+    "saving": "Saving changes",
+    "unsaved": "Unsaved changes",
+    "savedAt": "Saved at {{time}}"
   },
   "appointment": {
     "patient": "Patient",

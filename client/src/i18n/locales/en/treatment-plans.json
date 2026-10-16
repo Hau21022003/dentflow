@@ -15,6 +15,25 @@
   "validation": { "required": "This field is required.", "quantity": "Quantity must be between 1 and 10,000.", "discount": "Discount cannot be negative.", "reasonCode": "Use uppercase letters, numbers, and underscores only." },
   "editor": { "noItems": "Add at least one treatment item before proposing this plan.", "item": "Item {{count}}", "saveBeforePropose": "Save your draft changes before proposing." },
   "detail": { "title": "Plan details", "originVisit": "Origin Visit: {{id}}", "quantity": "Quantity: {{count}}" },
+  "visitList": {
+    "title": "Related treatment plans",
+    "description": "Quickly review a plan or open its detail page to manage treatment items.",
+    "detailPageDescription": "Manage treatment plan content and state without interrupting the Visit record.",
+    "quickView": "Treatment plan quick view",
+    "quickViewDescription": "Read-only information; open the detail page to take action.",
+    "quickViewPlan": "Quick view {{code}}",
+    "openDetail": "View details",
+    "retry": "Try again",
+    "noItems": "No items yet",
+    "progress": "{{completed}} / {{total}} completed",
+    "columns": {
+      "plan": "Plan",
+      "createdAt": "Created",
+      "progress": "Progress",
+      "status": "Status",
+      "actions": "Actions"
+    }
+  },
   "events": { "title": "Event history", "loading": "Loading event history...", "loadError": "Could not load event history. Please try again.", "empty": "No execution events have been recorded.", "loadMore": "Load more", "types": { "IN_PROGRESS": "In progress", "COMPLETED": "Completed", "CANCELLED": "Cancelled" } },
   "errors": { "plansLoad": "Could not load treatment plans. Please retry.", "planLoad": "Could not load this treatment plan. Please retry." },
   "dialogs": { "reopen": { "title": "Reopen treatment plan", "description": "This clears the previous acceptance and returns the plan to Draft.", "submit": "Reopen" }, "cancelPlan": { "title": "Cancel treatment plan", "description": "This cancels the plan and all pending items. This cannot be used after execution events exist.", "submit": "Cancel plan" }, "cancelItem": { "title": "Cancel treatment item", "description": "Record a cancellation event for this item.", "submit": "Cancel item" } }

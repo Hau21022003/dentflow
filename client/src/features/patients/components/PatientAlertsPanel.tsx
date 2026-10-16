@@ -24,7 +24,7 @@ import type {
   ResolvePatientAlertReasonCode,
 } from "@/features/patients/patients.types";
 import { getErrorMessage } from "@/shared/lib/error";
-import { AlertTriangle, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, Eye, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -41,12 +41,13 @@ export function PatientAlertsPanel({
   const query = usePatientAlertsQuery(tenantSlug, branchSlug, patientId);
   const [editing, setEditing] = useState<PatientAlert | null | undefined>();
   const [resolving, setResolving] = useState<PatientAlert | null>(null);
+  const [viewing, setViewing] = useState<PatientAlert | null>(null);
 
   return (
-    <Card>
+    <Card aria-labelledby="patient-alerts-title" role="region">
       <CardHeader className="flex-row items-center justify-between gap-3 border-b">
         <div>
-          <CardTitle>{t("alertsManagement.title")}</CardTitle>
+          <CardTitle id="patient-alerts-title">{t("alertsManagement.title")}</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">{t("alertsManagement.description")}</p>
         </div>
         <Button onClick={() => setEditing(null)} size="sm"><Plus /> {t("alertsManagement.add")}</Button>
@@ -67,12 +68,15 @@ export function PatientAlertsPanel({
                 </div>
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-6">{alert.message}</p>
               </div>
-              {!alert.resolvedAt && (
-                <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => setViewing(alert)} size="sm" variant="outline"><Eye /> {t("actions.view")}</Button>
+                {!alert.resolvedAt && (
+                  <>
                   <Button onClick={() => setEditing(alert)} size="sm" variant="outline"><Pencil /> {t("actions.edit")}</Button>
                   <Button onClick={() => setResolving(alert)} size="sm" variant="outline">{t("alertsManagement.resolve")}</Button>
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </div>
           </article>
         ))}
@@ -95,7 +99,49 @@ export function PatientAlertsPanel({
           tenantSlug={tenantSlug}
         />
       )}
+      {viewing && (
+        <AlertViewDialog alert={viewing} onClose={() => setViewing(null)} />
+      )}
     </Card>
+  );
+}
+
+function AlertViewDialog({
+  alert,
+  onClose,
+}: {
+  alert: PatientAlert;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("patients");
+  return (
+    <Dialog onOpenChange={(open) => !open && onClose()} open>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("alertsManagement.viewTitle")}</DialogTitle>
+          <DialogDescription>{t("alertsManagement.viewDescription")}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={alert.severity === "CRITICAL" ? "destructive" : "outline"}>
+              {t(`detail.alerts.severities.${alert.severity}`)}
+            </Badge>
+            <Badge variant="secondary">
+              {t(`detail.alerts.categories.${alert.category}`)}
+            </Badge>
+            {alert.resolvedAt && (
+              <Badge variant="outline">{t("alertsManagement.resolved")}</Badge>
+            )}
+          </div>
+          <p className="whitespace-pre-wrap text-sm leading-6">{alert.message}</p>
+        </div>
+        <DialogFooter>
+          <Button onClick={onClose} type="button" variant="outline">
+            {t("alertsManagement.close")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

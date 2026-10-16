@@ -58,7 +58,9 @@ export type AssignedAppointment = {
   endAt: string;
   patient: {
     id: string;
+    code: string;
     fullName: string;
+    phone: string;
     gender: PatientGender;
     dateOfBirth: string | null;
   };

@@ -41,6 +41,11 @@ test("Dentist starts, saves, completes, and adds to a Visit", async ({ page }) =
   );
 
   await expect(page.getByRole("heading", { name: "Clinical record" })).toBeVisible();
+  await expect(page.getByText("0909999933", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "View patient profile" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Clinical record" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Safety notes" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Related treatment plans" })).toBeVisible();
   const completeButton = page.getByRole("button", { name: "Complete Visit", exact: true });
   await expect(completeButton).toBeDisabled();
 
@@ -75,6 +80,8 @@ test("Dentist starts, saves, completes, and adds to a Visit", async ({ page }) =
   await expect(page.getByLabel("Symptoms")).toHaveValue("Synthetic visit symptom");
   await expect(page.getByLabel("Symptoms")).toHaveJSProperty("readOnly", true);
   await expect(page.getByRole("button", { name: "Save draft" })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Safety notes" })).toBeDisabled();
+  await expect(page.getByRole("tab", { name: "Related treatment plans" })).toBeDisabled();
 
   await page
     .getByRole("textbox", { name: "Addendum" })
@@ -95,6 +102,10 @@ test("Dentist starts, saves, completes, and adds to a Visit", async ({ page }) =
   await page.reload();
   await expect(page.getByLabel("Symptoms")).toHaveValue("Synthetic visit symptom");
   await expect(page.getByText("Synthetic completed Visit addendum", { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
+  ).toBe(false);
 });
 
 test("assigned Dentist creates, edits, and resolves a Patient safety alert", async ({
@@ -106,6 +117,7 @@ test("assigned Dentist creates, edits, and resolves a Patient safety alert", asy
 
   await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
   await page.getByRole("button", { name: "Start Visit" }).click();
+  await page.getByRole("tab", { name: "Safety notes" }).click();
   await expect(
     page.getByRole("heading", { name: "Patient safety alerts" }),
   ).toBeVisible();
@@ -126,7 +138,8 @@ test("assigned Dentist creates, edits, and resolves a Patient safety alert", asy
   await createDialog.getByRole("button", { name: "Save changes" }).click();
   expectIdempotencyKey((await createRequest).headers()["idempotency-key"]);
   await expect(createDialog).toHaveCount(0);
-  const alertCard = page
+  const alertsPanel = page.getByRole("region", { name: "Patient safety alerts" });
+  const alertCard = alertsPanel
     .locator("article")
     .filter({ hasText: "Synthetic browser penicillin allergy" });
   await expect(alertCard).toContainText("Critical");
@@ -141,7 +154,7 @@ test("assigned Dentist creates, edits, and resolves a Patient safety alert", asy
     .fill("Synthetic browser severe penicillin allergy");
   await editDialog.getByRole("button", { name: "Save changes" }).click();
   await expect(editDialog).toHaveCount(0);
-  const updatedAlertCard = page
+  const updatedAlertCard = alertsPanel
     .locator("article")
     .filter({ hasText: "Synthetic browser severe penicillin allergy" });
   await updatedAlertCard.getByRole("button", { name: "Resolve" }).click();
@@ -173,14 +186,16 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
 
   await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
   await page.getByRole("button", { name: "Start Visit" }).click();
-  await expect(page.getByRole("heading", { name: "Treatment plans" })).toBeVisible();
-  const treatmentPlans = page.locator('section[aria-labelledby="treatment-plans-title"]');
+  await page.getByRole("tab", { name: "Related treatment plans" }).click();
+  await expect(page.getByRole("heading", { name: "Related treatment plans" })).toBeVisible();
 
   const createRequest = page.waitForRequest((request) =>
     request.method() === "POST" && new URL(request.url()).pathname.endsWith("/treatment-plans"),
   );
-  await treatmentPlans.getByRole("button", { name: "Create draft" }).click();
+  await page.getByRole("button", { name: "Create draft" }).click();
   expectIdempotencyKey((await createRequest).headers()["idempotency-key"]);
+  await expect(page).toHaveURL(/\/visit\/treatment-plans\/[0-9a-f-]+\?date=/);
+  const treatmentPlans = page.getByRole("region", { name: "Plan details" });
 
   await treatmentPlans.getByRole("button", { name: "Add item" }).click();
   await treatmentPlans.getByRole("combobox", { name: "Service" }).first().click();
@@ -236,7 +251,8 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   await page.reload();
   await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
   await page.getByRole("button", { name: "Continue Visit" }).click();
-  await treatmentPlans.getByRole("button", { name: /Treatment plan/ }).click();
+  await page.getByRole("tab", { name: "Related treatment plans" }).click();
+  await page.getByRole("button", { name: "View details" }).first().click();
 
   const startEventResponse = page.waitForResponse((response) =>
     response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/events"),
@@ -262,7 +278,9 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   const secondCreateRequest = page.waitForRequest((request) =>
     request.method() === "POST" && new URL(request.url()).pathname.endsWith("/treatment-plans"),
   );
-  await treatmentPlans.getByRole("button", { name: "Create draft" }).click();
+  await page.getByRole("link", { name: "Back to Visit" }).click();
+  await page.getByRole("tab", { name: "Related treatment plans" }).click();
+  await page.getByRole("button", { name: "Create draft" }).click();
   await secondCreateRequest;
   await expect(treatmentPlans.getByRole("button", { name: "Add item" })).toBeVisible();
   await treatmentPlans.getByRole("button", { name: "Add item" }).click();

@@ -29,7 +29,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 
-type TreatmentPlansPanelProps = TreatmentPlanScope & { user: AuthUser | null | undefined };
+type TreatmentPlansPanelProps = TreatmentPlanScope & {
+  initialPlanId?: string;
+  showList?: boolean;
+  user: AuthUser | null | undefined;
+};
 type ItemForm = SyncTreatmentPlanItemInput;
 type EditorForm = { items: ItemForm[] };
 type ReasonForm = { reasonCode: string };
@@ -271,18 +275,27 @@ function EventHistory({ scope, planId, itemId }: { scope: TreatmentPlanScope; pl
   </div>;
 }
 
-export function TreatmentPlansPanel({ tenantSlug, branchSlug, visitId, user }: TreatmentPlansPanelProps) {
+export function TreatmentPlansPanel({
+  tenantSlug,
+  branchSlug,
+  visitId,
+  initialPlanId,
+  showList = true,
+  user,
+}: TreatmentPlansPanelProps) {
   const { t } = useTranslation("treatmentPlans");
   const scope = { tenantSlug, branchSlug, visitId };
   const canWrite = hasBranchPermission(user, { slug: tenantSlug }, branchSlug, PERMISSIONS.treatmentPlanWrite);
   const canExecute = canWrite && hasBranchPermission(user, { slug: tenantSlug }, branchSlug, PERMISSIONS.treatmentItemExecute);
-  const plans = useTreatmentPlansQuery(scope, canWrite);
+  const plans = useTreatmentPlansQuery(scope, { page: 1, limit: 100 }, canWrite);
   const create = useCreateTreatmentPlanMutation();
   const propose = useProposeTreatmentPlanMutation();
   const reopen = useReopenTreatmentPlanMutation();
   const cancel = useCancelTreatmentPlanMutation();
   const eventMutation = useRecordTreatmentItemEventMutation();
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
+    initialPlanId ?? null,
+  );
   const selected = useTreatmentPlanQuery(scope, selectedPlanId, canWrite);
   const [reasonAction, setReasonAction] = useState<{ kind: "reopen" | "cancelPlan" | "cancelItem"; itemId?: string } | null>(null);
   const [historyItemId, setHistoryItemId] = useState<string | null>(null);
@@ -340,12 +353,13 @@ export function TreatmentPlansPanel({ tenantSlug, branchSlug, visitId, user }: T
   const reasonDescription = reasonAction ? t(`dialogs.${reasonAction.kind}.description`) : "";
   const reasonPending = reopen.isPending || cancel.isPending || eventMutation.isPending;
 
-  return <section className="space-y-4 border-t pt-6" aria-labelledby="treatment-plans-title">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold" id="treatment-plans-title">{t("title")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("description")}</p></div><Button disabled={create.isPending} onClick={() => void createDraft()} type="button"><Plus aria-hidden="true" />{t("actions.createDraft")}</Button></div>
+  return <section className="space-y-4" aria-label={showList ? undefined : t("detail.title")} aria-labelledby={showList ? "treatment-plans-title" : undefined}>
+    {showList && <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold" id="treatment-plans-title">{t("title")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("description")}</p></div><Button disabled={create.isPending} onClick={() => void createDraft()} type="button"><Plus aria-hidden="true" />{t("actions.createDraft")}</Button></div>}
     {commandError && <Alert variant="destructive">{commandError}</Alert>}
-    {plans.isError && <Alert variant="destructive">{getErrorMessage(plans.error)}</Alert>}
-    {plans.isLoading ? <div className="h-28 animate-pulse rounded-xl bg-muted" /> : <div className="grid gap-2">{(plans.data?.items ?? []).map((plan) => <button className="flex w-full items-center justify-between rounded-xl border p-3 text-left hover:bg-muted/50" key={plan.id} onClick={() => setSelectedPlanId(plan.id)} type="button"><span className="min-w-0"><span className="block font-medium">{t("planLabel", { id: plan.id.slice(0, 8) })}</span><span className="text-sm text-muted-foreground">{t("itemCount", { count: plan.items.length })}</span></span><PlanStatusBadge status={plan.status} /></button>)}{(plans.data?.items.length ?? 0) === 0 && <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">{t("empty")}</p>}</div>}
+    {showList && plans.isError && <Alert variant="destructive">{getErrorMessage(plans.error)}</Alert>}
+    {showList && (plans.isLoading ? <div className="h-28 animate-pulse rounded-xl bg-muted" /> : <div className="grid gap-2">{(plans.data?.items ?? []).map((plan) => <button className="flex w-full items-center justify-between rounded-xl border p-3 text-left hover:bg-muted/50" key={plan.id} onClick={() => setSelectedPlanId(plan.id)} type="button"><span className="min-w-0"><span className="block font-medium">{plan.code}</span><span className="text-sm text-muted-foreground">{t("itemCount", { count: plan.items.length })}</span></span><PlanStatusBadge status={plan.status} /></button>)}{(plans.data?.items.length ?? 0) === 0 && <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">{t("empty")}</p>}</div>)}
     {selectedPlanId && selected.isError && <Alert variant="destructive">{getErrorMessage(selected.error)}</Alert>}
+    {selectedPlanId && selected.isLoading && <div className="h-72 animate-pulse rounded-xl bg-muted" />}
     {currentPlan && <Card><CardHeader><div className="flex flex-wrap items-center justify-between gap-2"><CardTitle>{t("detail.title")}</CardTitle><PlanStatusBadge status={currentPlan.status} /></div><CardDescription>{t("detail.originVisit", { id: currentPlan.originVisitId.slice(0, 8) })}</CardDescription></CardHeader><CardContent className="space-y-5">
       {currentPlan.status === "DRAFT" ? <DraftEditor onPropose={proposePlan} onSaved={() => undefined} pending={propose.isPending} plan={currentPlan} scope={scope} /> : <PlanItems canExecute={canExecute} historyItemId={historyItemId} onCancelItem={(itemId) => setReasonAction({ kind: "cancelItem", itemId })} onHistory={setHistoryItemId} onRecordEvent={recordEvent} plan={currentPlan} scope={scope} />}
       <div className="flex flex-wrap gap-2">{currentPlan.status === "PROPOSED" && <Button onClick={() => setReasonAction({ kind: "reopen" })} type="button" variant="outline"><RotateCcw aria-hidden="true" />{t("actions.reopen")}</Button>}{["DRAFT", "PROPOSED", "ACCEPTED"].includes(currentPlan.status) && currentPlan.items.every((item) => item.status === "PENDING") && <Button onClick={() => setReasonAction({ kind: "cancelPlan" })} type="button" variant="destructive"><X aria-hidden="true" />{t("actions.cancelPlan")}</Button>}</div>

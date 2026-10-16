@@ -20,6 +20,7 @@ import { TempImageUploadTestPage } from "../../pages/workspace/branch/TempImageU
 import { DoctorHomePage } from "../../pages/workspace/doctor/DoctorHomePage";
 import { DoctorPatientsPage } from "../../pages/workspace/doctor/DoctorPatientsPage";
 import { DoctorVisitPage } from "../../pages/workspace/doctor/DoctorVisitPage";
+import { DoctorTreatmentPlanPage } from "../../pages/workspace/doctor/DoctorTreatmentPlanPage";
 import { AppointmentsPage } from "../../pages/workspace/reception/AppointmentsPage";
 import { TreatmentPlanAcceptancesPage } from "../../pages/workspace/reception/TreatmentPlanAcceptancesPage";
 import { BranchManagementPage } from "../../pages/workspace/tenant/BranchManagementPage";
@@ -281,6 +282,29 @@ export const routes: RouteObject[] = [
                           />
                         ),
                         children: [{ index: true, element: <DoctorVisitPage /> }],
+                      },
+                      {
+                        path: "doctor/appointments/:appointmentId/visit/treatment-plans/:planId",
+                        element: (
+                          <RequireBranchPermission
+                            permission={PERMISSIONS.clinicalVisitWrite}
+                          />
+                        ),
+                        children: [
+                          {
+                            element: (
+                              <RequireBranchPermission
+                                permission={PERMISSIONS.treatmentPlanWrite}
+                              />
+                            ),
+                            children: [
+                              {
+                                index: true,
+                                element: <DoctorTreatmentPlanPage />,
+                              },
+                            ],
+                          },
+                        ],
                       },
                     ],
                   },

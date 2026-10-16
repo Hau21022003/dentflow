@@ -408,15 +408,16 @@ describe('Appointment workflow (e2e)', () => {
           id: appointmentId,
           patient: {
             id: fixture.patient.id,
+            code: expect.stringMatching(/^PAT-\d{6}$/),
             fullName: fixture.patient.fullName,
+            phone: fixture.patient.phone,
             gender: PatientGender.OTHER,
             dateOfBirth: null,
           },
         });
         expect(item).not.toHaveProperty('operationalNote');
-        expect(JSON.stringify(item)).not.toContain(fixture.patient.phone);
-        expect(item?.patient).not.toHaveProperty('phone');
         expect(item?.patient).not.toHaveProperty('address');
+        expect(item?.patient).not.toHaveProperty('email');
         expect(item?.patient).not.toHaveProperty('emergencyContactPhone');
       });
   });

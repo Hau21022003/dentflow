@@ -11,6 +11,7 @@ import {
   applyOffsetPagination,
   toPageMeta,
 } from '../../common/database/query-builder-list.util';
+import { patientCode } from '../../common/database/tenant-display-number';
 import { RequestFieldValidationException } from '../../common/exceptions/request-field-validation.exception';
 import { AuditAction } from '../audit/audit-actions';
 import { AuditLogService } from '../audit/audit-log.service';
@@ -116,7 +117,9 @@ export interface AssignedAppointmentResponse {
   endAt: Date;
   patient: {
     id: string;
+    code: string;
     fullName: string;
+    phone: string;
     gender: Patient['gender'];
     dateOfBirth: string | null;
   };
@@ -1408,7 +1411,9 @@ export class AppointmentsService {
       endAt: appointment.endAt,
       patient: {
         id: appointment.patient.id,
+        code: patientCode(appointment.patient.displayNumber),
         fullName: appointment.patient.fullName,
+        phone: appointment.patient.phone,
         gender: appointment.patient.gender,
         dateOfBirth: appointment.patient.dateOfBirth,
       },
