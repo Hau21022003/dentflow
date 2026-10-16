@@ -243,6 +243,7 @@ export type PatientAlert = {
   category: "ALLERGY" | "MEDICAL_CONDITION" | "MEDICATION" | "OTHER";
   severity: "INFO" | "WARNING" | "CRITICAL";
   message: string;
+  updatedBy: { id: string; fullName: string };
   resolvedAt: string | null;
   createdAt: string;
   updatedAt: string;

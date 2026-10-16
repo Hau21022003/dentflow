@@ -39,6 +39,7 @@
     "safetyTitle": "Important safety alerts",
     "plansTitle": "Related treatment plans",
     "viewAll": "View all",
+    "loadingAlerts": "Loading important safety alerts…",
     "alertLoadError": "Could not load safety alerts.",
     "planLoadError": "Could not load treatment plans.",
     "noActiveAlerts": "No active safety alerts.",

@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
@@ -13,6 +14,7 @@ import {
   Appointment,
   AppointmentStatus,
 } from '../appointments/entities/appointment.entity';
+import { User } from '../users/entities/user.entity';
 import {
   CreatePatientAlertDto,
   ResolvePatientAlertReasonCode,
@@ -37,6 +39,7 @@ export type PatientAlertResponse = {
   category: PatientAlertCategory;
   severity: PatientAlertSeverity;
   message: string;
+  updatedBy: { id: string; fullName: string };
   resolvedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -59,7 +62,9 @@ export class PatientAlertsService {
       where: { tenantId: context.tenant!.id, patientId },
       order: { resolvedAt: 'ASC', severity: 'DESC', createdAt: 'DESC' },
     });
-    return { items: alerts.map((alert) => this.toResponse(alert)) };
+    return {
+      items: await this.toResponses(this.dataSource.manager, alerts),
+    };
   }
 
   async listActive(
@@ -74,7 +79,7 @@ export class PatientAlertsService {
       },
       order: { severity: 'DESC', createdAt: 'ASC' },
     });
-    return alerts.map((alert) => this.toResponse(alert));
+    return this.toResponses(this.dataSource.manager, alerts);
   }
 
   async create(
@@ -92,6 +97,7 @@ export class PatientAlertsService {
           severity: input.severity,
           message: input.message,
           createdByUserId: context.actor.userId,
+          updatedByUserId: context.actor.userId,
           resolvedByUserId: null,
           resolvedAt: null,
         }),
@@ -106,7 +112,7 @@ export class PatientAlertsService {
           severity: alert.severity,
         },
       );
-      return this.toResponse(alert);
+      return this.toResponseWithUpdater(manager, alert);
     });
   }
 
@@ -134,10 +140,13 @@ export class PatientAlertsService {
           alert[field as 'category' | 'severity' | 'message'] !==
           input[field as 'category' | 'severity' | 'message'],
       );
-      if (changedFields.length === 0) return this.toResponse(alert);
+      if (changedFields.length === 0) {
+        return this.toResponseWithUpdater(manager, alert);
+      }
       alert.category = input.category;
       alert.severity = input.severity;
       alert.message = input.message;
+      alert.updatedByUserId = context.actor.userId;
       await manager.save(alert);
       await this.recordAudit(
         manager,
@@ -150,7 +159,7 @@ export class PatientAlertsService {
           severity: alert.severity,
         },
       );
-      return this.toResponse(alert);
+      return this.toResponseWithUpdater(manager, alert);
     });
   }
 
@@ -175,6 +184,7 @@ export class PatientAlertsService {
       }
       alert.resolvedAt = new Date();
       alert.resolvedByUserId = context.actor.userId;
+      alert.updatedByUserId = context.actor.userId;
       await manager.save(alert);
       await this.recordAudit(
         manager,
@@ -186,16 +196,55 @@ export class PatientAlertsService {
         },
         reasonCode,
       );
-      return this.toResponse(alert);
+      return this.toResponseWithUpdater(manager, alert);
     });
   }
 
-  private toResponse(alert: PatientAlert): PatientAlertResponse {
+  private async toResponseWithUpdater(
+    manager: EntityManager,
+    alert: PatientAlert,
+  ): Promise<PatientAlertResponse> {
+    const [response] = await this.toResponses(manager, [alert]);
+    if (!response) {
+      throw new InternalServerErrorException(
+        'Patient Alert response could not be created.',
+      );
+    }
+    return response;
+  }
+
+  private async toResponses(
+    manager: EntityManager,
+    alerts: PatientAlert[],
+  ): Promise<PatientAlertResponse[]> {
+    if (alerts.length === 0) return [];
+    const updaterIds = [
+      ...new Set(alerts.map((alert) => alert.updatedByUserId)),
+    ];
+    const updaters = await manager.getRepository(User).find({
+      where: { id: In(updaterIds) },
+      withDeleted: true,
+    });
+    const updaterById = new Map(updaters.map((user) => [user.id, user]));
+
+    return alerts.map((alert) => {
+      const updater = updaterById.get(alert.updatedByUserId);
+      if (!updater) {
+        throw new InternalServerErrorException(
+          'Patient Alert updater was not found.',
+        );
+      }
+      return this.toResponse(alert, updater);
+    });
+  }
+
+  private toResponse(alert: PatientAlert, updater: User): PatientAlertResponse {
     return {
       id: alert.id,
       category: alert.category,
       severity: alert.severity,
       message: alert.message,
+      updatedBy: { id: updater.id, fullName: updater.fullName },
       resolvedAt: alert.resolvedAt,
       createdAt: alert.createdAt,
       updatedAt: alert.updatedAt,

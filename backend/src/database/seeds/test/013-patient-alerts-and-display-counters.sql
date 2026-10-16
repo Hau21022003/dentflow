@@ -34,6 +34,7 @@ INSERT INTO "patient_alerts" (
   "severity",
   "message",
   "created_by_user_id",
+  "updated_by_user_id",
   "resolved_by_user_id",
   "resolved_at",
   "created_at",
@@ -46,6 +47,7 @@ SELECT
   "category"::"patient_alert_category_enum",
   "severity"::"patient_alert_severity_enum",
   "message",
+  "actor_user_id",
   "actor_user_id",
   CASE WHEN "resolved_days_ago" IS NOT NULL THEN "actor_user_id" END,
   CASE WHEN "resolved_days_ago" IS NOT NULL
@@ -61,6 +63,7 @@ ON CONFLICT ("id") DO UPDATE SET
   "severity" = EXCLUDED."severity",
   "message" = EXCLUDED."message",
   "created_by_user_id" = EXCLUDED."created_by_user_id",
+  "updated_by_user_id" = EXCLUDED."updated_by_user_id",
   "resolved_by_user_id" = EXCLUDED."resolved_by_user_id",
   "resolved_at" = EXCLUDED."resolved_at",
   "created_at" = EXCLUDED."created_at",

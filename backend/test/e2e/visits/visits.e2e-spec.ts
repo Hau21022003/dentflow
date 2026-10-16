@@ -88,9 +88,9 @@ describe('Visit workflow (e2e)', () => {
       .expect('Idempotency-Replayed', 'true');
 
     const visitId = (started.body as { id: string }).id;
-    await expect(
-      visits.countBy({ tenantId: fixture.tenant.id }),
-    ).resolves.toBe(1);
+    await expect(visits.countBy({ tenantId: fixture.tenant.id })).resolves.toBe(
+      1,
+    );
     await expect(
       appointments.findOneByOrFail({ id: appointment.id }),
     ).resolves.toMatchObject({
@@ -291,6 +291,13 @@ describe('Visit workflow (e2e)', () => {
       .set('Idempotency-Key', createKey)
       .send(alertPayload)
       .expect(201);
+    expect(created.body).toMatchObject({
+      ...alertPayload,
+      updatedBy: {
+        id: fixture.dentist.user.id,
+        fullName: fixture.dentist.user.fullName,
+      },
+    });
     await fixture.dentist.agent
       .post(`${patientRoute}/alerts`)
       .set('Idempotency-Key', createKey)
@@ -317,11 +324,48 @@ describe('Visit workflow (e2e)', () => {
       });
 
     const updatedMessage = 'Synthetic severe penicillin allergy';
-    await fixture.dentist.agent
+    const updated = await fixture.dentist.agent
       .patch(`${patientRoute}/alerts/${alertId}`)
       .set('Idempotency-Key', randomUUID())
       .send({ ...alertPayload, message: updatedMessage })
       .expect(200);
+    const updatedBody = updated.body as {
+      updatedAt: string;
+      updatedBy: { id: string; fullName: string };
+    };
+    expect(updatedBody).toMatchObject({
+      id: alertId,
+      message: updatedMessage,
+      updatedBy: {
+        id: fixture.dentist.user.id,
+        fullName: fixture.dentist.user.fullName,
+      },
+    });
+    const noOpUpdate = await fixture.dentist.agent
+      .patch(`${patientRoute}/alerts/${alertId}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ ...alertPayload, message: updatedMessage })
+      .expect(200);
+    expect(noOpUpdate.body).toMatchObject({
+      updatedAt: updatedBody.updatedAt,
+      updatedBy: updatedBody.updatedBy,
+    });
+    await fixture.dentist.agent
+      .get(`${patientRoute}/alerts`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as { items: Array<Record<string, unknown>> };
+        expect(body.items).toEqual([
+          expect.objectContaining({
+            id: alertId,
+            message: updatedMessage,
+            updatedBy: {
+              id: fixture.dentist.user.id,
+              fullName: fixture.dentist.user.fullName,
+            },
+          }),
+        ]);
+      });
     const alertAudits = await auditLogs.find({
       where: { resourceId: alertId },
     });
@@ -335,11 +379,18 @@ describe('Visit workflow (e2e)', () => {
     expect(JSON.stringify(alertAudits)).not.toContain(updatedMessage);
 
     const resolveKey = randomUUID();
-    await fixture.dentist.agent
+    const resolved = await fixture.dentist.agent
       .post(`${patientRoute}/alerts/${alertId}/resolve`)
       .set('Idempotency-Key', resolveKey)
       .send({ reasonCode: 'NO_LONGER_APPLICABLE' })
       .expect(200);
+    expect(resolved.body).toMatchObject({
+      id: alertId,
+      updatedBy: {
+        id: fixture.dentist.user.id,
+        fullName: fixture.dentist.user.fullName,
+      },
+    });
     await fixture.dentist.agent
       .post(`${patientRoute}/alerts/${alertId}/resolve`)
       .set('Idempotency-Key', resolveKey)

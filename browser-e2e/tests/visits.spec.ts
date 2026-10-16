@@ -126,44 +126,74 @@ test("assigned Dentist creates, edits, and resolves a Patient safety alert", asy
     name: "Create patient alert",
   });
   await createDialog.getByLabel("Category").selectOption("ALLERGY");
-  await createDialog.getByLabel("Severity").selectOption("CRITICAL");
+  await createDialog.getByRole("radio", { name: /Critical/ }).check();
   await createDialog
-    .getByLabel("Message")
+    .getByLabel("Alert content")
     .fill("Synthetic browser penicillin allergy");
   const createRequest = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
       new URL(request.url()).pathname.endsWith("/alerts"),
   );
-  await createDialog.getByRole("button", { name: "Save changes" }).click();
+  await createDialog.getByRole("button", { name: "Create alert" }).click();
   expectIdempotencyKey((await createRequest).headers()["idempotency-key"]);
   await expect(createDialog).toHaveCount(0);
   const alertsPanel = page.getByRole("region", { name: "Patient safety alerts" });
-  const alertCard = alertsPanel
-    .locator("article")
+  const alertRow = alertsPanel
+    .locator("tbody tr")
     .filter({ hasText: "Synthetic browser penicillin allergy" });
-  await expect(alertCard).toContainText("Critical");
-  await expect(alertCard).toContainText("Allergy");
+  await expect(alertRow).toContainText("Critical");
+  await expect(alertRow).toContainText("Allergy");
+  await expect(alertRow).toContainText(`by ${DENTIST_NAME}`);
+  await expect(alertRow.locator('[data-category-icon="ALLERGY"]')).toBeVisible();
+  await expect(alertRow.getByRole("button", { name: "View" })).toHaveCount(0);
 
-  await alertCard.getByRole("button", { name: "Edit" }).click();
+  await page.getByRole("tab", { name: "Clinical record" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Important safety alerts" }),
+  ).toBeVisible();
+  const highlightedAlert = page
+    .getByRole("button")
+    .filter({ hasText: "Synthetic browser penicillin allergy" });
+  await expect(highlightedAlert).toContainText("Allergy");
+  await expect(highlightedAlert).toContainText("Critical");
+  await expect(
+    highlightedAlert.locator('[data-category-icon="ALLERGY"]'),
+  ).toBeVisible();
+  await highlightedAlert.click();
+  await expect(page.getByRole("tab", { name: "Safety notes" })).toHaveAttribute(
+    "data-state",
+    "active",
+  );
+
+  const editButton = alertRow.getByRole("button", { name: "Edit" });
+  await editButton.hover();
+  await expect(page.getByRole("tooltip")).toContainText(
+    "Edit this alert's category, severity, and content.",
+  );
+  await editButton.click();
   const editDialog = page.getByRole("dialog", {
     name: "Edit patient alert",
   });
   await editDialog
-    .getByLabel("Message")
+    .getByLabel("Alert content")
     .fill("Synthetic browser severe penicillin allergy");
   await editDialog.getByRole("button", { name: "Save changes" }).click();
   await expect(editDialog).toHaveCount(0);
-  const updatedAlertCard = alertsPanel
-    .locator("article")
+  const updatedAlertRow = alertsPanel
+    .locator("tbody tr")
     .filter({ hasText: "Synthetic browser severe penicillin allergy" });
-  await updatedAlertCard.getByRole("button", { name: "Resolve" }).click();
+  const resolveButton = updatedAlertRow.getByRole("button", { name: "Resolve" });
+  await resolveButton.hover();
+  await expect(page.getByRole("tooltip")).toContainText(
+    "Mark this alert as resolved and move it to history.",
+  );
+  await resolveButton.click();
   const resolveDialog = page.getByRole("dialog", {
     name: "Resolve this alert?",
   });
-  await resolveDialog
-    .getByLabel("Resolution reason")
-    .selectOption("NO_LONGER_APPLICABLE");
+  await resolveDialog.getByLabel("Resolution reason").click();
+  await page.getByRole("option", { name: "No longer applicable" }).click();
   const resolveRequest = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
@@ -172,11 +202,26 @@ test("assigned Dentist creates, edits, and resolves a Patient safety alert", asy
   await resolveDialog.getByRole("button", { name: "Resolve" }).click();
   expectIdempotencyKey((await resolveRequest).headers()["idempotency-key"]);
   await expect(resolveDialog).toHaveCount(0);
-  await expect(updatedAlertCard.getByText("Resolved", { exact: true })).toBeVisible();
-  await expect(updatedAlertCard.getByRole("button", { name: "Edit" })).toHaveCount(0);
+  await expect(updatedAlertRow).toHaveCount(0);
+
+  await alertsPanel.getByRole("button", { name: "Resolved", exact: true }).click();
+  const resolvedAlertRow = alertsPanel
+    .locator("tbody tr")
+    .filter({ hasText: "Synthetic browser severe penicillin allergy" });
+  await expect(resolvedAlertRow.getByText("Resolved", { exact: true })).toBeVisible();
+  await expect(resolvedAlertRow.getByRole("button", { name: "Edit" })).toHaveCount(0);
   await expect(
-    updatedAlertCard.getByRole("button", { name: "Resolve" }),
+    resolvedAlertRow.getByRole("button", { name: "Resolve" }),
   ).toHaveCount(0);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const resolvedAlertCard = alertsPanel
+    .locator("article")
+    .filter({ hasText: "Synthetic browser severe penicillin allergy" });
+  await expect(resolvedAlertCard).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
+  ).toBe(false);
 });
 
 test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", async ({ page }) => {

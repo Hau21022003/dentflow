@@ -39,6 +39,7 @@
     "safetyTitle": "Cảnh báo an toàn nổi bật",
     "plansTitle": "Kế hoạch điều trị liên quan",
     "viewAll": "Xem tất cả",
+    "loadingAlerts": "Đang tải cảnh báo an toàn nổi bật…",
     "alertLoadError": "Không thể tải cảnh báo an toàn.",
     "planLoadError": "Không thể tải kế hoạch điều trị.",
     "noActiveAlerts": "Không có cảnh báo an toàn đang hiệu lực.",

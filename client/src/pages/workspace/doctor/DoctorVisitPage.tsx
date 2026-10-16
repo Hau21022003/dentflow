@@ -25,8 +25,11 @@ import { hasBranchPermission } from "@/features/auth/authorization";
 import { PERMISSIONS } from "@/features/auth/auth.types";
 import { PatientAlertsPanel } from "@/features/patients/components/PatientAlertsPanel";
 import { PatientTreatmentPlanStatusBadge } from "@/features/patients/components/PatientTreatmentPlanStatusBadge";
+import {
+  PATIENT_ALERT_CATEGORY_VISUALS,
+  PATIENT_ALERT_SEVERITY_VISUALS,
+} from "@/features/patients/patient-alert-visuals";
 import { usePatientAlertsQuery } from "@/features/patients/patients.hooks";
-import type { PatientAlert } from "@/features/patients/patients.types";
 import { useTreatmentPlansQuery } from "@/features/treatment-plans/treatment-plans.hooks";
 import type { TreatmentPlan } from "@/features/treatment-plans/treatment-plans.types";
 import { VisitTreatmentPlansTab } from "@/features/treatment-plans/components/VisitTreatmentPlansTab";
@@ -262,12 +265,6 @@ function CompactVisitHeader({
   );
 }
 
-function severityBorder(severity: PatientAlert["severity"]): string {
-  if (severity === "CRITICAL") return "border-red-200 bg-red-50/70";
-  if (severity === "WARNING") return "border-amber-200 bg-amber-50/70";
-  return "border-sky-200 bg-sky-50/70";
-}
-
 function ClinicalReferenceSidebar({
   branchSlug,
   onShowPlans,
@@ -296,43 +293,91 @@ function ClinicalReferenceSidebar({
 
   return (
     <>
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="flex-row items-center justify-between gap-3 border-b p-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="size-5 text-red-600" />
             <CardTitle className="text-base">{t("references.safetyTitle")}</CardTitle>
           </div>
-          <Button onClick={onShowSafety} size="sm" type="button" variant="outline">
+          <Button
+            className="shrink-0 rounded-full"
+            onClick={onShowSafety}
+            size="sm"
+            type="button"
+            variant="secondary"
+          >
             {t("references.viewAll")}
             <ChevronRight aria-hidden="true" />
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3 p-4">
-          {alerts.isLoading && <div className="h-24 animate-pulse rounded-xl bg-muted" />}
+        <CardContent className="divide-y p-0">
+          {alerts.isLoading && (
+            <div className="space-y-3 p-4" role="status">
+              <span className="sr-only">{t("references.loadingAlerts")}</span>
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div className="flex items-center gap-3" key={index}>
+                  <div className="size-10 animate-pulse rounded-full bg-muted" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-2/5 animate-pulse rounded bg-muted" />
+                    <div className="h-3 w-4/5 animate-pulse rounded bg-muted" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           {alerts.isError && (
-            <p className="text-sm text-destructive">{t("references.alertLoadError")}</p>
+            <p className="p-4 text-sm text-destructive">
+              {t("references.alertLoadError")}
+            </p>
           )}
           {!alerts.isLoading && !alerts.isError && activeAlerts.length === 0 && (
-            <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            <p className="p-4 text-sm text-muted-foreground">
               {t("references.noActiveAlerts")}
             </p>
           )}
-          {activeAlerts.map((alert) => (
-            <article
-              className={`rounded-xl border p-3 ${severityBorder(alert.severity)}`}
-              key={alert.id}
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={alert.severity === "CRITICAL" ? "destructive" : "outline"}>
+          {activeAlerts.map((alert) => {
+            const categoryVisual =
+              PATIENT_ALERT_CATEGORY_VISUALS[alert.category];
+            const severityVisual =
+              PATIENT_ALERT_SEVERITY_VISUALS[alert.severity];
+            const CategoryIcon = categoryVisual.Icon;
+            const SeverityIcon = severityVisual.Icon;
+
+            return (
+              <button
+                className="group flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                key={alert.id}
+                onClick={onShowSafety}
+                type="button"
+              >
+                <span
+                  className={`grid size-10 shrink-0 place-items-center rounded-full border ${categoryVisual.className}`}
+                  data-category-icon={alert.category}
+                >
+                  <CategoryIcon aria-hidden="true" size={20} stroke={2} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-foreground">
+                    {tPatients(`detail.alerts.categories.${alert.category}`)}
+                  </span>
+                  <span className="mt-0.5 line-clamp-2 block text-xs leading-5 text-muted-foreground">
+                    {alert.message}
+                  </span>
+                </span>
+                <Badge
+                  className={`shrink-0 ${severityVisual.className}`}
+                  variant="outline"
+                >
+                  <SeverityIcon aria-hidden="true" stroke={2} />
                   {tPatients(`detail.alerts.severities.${alert.severity}`)}
                 </Badge>
-                <span className="text-xs font-medium text-muted-foreground">
-                  {tPatients(`detail.alerts.categories.${alert.category}`)}
-                </span>
-              </div>
-              <p className="mt-2 line-clamp-3 text-sm leading-5">{alert.message}</p>
-            </article>
-          ))}
+                <ChevronRight
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                />
+              </button>
+            );
+          })}
         </CardContent>
       </Card>
 
@@ -585,6 +630,7 @@ export function DoctorVisitPage() {
               branchSlug={branchSlug}
               patientId={appointment.patient.id}
               tenantSlug={tenantSlug}
+              timeZone={timeZone}
             />
           )}
 

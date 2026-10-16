@@ -47,6 +47,7 @@ export class PatientAlert {
   severity: PatientAlertSeverity;
   @Column({ type: 'varchar', length: 500 }) message: string;
   @Column({ name: 'created_by_user_id', type: 'uuid' }) createdByUserId: string;
+  @Column({ name: 'updated_by_user_id', type: 'uuid' }) updatedByUserId: string;
   @Column({ name: 'resolved_by_user_id', type: 'uuid', nullable: true })
   resolvedByUserId: string | null;
   @Column({ name: 'resolved_at', type: 'timestamptz', nullable: true })

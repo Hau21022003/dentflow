@@ -28,6 +28,12 @@ khi có contract attachment riêng.
 | `Operatory` | Tenant + branch | Đại diện thống nhất cho một phòng hoặc ghế; code bất biến, code/name unique trong branch và có lifecycle active/inactive. |
 | `Appointment`, `Visit`, `TreatmentPlan`, `TreatmentItem`, `TreatmentNote`, `PatientInvoice`, `Payment`, `FollowUpRecommendation` | Tenant + branch | Mọi query/write mang cả `tenantId` và `branchId` đã resolve từ route context. |
 
+`PatientAlert` lưu `updatedByUserId` do server lấy từ actor đã xác thực. Trường
+này được cập nhật khi tạo, khi nội dung thực sự thay đổi hoặc khi resolve; no-op
+update không đổi actor. Response alert trả `updatedBy: { id, fullName }` để UI
+hiển thị người cập nhật gần nhất, nhưng không đưa message hay tên bệnh nhân vào
+audit payload.
+
 `Patient` được truy cập qua route branch-scoped dù bản ghi thuộc tenant. Cách
 này cho phép Receptionist hoặc Branch Admin tại branch đã được cấp quyền tìm
 Patient trên toàn tenant để tránh tạo trùng, nhưng không biến một route

@@ -172,6 +172,7 @@ export function DataTable<TData, TValue>({
   const table = useShadcnTable({
     data,
     columns: prepareColumns,
+    enablePagination: pagination?.enabled !== false,
     pageSize: pagination?.pageSize,
     rowSelectionConfig: rowSelection,
     manualPagination,
