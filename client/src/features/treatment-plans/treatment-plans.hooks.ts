@@ -1,24 +1,24 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { treatmentPlansService, type TreatmentPlanScope } from "./treatment-plans.service";
-import type { TreatmentPlan } from "./treatment-plans.types";
+import type { TreatmentPlan, TreatmentPlanListQuery } from "./treatment-plans.types";
 
 export const treatmentPlanQueryKeys = {
   all: ["treatment-plans"] as const,
   branch: (tenantSlug: string, branchSlug: string) => [...treatmentPlanQueryKeys.all, "branch", tenantSlug, branchSlug] as const,
   lists: (scope: TreatmentPlanScope) => [...treatmentPlanQueryKeys.branch(scope.tenantSlug, scope.branchSlug), "visit", scope.visitId, "list"] as const,
-  list: (scope: TreatmentPlanScope, page: number, limit: number) => [...treatmentPlanQueryKeys.lists(scope), { page, limit }] as const,
+  list: (scope: TreatmentPlanScope, query: TreatmentPlanListQuery) => [...treatmentPlanQueryKeys.lists(scope), query] as const,
   detail: (scope: TreatmentPlanScope, planId: string) => [...treatmentPlanQueryKeys.lists(scope), "detail", planId] as const,
   events: (scope: TreatmentPlanScope, planId: string, itemId: string) => [...treatmentPlanQueryKeys.detail(scope, planId), "item", itemId, "events"] as const,
 };
 
 export function useTreatmentPlansQuery(
   scope: TreatmentPlanScope,
-  pagination: { page: number; limit: number } = { page: 1, limit: 100 },
+  query: TreatmentPlanListQuery = { page: 1, limit: 100 },
   enabled = true,
 ) {
   return useQuery({
-    queryKey: treatmentPlanQueryKeys.list(scope, pagination.page, pagination.limit),
-    queryFn: () => treatmentPlansService.list(scope, pagination.page, pagination.limit),
+    queryKey: treatmentPlanQueryKeys.list(scope, query),
+    queryFn: () => treatmentPlansService.list(scope, query),
     enabled: Boolean(scope.tenantSlug && scope.branchSlug && scope.visitId && enabled),
   });
 }

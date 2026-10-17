@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, EntityManager } from 'typeorm';
+import { Brackets, DataSource, EntityManager, In } from 'typeorm';
 import {
   allocateTenantDisplayNumber,
   treatmentPlanCode,
@@ -31,6 +31,7 @@ import {
 } from '../authorization/entities/role-assignment.entity';
 import { Service } from '../services/entities/service.entity';
 import { TenantUserMembershipStatus } from '../staff/entities/tenant-user-membership.entity';
+import { User } from '../users/entities/user.entity';
 import { Visit, VisitStatus } from '../visits/entities/visit.entity';
 import { ListTreatmentItemEventsDto } from './dto/list-treatment-item-events.dto';
 import { ListTreatmentPlansQueryDto } from './dto/list-treatment-plans-query.dto';
@@ -85,6 +86,10 @@ export interface TreatmentPlanResponse {
   }>;
 }
 
+export interface TreatmentPlanListItemResponse extends TreatmentPlanResponse {
+  plannedDentists: Array<{ id: string; fullName: string }>;
+}
+
 @Injectable()
 export class TreatmentPlansService {
   constructor(
@@ -98,7 +103,10 @@ export class TreatmentPlansService {
     context: AuthorizationContext,
     visitId: string,
     query: ListTreatmentPlansQueryDto,
-  ) {
+  ): Promise<{
+    items: TreatmentPlanListItemResponse[];
+    meta: ReturnType<typeof toPageMeta>;
+  }> {
     const current = await this.resolveCurrentCase(context, visitId);
     const page = query.page ?? 1,
       limit = query.limit ?? 10;
@@ -108,21 +116,80 @@ export class TreatmentPlansService {
       .andWhere('plan.branchId=:branchId', { branchId: context.branch!.id })
       .andWhere('plan.patientId=:patientId', {
         patientId: current.appointment.patientId,
-      })
-      .orderBy('plan.createdAt', 'DESC')
-      .addOrderBy('plan.id', 'DESC');
+      });
+    const search = query.search?.trim();
+    if (search) {
+      qb.andWhere(
+        new Brackets((searchQuery) => {
+          searchQuery
+            .where(
+              "('TP-' || LPAD(CAST(plan.displayNumber AS text), 4, '0')) ILIKE :planSearch",
+              { planSearch: `%${search}%` },
+            )
+            .orWhere(
+              `EXISTS (
+                SELECT 1
+                FROM treatment_items search_item
+                WHERE search_item.treatment_plan_id = plan.id
+                  AND (
+                    search_item.service_code ILIKE :planSearch
+                    OR search_item.service_name ILIKE :planSearch
+                    OR search_item.indication ILIKE :planSearch
+                    OR search_item.tooth_position ILIKE :planSearch
+                  )
+              )`,
+            );
+        }),
+      );
+    }
+    if (query.status) {
+      qb.andWhere('plan.status=:planStatus', { planStatus: query.status });
+    }
+    qb.orderBy('plan.createdAt', 'DESC').addOrderBy('plan.id', 'DESC');
     applyOffsetPagination(qb, { page, limit });
     const [plans, total] = await qb.getManyAndCount();
+    const planIds = plans.map((plan) => plan.id);
+    const treatmentItems = planIds.length
+      ? await this.repository.items.find({
+          where: { treatmentPlanId: In(planIds) },
+          order: { createdAt: 'ASC', id: 'ASC' },
+        })
+      : [];
+    const dentistIds = [
+      ...new Set(treatmentItems.map((item) => item.plannedDentistUserId)),
+    ];
+    const dentists = dentistIds.length
+      ? await this.dataSource.getRepository(User).find({
+          where: { id: In(dentistIds) },
+        })
+      : [];
+    const itemsByPlan = new Map<string, TreatmentItem[]>();
+    for (const item of treatmentItems) {
+      const planItems = itemsByPlan.get(item.treatmentPlanId) ?? [];
+      planItems.push(item);
+      itemsByPlan.set(item.treatmentPlanId, planItems);
+    }
+    const dentistById = new Map(
+      dentists.map((dentist) => [dentist.id, dentist]),
+    );
     const items = await Promise.all(
-      plans.map((plan) =>
-        this.toResponse(
-          plan,
-          this.repository.items.find({
-            where: { treatmentPlanId: plan.id },
-            order: { id: 'ASC' },
-          }),
-        ),
-      ),
+      plans.map(async (plan): Promise<TreatmentPlanListItemResponse> => {
+        const planItems = itemsByPlan.get(plan.id) ?? [];
+        const response = await this.toResponse(plan, planItems);
+        const seenDentists = new Set<string>();
+        const plannedDentists: Array<{ id: string; fullName: string }> = [];
+        for (const item of planItems) {
+          const dentist = dentistById.get(item.plannedDentistUserId);
+          if (dentist && !seenDentists.has(dentist.id)) {
+            seenDentists.add(dentist.id);
+            plannedDentists.push({
+              id: dentist.id,
+              fullName: dentist.fullName,
+            });
+          }
+        }
+        return { ...response, plannedDentists };
+      }),
     );
     return { items, meta: toPageMeta({ page, limit }, total) };
   }

@@ -699,7 +699,6 @@ export function DoctorVisitPage() {
               branchSlug={branchSlug}
               date={date}
               tenantSlug={tenantSlug}
-              timeZone={timeZone}
               visitId={visit.id}
             />
           )}

@@ -22,7 +22,8 @@ export const TREATMENT_ITEM_EVENT_TYPES = [
 
 export type TreatmentPlanStatus = (typeof TREATMENT_PLAN_STATUSES)[number];
 export type TreatmentItemStatus = (typeof TREATMENT_ITEM_STATUSES)[number];
-export type TreatmentItemEventType = (typeof TREATMENT_ITEM_EVENT_TYPES)[number];
+export type TreatmentItemEventType =
+  (typeof TREATMENT_ITEM_EVENT_TYPES)[number];
 
 export type TreatmentPlanItem = {
   id: string;
@@ -56,8 +57,19 @@ export type TreatmentPlan = {
   items: TreatmentPlanItem[];
 };
 
+export type TreatmentPlanListItem = TreatmentPlan & {
+  plannedDentists: Array<{ id: string; fullName: string }>;
+};
+
+export type TreatmentPlanListQuery = {
+  page: number;
+  limit: number;
+  search?: string;
+  status?: TreatmentPlanStatus;
+};
+
 export type TreatmentPlanPage = {
-  items: TreatmentPlan[];
+  items: TreatmentPlanListItem[];
   meta: { page: number; limit: number; total: number; totalPages: number };
 };
 

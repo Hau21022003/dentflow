@@ -6,7 +6,7 @@
   "itemCount_one": "{{count}} hạng mục",
   "itemCount_other": "{{count}} hạng mục",
   "statuses": { "plan": { "DRAFT": "Bản nháp", "PROPOSED": "Đã đề xuất", "ACCEPTED": "Đã chấp thuận", "PARTIALLY_COMPLETED": "Hoàn thành một phần", "COMPLETED": "Đã hoàn thành", "CANCELLED": "Đã hủy" }, "item": { "PENDING": "Chờ thực hiện", "IN_PROGRESS": "Đang thực hiện", "COMPLETED": "Đã hoàn thành", "CANCELLED": "Đã hủy" } },
-  "actions": { "createDraft": "Tạo bản nháp", "addItem": "Thêm hạng mục", "removeItem": "Xóa hạng mục", "saveDraft": "Lưu bản nháp", "propose": "Đề xuất", "reopen": "Mở lại", "cancelPlan": "Hủy kế hoạch", "cancelItem": "Hủy hạng mục", "start": "Bắt đầu", "recordProgress": "Ghi nhận tiến độ", "complete": "Hoàn thành", "history": "Lịch sử sự kiện", "close": "Đóng", "saving": "Đang lưu" },
+  "actions": { "createDraft": "Tạo bản nháp", "createPlan": "Tạo kế hoạch", "addItem": "Thêm hạng mục", "removeItem": "Xóa hạng mục", "saveDraft": "Lưu bản nháp", "propose": "Đề xuất", "reopen": "Mở lại", "cancelPlan": "Hủy kế hoạch", "cancelItem": "Hủy hạng mục", "start": "Bắt đầu", "recordProgress": "Ghi nhận tiến độ", "complete": "Hoàn thành", "history": "Lịch sử sự kiện", "close": "Đóng", "saving": "Đang lưu" },
   "fields": { "service": "Dịch vụ", "plannedDentist": "Bác sĩ dự kiến", "quantity": "Số lượng", "discountAmount": "Giảm giá", "toothPosition": "Vị trí răng", "indication": "Chỉ định", "reasonCode": "Mã lý do", "reasonCodePlaceholder": "Ví dụ: PATIENT_REQUEST" },
   "picker": { "servicePlaceholder": "Chọn dịch vụ", "serviceSearch": "Tìm dịch vụ...", "emptyServices": "Không có dịch vụ hoạt động.", "dentistPlaceholder": "Chọn bác sĩ", "dentistSearch": "Tìm bác sĩ...", "emptyDentists": "Không có bác sĩ hoạt động." },
   "validation": { "required": "Trường này là bắt buộc.", "quantity": "Số lượng phải từ 1 đến 10.000.", "discount": "Giảm giá không được âm.", "reasonCode": "Chỉ dùng chữ in hoa, số và dấu gạch dưới." },
@@ -14,7 +14,7 @@
   "detail": { "title": "Chi tiết kế hoạch", "originVisit": "Visit khởi tạo: {{id}}", "quantity": "Số lượng: {{count}}" },
   "visitList": {
     "title": "Kế hoạch điều trị liên quan",
-    "description": "Xem nhanh hoặc mở trang chi tiết để quản lý kế hoạch và hạng mục điều trị.",
+    "description": "Các kế hoạch liên quan đến lần khám này.",
     "detailPageDescription": "Quản lý nội dung và trạng thái kế hoạch điều trị mà không làm gián đoạn phiếu khám.",
     "quickView": "Xem nhanh kế hoạch",
     "quickViewDescription": "Thông tin chỉ đọc; mở trang chi tiết để thực hiện thao tác.",
@@ -22,12 +22,19 @@
     "openDetail": "Xem chi tiết",
     "retry": "Thử lại",
     "noItems": "Chưa có hạng mục",
+    "noResults": "Không tìm thấy kế hoạch phù hợp với bộ lọc.",
+    "notAssigned": "Chưa chỉ định",
+    "searchPlaceholder": "Tìm theo mã kế hoạch, tên điều trị...",
+    "allStatuses": "Tất cả trạng thái",
+    "toothPositionValue": "Vị trí răng: {{position}}",
     "progress": "{{completed}} / {{total}} hoàn tất",
     "columns": {
       "plan": "Kế hoạch",
       "createdAt": "Ngày tạo",
+      "dentist": "Bác sĩ",
       "progress": "Tiến độ",
       "status": "Trạng thái",
+      "cost": "Chi phí dự kiến",
       "actions": "Thao tác"
     }
   },

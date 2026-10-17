@@ -14,12 +14,9 @@ import {
 } from 'src/modules/patients/entities/patient.entity';
 import { ServiceGroup } from 'src/modules/service-groups/entities/service-group.entity';
 import { Service } from 'src/modules/services/entities/service.entity';
-import { Tenant } from 'src/modules/tenants/entities/tenant.entity';
 import { TreatmentItemEvent } from 'src/modules/treatment-plans/entities/treatment-item-event.entity';
 import { TreatmentPlanStatus } from 'src/modules/treatment-plans/entities/treatment-plan.entity';
-import { User } from 'src/modules/users/entities/user.entity';
 import { Visit, VisitStatus } from 'src/modules/visits/entities/visit.entity';
-import request from 'supertest';
 import { createAuthFixtures } from 'test/fixtures/auth.fixture';
 import { loginAs } from 'test/helpers/auth.helper';
 import { resetDbToBaseState } from 'test/helpers/db.helper';
@@ -53,6 +50,11 @@ describe('Treatment plan V1 (e2e)', () => {
     });
     const branch = await fixtures.createBranch(tenant, { slug: 'main' });
     const dentist = await actor(branch, TenantRoleCode.DENTIST);
+    const secondDentist = await actor(
+      branch,
+      TenantRoleCode.DENTIST,
+      'Synthetic Treatment Specialist',
+    );
     const receptionist = await actor(branch, TenantRoleCode.RECEPTIONIST);
     const patient = await dataSource.manager.save(
       dataSource.manager.create(Patient, {
@@ -160,7 +162,7 @@ describe('Treatment plan V1 (e2e)', () => {
             discountAmount: 500,
             toothPosition: null,
             indication: 'Synthetic whitening indication',
-            plannedDentistUserId: dentist.user.id,
+            plannedDentistUserId: secondDentist.user.id,
           },
         ],
       })
@@ -188,6 +190,52 @@ describe('Treatment plan V1 (e2e)', () => {
       .post(`${root}/visits/${visit.id}/treatment-plans`)
       .set('Idempotency-Key', randomUUID())
       .expect(201);
+    const visitPlansRoute = `${root}/visits/${visit.id}/treatment-plans`;
+    const visitPlans = await dentist.agent
+      .get(`${visitPlansRoute}?page=1&limit=10`)
+      .expect(200);
+    expect(visitPlans.body.meta).toMatchObject({
+      page: 1,
+      limit: 10,
+      total: 2,
+      totalPages: 1,
+    });
+    expect(visitPlans.body.items[0]).toMatchObject({
+      code: 'TP-0002',
+      status: TreatmentPlanStatus.DRAFT,
+      plannedDentists: [],
+      items: [],
+    });
+    expect(visitPlans.body.items[1]).toMatchObject({
+      id: planId,
+      code: 'TP-0001',
+      status: TreatmentPlanStatus.PROPOSED,
+    });
+    expect(visitPlans.body.items[1].plannedDentists).toEqual(
+      expect.arrayContaining([
+        { id: dentist.user.id, fullName: dentist.user.fullName },
+        {
+          id: secondDentist.user.id,
+          fullName: secondDentist.user.fullName,
+        },
+      ]),
+    );
+    expect(visitPlans.body.items[1].plannedDentists).toHaveLength(2);
+    await dentist.agent
+      .get(`${visitPlansRoute}?search=whitening%20indication`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.meta.total).toBe(1);
+        expect(response.body.items[0].id).toBe(planId);
+      });
+    await dentist.agent
+      .get(`${visitPlansRoute}?status=DRAFT`)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.meta.total).toBe(1);
+        expect(response.body.items[0].code).toBe('TP-0002');
+      });
+    await secondDentist.agent.get(visitPlansRoute).expect(403);
     const patientPlansRoute = `${root}/patients/${patient.id}/treatment-plans`;
     const patientPlans = await receptionist.agent
       .get(patientPlansRoute)
@@ -198,9 +246,16 @@ describe('Treatment plan V1 (e2e)', () => {
       total: 2,
       totalPages: 1,
     });
-    expect(patientPlans.body.filterOptions.dentists).toEqual([
-      { id: dentist.user.id, fullName: dentist.user.fullName },
-    ]);
+    expect(patientPlans.body.filterOptions.dentists).toEqual(
+      expect.arrayContaining([
+        { id: dentist.user.id, fullName: dentist.user.fullName },
+        {
+          id: secondDentist.user.id,
+          fullName: secondDentist.user.fullName,
+        },
+      ]),
+    );
+    expect(patientPlans.body.filterOptions.dentists).toHaveLength(2);
     expect(patientPlans.body.items[0]).toMatchObject({
       code: 'TP-0002',
       status: TreatmentPlanStatus.DRAFT,
@@ -214,15 +269,22 @@ describe('Treatment plan V1 (e2e)', () => {
       code: 'TP-0001',
       status: TreatmentPlanStatus.PROPOSED,
       originVisit: { id: visit.id },
-      plannedDentists: [
-        { id: dentist.user.id, fullName: dentist.user.fullName },
-      ],
       progress: { completedItems: 0, totalItems: 2 },
       totals: [
         { currency: 'USD', amount: 9000 },
         { currency: 'VND', amount: 100000 },
       ],
     });
+    expect(patientPlans.body.items[1].plannedDentists).toEqual(
+      expect.arrayContaining([
+        { id: dentist.user.id, fullName: dentist.user.fullName },
+        {
+          id: secondDentist.user.id,
+          fullName: secondDentist.user.fullName,
+        },
+      ]),
+    );
+    expect(patientPlans.body.items[1].plannedDentists).toHaveLength(2);
     expect([service.name, usdService.name]).toContain(
       patientPlans.body.items[1].primaryItem.serviceName,
     );
@@ -360,15 +422,16 @@ describe('Treatment plan V1 (e2e)', () => {
     await expect(
       dataSource.getRepository(TreatmentItemEvent).delete(event.id),
     ).rejects.toThrow('treatment_item_events are append-only');
-  });
+  }, 15_000);
 
   async function actor(
     branch: Branch,
     role: Exclude<TenantRoleCode, TenantRoleCode.TENANT_ADMIN>,
+    fullName = `Synthetic ${role}`,
   ) {
     const user = await fixtures.createUser({
       email: `${role.toLowerCase()}-${randomUUID()}@example.test`,
-      fullName: `Synthetic ${role}`,
+      fullName,
     });
     await fixtures.grantBranchRole(user, branch, role);
     const session = await loginAs(app, {

@@ -6,6 +6,7 @@ import type {
   TreatmentItemEventPage,
   TreatmentItemEventType,
   TreatmentPlan,
+  TreatmentPlanListQuery,
   TreatmentPlanPage,
   TreatmentReasonInput,
 } from "./treatment-plans.types";
@@ -25,9 +26,12 @@ function planRoute(scope: TreatmentPlanScope, planId: string) {
 }
 
 export const treatmentPlansService = {
-  async list(scope: TreatmentPlanScope, page = 1, limit = 100): Promise<TreatmentPlanPage> {
+  async list(
+    scope: TreatmentPlanScope,
+    query: TreatmentPlanListQuery = { page: 1, limit: 100 },
+  ): Promise<TreatmentPlanPage> {
     const { payload } = await http.get<TreatmentPlanPage>(plansRoute(scope), {
-      params: { page, limit },
+      params: query,
     });
     return payload;
   },

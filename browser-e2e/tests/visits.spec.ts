@@ -225,6 +225,7 @@ test("assigned Dentist creates, edits, and resolves a Patient safety alert", asy
 });
 
 test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", async ({ page }) => {
+  test.setTimeout(60_000);
   await grantDentistRole(page);
   await loginAsDentistReceptionist(page);
   await createAndCheckInAssignedAppointment(page);
@@ -237,7 +238,7 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   const createRequest = page.waitForRequest((request) =>
     request.method() === "POST" && new URL(request.url()).pathname.endsWith("/treatment-plans"),
   );
-  await page.getByRole("button", { name: "Create draft" }).click();
+  await page.getByRole("button", { name: "Create plan" }).click();
   expectIdempotencyKey((await createRequest).headers()["idempotency-key"]);
   await expect(page).toHaveURL(/\/visit\/treatment-plans\/[0-9a-f-]+\?date=/);
   const treatmentPlans = page.getByRole("region", { name: "Plan details" });
@@ -297,6 +298,77 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   await page.goto(`${DOCTOR_WORKSPACE}?date=${APPOINTMENT_DATE}`);
   await page.getByRole("button", { name: "Continue Visit" }).click();
   await page.getByRole("tab", { name: "Related treatment plans" }).click();
+  await expect(
+    page.getByPlaceholder("Search by plan code or treatment name..."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "All statuses", exact: true }),
+  ).toBeVisible();
+  for (const column of [
+    "Plan",
+    "Dentist",
+    "Status",
+    "Progress",
+    "Estimated cost",
+    "Actions",
+  ]) {
+    await expect(page.getByRole("columnheader", { name: column })).toBeVisible();
+  }
+  const planRow = page
+    .getByRole("row")
+    .filter({ hasText: "Accepted" })
+    .filter({
+      has: page.getByRole("button", { name: "View details", exact: true }),
+    });
+  await expect(planRow).toContainText("Accepted");
+  await expect(planRow.getByRole("progressbar")).toHaveAttribute(
+    "aria-label",
+    "0 / 2 completed",
+  );
+  await expect(planRow.getByRole("cell").nth(4)).not.toHaveText("—");
+  await expect(page.getByRole("button", { name: /Quick view/ })).toHaveCount(0);
+
+  const planSearch = page.getByPlaceholder(
+    "Search by plan code or treatment name...",
+  );
+  await planSearch.fill("no-matching-treatment-plan");
+  await expect(
+    page
+      .getByText("No treatment plans match the current filters.", { exact: true })
+      .first(),
+  ).toBeVisible();
+  await planSearch.fill("");
+  const statusFilter = page.getByRole("combobox", {
+    name: "All statuses",
+    exact: true,
+  });
+  await statusFilter.click();
+  await page.getByRole("option", { name: "Draft", exact: true }).click();
+  await expect(
+    page
+      .getByText("No treatment plans match the current filters.", { exact: true })
+      .first(),
+  ).toBeVisible();
+  await statusFilter.click();
+  await page.getByRole("option", { name: "All statuses", exact: true }).click();
+  await expect(planRow).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobilePlan = page
+    .locator('[data-slot="data-table-mobile-item"]')
+    .filter({ hasText: "Accepted" });
+  await expect(mobilePlan).toBeVisible();
+  await expect(mobilePlan.getByRole("progressbar")).toHaveAttribute(
+    "aria-label",
+    "0 / 2 completed",
+  );
+  await expect(
+    mobilePlan.getByRole("button", { name: "View details", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
+  ).toBe(false);
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole("button", { name: "View details" }).first().click();
 
   const startEventResponse = page.waitForResponse((response) =>
@@ -325,7 +397,7 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   );
   await page.getByRole("link", { name: "Back to Visit" }).click();
   await page.getByRole("tab", { name: "Related treatment plans" }).click();
-  await page.getByRole("button", { name: "Create draft" }).click();
+  await page.getByRole("button", { name: "Create plan" }).click();
   await secondCreateRequest;
   await expect(treatmentPlans.getByRole("button", { name: "Add item" })).toBeVisible();
   await treatmentPlans.getByRole("button", { name: "Add item" }).click();
