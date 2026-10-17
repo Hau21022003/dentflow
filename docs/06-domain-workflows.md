@@ -14,8 +14,10 @@ viết migration, endpoint hoặc UI. Khi có khác biệt, tài liệu này là
 định cho clinical workflow; [01-payment-model.md](./01-payment-model.md) vẫn là
 nguồn quyết định cho ranh giới hai dòng tiền.
 
-V1 không có odontogram trực quan hoặc attachment Patient/Visit,
-`DENTAL_ASSISTANT`, kho/vật tư/labo, payment online cho bệnh nhân hay passkey.
+V1 có bộ chọn mã răng FDI trực quan trong lúc chỉnh Treatment Plan `DRAFT`,
+nhưng không có hồ sơ odontogram theo Patient hoặc trạng thái lâm sàng riêng cho
+từng răng. V1 cũng chưa có attachment Patient/Visit, `DENTAL_ASSISTANT`,
+kho/vật tư/labo, payment online cho bệnh nhân hay passkey.
 Ảnh upload hiện có chỉ là object tạm; không được gắn vào clinical record cho đến
 khi có contract attachment riêng.
 
@@ -141,7 +143,7 @@ Workspace.
 
 ## 4. Treatment Plan, item và follow-up
 
-Treatment Plan thuộc Patient + Tenant + Branch, có mã hiển thị tuần tự bất biến `TP-*` và nhiều TreatmentItem; `originVisitId` chỉ là Visit đã khởi tạo, bất biến nhưng không giới hạn Visit thực hiện sau đó. Mọi thao tác Dentist resolve một current Visit `OPEN` có Appointment `IN_PROGRESS` cùng Patient/Branch và Dentist được gán. Item snapshot Service `id`, code, name, price/currency, quantity, discount, đơn giá cuối cùng, vị trí/răng (FDI string hoặc mô tả), chỉ định và bác sĩ dự kiến. Chỉ Service `ACTIVE` của tenant và Dentist có grant active cùng branch được thêm/sửa ở Draft; thay đổi catalog hoặc grant sau đó không hồi tố snapshot.
+Treatment Plan thuộc Patient + Tenant + Branch, có mã hiển thị tuần tự bất biến `TP-*` và nhiều TreatmentItem; `originVisitId` chỉ là Visit đã khởi tạo, bất biến nhưng không giới hạn Visit thực hiện sau đó. Mọi thao tác Dentist resolve một current Visit `OPEN` có Appointment `IN_PROGRESS` cùng Patient/Branch và Dentist được gán. Item snapshot Service `id`, code, name, price/currency, quantity, discount, đơn giá cuối cùng, vị trí/răng (FDI string hoặc mô tả), chỉ định và bác sĩ dự kiến. UI Draft có thể tạo chuỗi FDI này bằng bộ chọn răng vĩnh viễn/răng sữa, nhưng không tạo entity hoặc trạng thái odontogram riêng. Chỉ Service `ACTIVE` của tenant và Dentist có grant active cùng branch được thêm/sửa ở Draft; thay đổi catalog hoặc grant sau đó không hồi tố snapshot.
 
 ```text
 DRAFT → PROPOSED → ACCEPTED → PARTIALLY_COMPLETED → COMPLETED

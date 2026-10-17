@@ -225,7 +225,7 @@ test("assigned Dentist creates, edits, and resolves a Patient safety alert", asy
 });
 
 test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
   await grantDentistRole(page);
   await loginAsDentistReceptionist(page);
   await createAndCheckInAssignedAppointment(page);
@@ -243,16 +243,115 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   await expect(page).toHaveURL(/\/visit\/treatment-plans\/[0-9a-f-]+\?date=/);
   const treatmentPlans = page.getByRole("region", { name: "Plan details" });
 
-  await treatmentPlans.getByRole("button", { name: "Add item" }).click();
-  await treatmentPlans.getByRole("combobox", { name: "Service" }).first().click();
+  await expect(page.getByRole("heading", { name: "Dental chart (FDI)" })).toBeVisible();
+  for (const width of [360, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
+    ).toBe(false);
+    const chart = await page
+      .getByRole("group", { name: "Upper arch, Lower arch" })
+      .boundingBox();
+    expect(chart).not.toBeNull();
+    expect(chart!.x + chart!.width).toBeLessThanOrEqual(width);
+  }
+  await expect(
+    treatmentPlans.getByRole("button", { name: "Save draft", exact: true }),
+  ).toBeVisible();
+  await expect(
+    treatmentPlans.getByRole("button", { name: "Create plan", exact: true }),
+  ).toBeVisible();
+  await expect(
+    treatmentPlans.getByRole("button", { name: "Cancel", exact: true }),
+  ).toBeHidden();
+
+  await page.getByRole("button", { name: "More actions" }).click();
+  await expect(page.getByRole("menuitem", { name: "Cancel plan" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Enlarge dental chart" }).click();
+  const enlargedChart = page.getByRole("dialog", { name: "Dental chart" });
+  await expect(enlargedChart).toBeVisible();
+  await expect(
+    enlargedChart.getByRole("button", { name: /^Tooth \d+$/ }),
+  ).toHaveCount(32);
+  await enlargedChart.getByRole("button", { name: "Close" }).click();
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const dentalChartHeading = page.getByRole("heading", {
+    name: "Dental chart (FDI)",
+  });
+  const treatmentItemHeading = page.getByRole("heading", {
+    name: "Add treatment item",
+  });
+  await expect
+    .poll(async () => {
+      const dentalChart = await dentalChartHeading.boundingBox();
+      const treatmentItem = await treatmentItemHeading.boundingBox();
+      return Boolean(
+        dentalChart &&
+          treatmentItem &&
+          treatmentItem.x >= dentalChart.x + dentalChart.width,
+      );
+    })
+    .toBe(true);
+  await expect
+    .poll(() =>
+      dentalChartHeading.evaluate((heading) => {
+        const card = heading.closest('[data-slot="card"]');
+        return card ? window.getComputedStyle(card).position : null;
+      }),
+    )
+    .toBe("sticky");
+  await expect
+    .poll(() =>
+      page
+        .locator('[data-slot="treatment-plan-actions"]')
+        .evaluate((actions) => window.getComputedStyle(actions).position),
+    )
+    .toBe("sticky");
+  const tooth16 = page.getByRole("button", { name: "Tooth 16", exact: true });
+  await tooth16.focus();
+  await expect(tooth16).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(tooth16).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Primary teeth", exact: true }).click();
+  await page.getByRole("button", { name: "Tooth 55", exact: true }).click();
+  await page.getByRole("button", { name: "Permanent teeth", exact: true }).click();
+  await expect(treatmentPlans.getByLabel("Quantity")).toHaveValue("2");
+  await treatmentPlans.getByLabel("Quantity").fill("4");
+  await page.getByRole("button", { name: "Tooth 26", exact: true }).click();
+  await expect(treatmentPlans.getByLabel("Quantity")).toHaveValue("4");
+
+  await treatmentPlans.getByRole("combobox", { name: "Service" }).click();
   await page.getByRole("option").first().click();
-  await treatmentPlans.getByRole("combobox", { name: "Planned dentist" }).first().click();
+  await treatmentPlans.getByRole("button", { name: "Save draft" }).click();
+  await expect(
+    treatmentPlans.getByText(
+      "Add or update the item currently being edited before saving the plan.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await treatmentPlans.getByRole("combobox", { name: "Planned dentist" }).click();
   await page.getByRole("option").first().click();
-  await treatmentPlans.getByRole("button", { name: "Add item" }).click();
-  await treatmentPlans.getByRole("combobox", { name: "Service" }).nth(1).click();
+  await treatmentPlans.getByLabel("Indication").fill("Synthetic indication");
+  await treatmentPlans.getByRole("button", { name: "Add to plan" }).click();
+
+  await treatmentPlans.getByRole("combobox", { name: "Service" }).click();
   await page.getByRole("option").first().click();
-  await treatmentPlans.getByRole("combobox", { name: "Planned dentist" }).nth(1).click();
+  await treatmentPlans.getByRole("combobox", { name: "Planned dentist" }).click();
   await page.getByRole("option").first().click();
+  await treatmentPlans.getByRole("button", { name: "Add to plan" }).click();
+  await expect(page.getByRole("heading", { name: "Added items (2)" })).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    treatmentPlans.locator('[data-slot="data-table-mobile-item"]'),
+  ).toHaveCount(2);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
+  ).toBe(false);
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   const syncRequest = page.waitForRequest((request) =>
     request.method() === "PATCH" && new URL(request.url()).pathname.includes("/treatment-plans/"),
@@ -261,14 +360,37 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   const sync = await syncRequest;
   expectIdempotencyKey(sync.headers()["idempotency-key"]);
   expect(sync.postDataJSON().items).toHaveLength(2);
+  expect(sync.postDataJSON().items[0]).toEqual(
+    expect.objectContaining({ quantity: 4, toothPosition: "16, 26, 55" }),
+  );
+
+  let failNextPropose = true;
+  let failedProposeKey = "";
+  await page.route(/\/treatment-plans\/[0-9a-f-]+\/propose$/, async (route) => {
+    if (!failNextPropose) return route.continue();
+    failNextPropose = false;
+    failedProposeKey = route.request().headers()["idempotency-key"] ?? "";
+    await route.fulfill({
+      body: JSON.stringify({ message: "Synthetic propose failure" }),
+      contentType: "application/json",
+      status: 500,
+    });
+  });
+  await treatmentPlans.getByRole("button", { name: "Create treatment plan" }).click();
+  await expect(
+    treatmentPlans.getByText("Synthetic propose failure", { exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/visit\/treatment-plans\/[0-9a-f-]+\?date=/);
 
   const proposeRequest = page.waitForRequest((request) =>
     request.method() === "POST" && new URL(request.url()).pathname.endsWith("/propose"),
   );
-  await treatmentPlans.getByRole("button", { name: "Propose" }).click();
+  await treatmentPlans.getByRole("button", { name: "Create treatment plan" }).click();
   const propose = await proposeRequest;
   expectIdempotencyKey(propose.headers()["idempotency-key"]);
-  await expect(treatmentPlans.getByText("Proposed", { exact: true }).last()).toBeVisible();
+  expect(propose.headers()["idempotency-key"]).toBe(failedProposeKey);
+  await page.unroute(/\/treatment-plans\/[0-9a-f-]+\/propose$/);
+  await expect(page).toHaveURL(/\/visit\?date=.*&tab=treatment-plans$/);
 
   const planId = propose.url().split("/").at(-2);
   expect(planId).toBeTruthy();
@@ -399,19 +521,39 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   await page.getByRole("tab", { name: "Related treatment plans" }).click();
   await page.getByRole("button", { name: "Create plan" }).click();
   await secondCreateRequest;
-  await expect(treatmentPlans.getByRole("button", { name: "Add item" })).toBeVisible();
-  await treatmentPlans.getByRole("button", { name: "Add item" }).click();
   await treatmentPlans.getByRole("combobox", { name: "Service" }).click();
   await page.getByRole("option").first().click();
   await treatmentPlans.getByRole("combobox", { name: "Planned dentist" }).click();
   await page.getByRole("option").first().click();
+  await treatmentPlans.getByRole("button", { name: "Add to plan" }).click();
+  await treatmentPlans.getByRole("button", { name: "Edit item 1" }).click();
+  await treatmentPlans.getByRole("button", { name: "Update item" }).click();
+  await treatmentPlans.getByRole("button", { name: "Clear all" }).click();
+  const clearAllDialog = page.getByRole("alertdialog", {
+    name: "Clear all treatment items?",
+  });
+  await expect(clearAllDialog).toBeVisible();
+  await clearAllDialog.getByRole("button", { name: "Close" }).click();
+  await treatmentPlans.getByRole("button", { name: "Cancel", exact: true }).click();
+  const discardDialog = page.getByRole("alertdialog", {
+    name: "Discard unsaved changes?",
+  });
+  await expect(discardDialog).toBeVisible();
+  await discardDialog.getByRole("button", { name: "Keep editing" }).click();
   const secondSyncRequest = page.waitForRequest((request) =>
     request.method() === "PATCH" && new URL(request.url()).pathname.includes("/treatment-plans/"),
   );
-  await treatmentPlans.getByRole("button", { name: "Save draft" }).click();
-  await secondSyncRequest;
-  await expect(treatmentPlans.getByRole("button", { name: "Propose" })).toBeEnabled();
-  await treatmentPlans.getByRole("button", { name: "Propose" }).click();
+  const secondProposeRequest = page.waitForRequest((request) =>
+    request.method() === "POST" && new URL(request.url()).pathname.endsWith("/propose"),
+  );
+  await treatmentPlans.getByRole("button", { name: "Create treatment plan" }).click();
+  await Promise.all([secondSyncRequest, secondProposeRequest]);
+  await expect(page).toHaveURL(/\/visit\?date=.*&tab=treatment-plans$/);
+  await page
+    .getByRole("row")
+    .filter({ hasText: "Proposed" })
+    .getByRole("button", { name: "View details" })
+    .click();
   await treatmentPlans.getByRole("button", { name: "Reopen" }).click();
   const reopenDialog = page.getByRole("dialog", { name: "Reopen treatment plan" });
   await reopenDialog.getByLabel("Reason code").fill("PATIENT_REQUEST");

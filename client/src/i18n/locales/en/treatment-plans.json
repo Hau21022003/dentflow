@@ -5,43 +5,63 @@
   "planLabel": "Treatment plan {{id}}",
   "itemCount_one": "{{count}} item",
   "itemCount_other": "{{count}} items",
+  "toothCount_one": "{{count}} tooth",
+  "toothCount_other": "{{count}} teeth",
   "statuses": {
     "plan": { "DRAFT": "Draft", "PROPOSED": "Proposed", "ACCEPTED": "Accepted", "PARTIALLY_COMPLETED": "Partially completed", "COMPLETED": "Completed", "CANCELLED": "Cancelled" },
     "item": { "PENDING": "Pending", "IN_PROGRESS": "In progress", "COMPLETED": "Completed", "CANCELLED": "Cancelled" }
   },
-  "actions": { "createDraft": "Create draft", "createPlan": "Create plan", "addItem": "Add item", "removeItem": "Remove item", "saveDraft": "Save draft", "propose": "Propose", "reopen": "Reopen", "cancelPlan": "Cancel plan", "cancelItem": "Cancel item", "start": "Start", "recordProgress": "Record progress", "complete": "Complete", "history": "Event history", "close": "Close", "saving": "Saving" },
+  "actions": {
+    "createDraft": "Create draft", "createPlan": "Create plan", "createTreatmentPlan": "Create treatment plan",
+    "addItem": "Add item", "addToPlan": "Add to plan", "updateItem": "Update item", "removeItem": "Remove item",
+    "editItem": "Edit item {{count}}", "deleteItem": "Delete item {{count}}", "edit": "Edit", "delete": "Delete", "clearAll": "Clear all",
+    "cancelEdit": "Cancel editing", "cancel": "Cancel", "saveDraft": "Save draft", "propose": "Propose", "reopen": "Reopen",
+    "cancelPlan": "Cancel plan", "cancelItem": "Cancel item", "start": "Start", "recordProgress": "Record progress",
+    "complete": "Complete", "history": "Event history", "close": "Close", "saving": "Saving",
+    "keepEditing": "Keep editing", "discard": "Discard changes", "more": "More actions"
+  },
   "fields": { "service": "Service", "plannedDentist": "Planned dentist", "quantity": "Quantity", "discountAmount": "Discount amount", "toothPosition": "Tooth position", "indication": "Indication", "reasonCode": "Reason code", "reasonCodePlaceholder": "Example: PATIENT_REQUEST" },
   "picker": { "servicePlaceholder": "Choose a service", "serviceSearch": "Search services...", "emptyServices": "No active services found.", "dentistPlaceholder": "Choose a dentist", "dentistSearch": "Search dentists...", "emptyDentists": "No active dentists found." },
-  "validation": { "required": "This field is required.", "quantity": "Quantity must be between 1 and 10,000.", "discount": "Discount cannot be negative.", "reasonCode": "Use uppercase letters, numbers, and underscores only." },
-  "editor": { "noItems": "Add at least one treatment item before proposing this plan.", "item": "Item {{count}}", "saveBeforePropose": "Save your draft changes before proposing." },
+  "validation": {
+    "required": "This field is required.", "quantity": "Quantity must be between 1 and 10,000.", "discount": "Discount cannot be negative.",
+    "discountExceeds": "Discount cannot exceed the service price.", "wholeAmount": "Amount must be a whole number in the currency's smallest unit.",
+    "activeService": "Choose an active service.", "reasonCode": "Use uppercase letters, numbers, and underscores only."
+  },
+  "odontogram": {
+    "title": "Dental chart (FDI)", "description": "Select teeth on the chart to add them to a treatment item.", "dentitionLabel": "Choose dentition",
+    "dentitions": { "permanent": "Permanent teeth", "primary": "Primary teeth" },
+    "upperArch": "Upper arch", "lowerArch": "Lower arch", "toothLabel": "Tooth {{code}}", "selectedCount": "Selected: {{count}} teeth", "selectedList": "Selected teeth: {{codes}}",
+    "noneSelected": "No teeth selected", "clear": "Clear selection", "zoom": "Enlarge dental chart", "zoomTitle": "Dental chart", "zoomHint": "Drag horizontally to inspect and select teeth.", "legend": { "selected": "Selected tooth", "normal": "Normal tooth" }
+  },
+  "editor": {
+    "title": "Add treatment item", "editTitle": "Edit treatment item", "description": "Create a treatment item for the selected teeth.",
+    "noItems": "No treatment items yet", "noItemsDescription": "Choose a service, dentist, and tooth position, then add the item to this plan.",
+    "item": "Item {{count}}", "itemsTitle": "Added items ({{count}})", "itemsDescription": "These items will be saved to the treatment plan for this Visit.",
+    "pendingComposer": "Add or update the item currently being edited before saving the plan.", "needItem": "Add at least one treatment item before creating the treatment plan.",
+    "quantityHelper": "Defaults to the selected tooth count and can still be edited.", "toothPositionHelper": "Filled from the selected teeth and can still be edited.",
+    "indicationPlaceholder": "Enter treatment indication, tooth condition, notes...",
+    "legacyToothWarning": "The current position contains text that is not an FDI code. Selecting a tooth on the chart will replace it with an FDI code list.",
+    "dentistUnavailable": "Dentist no longer available", "estimatedTotal": "Total estimated cost",
+    "columns": { "service": "Service", "teeth": "Teeth", "dentist": "Planned dentist", "cost": "Estimated cost", "actions": "Actions" }
+  },
+  "feedback": { "draftSaved": "Treatment plan draft saved.", "proposed": "Treatment plan created and proposed." },
   "detail": { "title": "Plan details", "originVisit": "Origin Visit: {{id}}", "quantity": "Quantity: {{count}}" },
   "visitList": {
-    "title": "Related treatment plans",
-    "description": "Treatment plans related to this visit.",
+    "title": "Related treatment plans", "description": "Treatment plans related to this visit.",
     "detailPageDescription": "Manage treatment plan content and state without interrupting the Visit record.",
-    "quickView": "Treatment plan quick view",
-    "quickViewDescription": "Read-only information; open the detail page to take action.",
-    "quickViewPlan": "Quick view {{code}}",
-    "openDetail": "View details",
-    "retry": "Try again",
-    "noItems": "No items yet",
-    "noResults": "No treatment plans match the current filters.",
-    "notAssigned": "Not assigned",
-    "searchPlaceholder": "Search by plan code or treatment name...",
-    "allStatuses": "All statuses",
-    "toothPositionValue": "Tooth position: {{position}}",
-    "progress": "{{completed}} / {{total}} completed",
-    "columns": {
-      "plan": "Plan",
-      "createdAt": "Created",
-      "dentist": "Dentist",
-      "progress": "Progress",
-      "status": "Status",
-      "cost": "Estimated cost",
-      "actions": "Actions"
-    }
+    "quickView": "Treatment plan quick view", "quickViewDescription": "Read-only information; open the detail page to take action.", "quickViewPlan": "Quick view {{code}}",
+    "openDetail": "View details", "retry": "Try again", "noItems": "No items yet", "noResults": "No treatment plans match the current filters.",
+    "notAssigned": "Not assigned", "searchPlaceholder": "Search by plan code or treatment name...", "allStatuses": "All statuses",
+    "toothPositionValue": "Tooth position: {{position}}", "progress": "{{completed}} / {{total}} completed",
+    "columns": { "plan": "Plan", "createdAt": "Created", "dentist": "Dentist", "progress": "Progress", "status": "Status", "cost": "Estimated cost", "actions": "Actions" }
   },
   "events": { "title": "Event history", "loading": "Loading event history...", "loadError": "Could not load event history. Please try again.", "empty": "No execution events have been recorded.", "loadMore": "Load more", "types": { "IN_PROGRESS": "In progress", "COMPLETED": "Completed", "CANCELLED": "Cancelled" } },
   "errors": { "plansLoad": "Could not load treatment plans. Please retry.", "planLoad": "Could not load this treatment plan. Please retry." },
-  "dialogs": { "reopen": { "title": "Reopen treatment plan", "description": "This clears the previous acceptance and returns the plan to Draft.", "submit": "Reopen" }, "cancelPlan": { "title": "Cancel treatment plan", "description": "This cancels the plan and all pending items. This cannot be used after execution events exist.", "submit": "Cancel plan" }, "cancelItem": { "title": "Cancel treatment item", "description": "Record a cancellation event for this item.", "submit": "Cancel item" } }
+  "dialogs": {
+    "clearAll": { "title": "Clear all treatment items?", "description": "Items are removed from the draft only after you save it." },
+    "discard": { "title": "Discard unsaved changes?", "description": "Changes made to this treatment plan will not be saved." },
+    "reopen": { "title": "Reopen treatment plan", "description": "This clears the previous acceptance and returns the plan to Draft.", "submit": "Reopen" },
+    "cancelPlan": { "title": "Cancel treatment plan", "description": "This cancels the plan and all pending items. This cannot be used after execution events exist.", "submit": "Cancel plan" },
+    "cancelItem": { "title": "Cancel treatment item", "description": "Record a cancellation event for this item.", "submit": "Cancel item" }
+  }
 }

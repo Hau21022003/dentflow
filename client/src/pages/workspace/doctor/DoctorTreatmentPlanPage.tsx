@@ -1,12 +1,11 @@
 import { pathFor } from "@/app/router/paths";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { TreatmentPlansPanel } from "@/features/treatment-plans/components/TreatmentPlansPanel";
 import { useVisitQuery } from "@/features/visits/visits.hooks";
 import { ChevronLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 function validDate(value: string | null): value is string {
@@ -18,6 +17,7 @@ export function DoctorTreatmentPlanPage() {
   const { appointmentId = "", planId = "" } = useParams();
   const [searchParams] = useSearchParams();
   const { branchSlug, tenantSlug, user } = useRouteWorkspaceContext();
+  const navigate = useNavigate();
   const { t } = useTranslation("treatmentPlans");
   const { t: tVisits } = useTranslation("visits");
   const date = searchParams.get("date");
@@ -27,15 +27,16 @@ export function DoctorTreatmentPlanPage() {
     : pathFor.workspaceDoctor(tenantSlug, branchSlug);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
-      <Button asChild size="sm" type="button" variant="ghost">
+    <div className="mx-auto max-w-7xl space-y-3 sm:space-y-5">
+      <Button asChild className="-ml-2 sm:ml-0" size="sm" type="button" variant="ghost">
         <Link to={backPath}>
           <ChevronLeft aria-hidden="true" />
-          {tVisits("actions.backToVisit")}
+          <span className="sm:hidden">{t("title")}</span>
+          <span className="hidden sm:inline">{tVisits("actions.backToVisit")}</span>
         </Link>
       </Button>
 
-      <div>
+      <div className="hidden sm:block">
         <p className="text-sm font-medium text-primary">{t("title")}</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
           {t("detail.title")}
@@ -62,18 +63,16 @@ export function DoctorTreatmentPlanPage() {
         </Alert>
       )}
       {visit.data && (
-        <Card>
-          <CardContent className="p-5 sm:p-6">
-            <TreatmentPlansPanel
-              branchSlug={branchSlug}
-              initialPlanId={planId}
-              showList={false}
-              tenantSlug={tenantSlug}
-              user={user}
-              visitId={visit.data.id}
-            />
-          </CardContent>
-        </Card>
+        <TreatmentPlansPanel
+          branchSlug={branchSlug}
+          initialPlanId={planId}
+          onDraftCancel={() => navigate(backPath)}
+          onProposed={() => navigate(backPath)}
+          showList={false}
+          tenantSlug={tenantSlug}
+          user={user}
+          visitId={visit.data.id}
+        />
       )}
     </div>
   );

@@ -71,7 +71,7 @@ Bác sĩ tạo **treatment plan** dài hạn thuộc Patient + Tenant + Branch, 
 
 - Bệnh nhân xác nhận kế hoạch tại quầy; lễ tân ghi lại người xác nhận và thời điểm. Dentist muốn sửa plan `PROPOSED` phải reopen về `DRAFT`, làm acceptance cũ mất hiệu lực rồi đề xuất/xác nhận lại.
 - Mỗi hạng mục điều trị tiến triển độc lập: `PENDING`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`.
-- MVP chỉ cần chọn răng theo mã/mô tả. Odontogram trực quan là hạng mục nâng cao, không chặn luồng điều trị cơ bản.
+- Màn chỉnh Treatment Plan `DRAFT` có bộ chọn răng trực quan theo mã FDI cho răng vĩnh viễn và răng sữa; kết quả vẫn chỉ được lưu vào `toothPosition` dưới dạng chuỗi mã/mô tả. Đây là trợ giúp nhập liệu, chưa phải hồ sơ odontogram theo bệnh nhân và không lưu trạng thái lâm sàng riêng cho từng răng.
 
 ### 3.4 Thanh toán và tái khám
 
@@ -153,7 +153,7 @@ Authorization snapshot trong auth response gồm platform role/permission và c�
 
 ## 8. Roadmap sau MVP
 
-1. Odontogram tương tác, ảnh X-quang/tệp điều trị và mẫu phiếu điều trị.
+1. Hồ sơ odontogram theo bệnh nhân với trạng thái lâm sàng từng răng, ảnh X-quang/tệp điều trị và mẫu phiếu điều trị.
 2. Nhắc hẹn SMS, Zalo OA hoặc email; chiến dịch gọi lại bệnh nhân không tái khám.
 3. Kho vật tư, nhà cung cấp, tiêu hao theo hạng mục điều trị.
 4. Báo cáo doanh thu/công nợ nâng cao, KPI bác sĩ, công suất ghế và export kế toán.
