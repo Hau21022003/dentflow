@@ -492,18 +492,69 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   ).toBe(false);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole("button", { name: "View details" }).first().click();
+  const detailSheet = page.getByRole("dialog", { name: /Plan details/ });
+  await expect(detailSheet).toBeVisible();
+  await expect(page).toHaveURL(/\/visit\?date=.*&tab=treatment-plans$/);
+  expect((await detailSheet.boundingBox())!.width).toBeGreaterThan(700);
+  expect((await detailSheet.boundingBox())!.width).toBeLessThanOrEqual(760);
+  await expect(
+    detailSheet.getByText("Estimated cost", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    detailSheet.getByText("Total estimated cost", { exact: true }),
+  ).toHaveCount(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect((await detailSheet.boundingBox())!.width).toBeLessThanOrEqual(390);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
+  ).toBe(false);
+  const firstItemCard = detailSheet.locator("article").first();
+  await expect(
+    firstItemCard.getByRole("button", { name: "History", exact: true }),
+  ).toBeVisible();
+  await expect(
+    firstItemCard.getByRole("button", { name: "Start", exact: true }),
+  ).toBeVisible();
+  await expect(
+    firstItemCard.getByRole("button", { name: "More actions", exact: true }),
+  ).toBeVisible();
+  await firstItemCard
+    .getByRole("button", { name: "More actions", exact: true })
+    .click();
+  await expect(
+    page.getByRole("menuitem", { name: "Cancel item", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   const startEventResponse = page.waitForResponse((response) =>
     response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/events"),
   );
-  await treatmentPlans.getByRole("button", { name: "Start" }).first().click();
+  await detailSheet.getByRole("button", { name: "Start" }).first().click();
   expectIdempotencyKey((await startEventResponse).request().headers()["idempotency-key"]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    firstItemCard.getByRole("button", { name: "History", exact: true }),
+  ).toBeVisible();
+  await expect(
+    firstItemCard.getByRole("button", { name: "Progress", exact: true }),
+  ).toBeVisible();
+  await expect(
+    firstItemCard.getByRole("button", { name: "Complete", exact: true }),
+  ).toBeVisible();
+  await expect(
+    firstItemCard.getByRole("button", { name: "More actions", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
+  ).toBe(false);
+  await page.setViewportSize({ width: 1280, height: 720 });
   const completeEventResponse = page.waitForResponse((response) =>
     response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/events"),
   );
-  await treatmentPlans.getByRole("button", { name: "Complete" }).click();
+  await detailSheet.getByRole("button", { name: "Complete" }).click();
   expectIdempotencyKey((await completeEventResponse).request().headers()["idempotency-key"]);
-  await treatmentPlans.getByRole("button", { name: "Cancel item" }).last().click();
+  await detailSheet.getByRole("button", { name: "Cancel item" }).last().click();
   const itemCancelDialog = page.getByRole("dialog", { name: "Cancel treatment item" });
   await itemCancelDialog.getByLabel("Reason code").fill("PATIENT_REQUEST");
   const cancelEventResponse = page.waitForResponse((response) =>
@@ -511,14 +562,37 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   );
   await itemCancelDialog.getByRole("button", { name: "Cancel item", exact: true }).click();
   expectIdempotencyKey((await cancelEventResponse).request().headers()["idempotency-key"]);
-  await treatmentPlans.getByRole("button", { name: "Event history" }).first().click();
-  await expect(treatmentPlans.getByText("Completed", { exact: true }).last()).toBeVisible();
+  await expect(detailSheet.getByText("Completed", { exact: true }).first()).toBeVisible();
+  await expect(detailSheet.getByRole("button", { name: "Start" })).toHaveCount(0);
+  await expect(detailSheet.getByRole("button", { name: "Complete" })).toHaveCount(0);
+  await expect(detailSheet.getByRole("button", { name: "Cancel item" })).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    firstItemCard.getByRole("button", { name: "History", exact: true }),
+  ).toBeVisible();
+  await expect(
+    firstItemCard.getByRole("button", { name: "Progress", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    firstItemCard.getByRole("button", { name: "Complete", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    firstItemCard.getByRole("button", { name: "More actions", exact: true }),
+  ).toHaveCount(0);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await detailSheet.getByRole("button", { name: "Treatment history" }).first().click();
+  await expect(
+    detailSheet.getByRole("button", { name: "Hide history" }).first(),
+  ).toBeVisible();
+  await detailSheet.getByRole("button", { name: "View full history" }).click();
+  const historyDialog = page.getByRole("dialog", { name: "Full treatment history" });
+  await expect(historyDialog.getByText("Completed", { exact: true }).last()).toBeVisible();
+  await historyDialog.getByRole("button", { name: "Close" }).last().click();
 
   const secondCreateRequest = page.waitForRequest((request) =>
     request.method() === "POST" && new URL(request.url()).pathname.endsWith("/treatment-plans"),
   );
-  await page.getByRole("link", { name: "Back to Visit" }).click();
-  await page.getByRole("tab", { name: "Related treatment plans" }).click();
+  await detailSheet.getByRole("button", { name: "Close" }).last().click();
   await page.getByRole("button", { name: "Create plan" }).click();
   await secondCreateRequest;
   await treatmentPlans.getByRole("combobox", { name: "Service" }).click();
@@ -554,7 +628,8 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
     .filter({ hasText: "Proposed" })
     .getByRole("button", { name: "View details" })
     .click();
-  await treatmentPlans.getByRole("button", { name: "Reopen" }).click();
+  const proposedSheet = page.getByRole("dialog", { name: /Plan details/ });
+  await proposedSheet.getByRole("button", { name: "Reopen" }).click();
   const reopenDialog = page.getByRole("dialog", { name: "Reopen treatment plan" });
   await reopenDialog.getByLabel("Reason code").fill("PATIENT_REQUEST");
   const reopenRequest = page.waitForRequest((request) =>

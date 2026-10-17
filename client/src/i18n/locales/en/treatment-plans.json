@@ -17,7 +17,7 @@
     "editItem": "Edit item {{count}}", "deleteItem": "Delete item {{count}}", "edit": "Edit", "delete": "Delete", "clearAll": "Clear all",
     "cancelEdit": "Cancel editing", "cancel": "Cancel", "saveDraft": "Save draft", "propose": "Propose", "reopen": "Reopen",
     "cancelPlan": "Cancel plan", "cancelItem": "Cancel item", "start": "Start", "recordProgress": "Record progress",
-    "complete": "Complete", "history": "Event history", "close": "Close", "saving": "Saving",
+    "complete": "Complete", "history": "Treatment history", "historyShort": "History", "hideHistory": "Hide history", "recordProgressShort": "Progress", "close": "Close", "saving": "Saving",
     "keepEditing": "Keep editing", "discard": "Discard changes", "more": "More actions"
   },
   "fields": { "service": "Service", "plannedDentist": "Planned dentist", "quantity": "Quantity", "discountAmount": "Discount amount", "toothPosition": "Tooth position", "indication": "Indication", "reasonCode": "Reason code", "reasonCodePlaceholder": "Example: PATIENT_REQUEST" },
@@ -45,7 +45,14 @@
     "columns": { "service": "Service", "teeth": "Teeth", "dentist": "Planned dentist", "cost": "Estimated cost", "actions": "Actions" }
   },
   "feedback": { "draftSaved": "Treatment plan draft saved.", "proposed": "Treatment plan created and proposed." },
-  "detail": { "title": "Plan details", "originVisit": "Origin Visit: {{id}}", "quantity": "Quantity: {{count}}" },
+  "detail": {
+    "title": "Plan details", "originVisit": "Origin Visit: {{id}}", "createdAt": "Created on {{date}}", "quantity": "Quantity: {{count}}",
+    "responsibleDentist": "Responsible dentist", "itemTotal": "Treatment items", "progressTitle": "Treatment progress", "progressValue": "{{completed}}/{{total}} completed ({{percentage}}%)",
+    "completedCount": "Completed: {{count}}", "inProgressCount": "In progress: {{count}}", "pendingCount": "Pending: {{count}}", "cancelledCount": "Cancelled: {{count}}",
+    "assignedTeeth": "Assigned teeth", "assignedToothLabel": "Tooth {{code}}, assigned", "otherPositions": "Other positions: {{positions}}",
+    "itemsTitle": "Treatment items ({{count}})", "readOnly": "Read only", "toothValue": "Tooth: {{position}}", "noTooth": "No tooth assigned", "unitPrice": "Unit price: {{amount}}",
+    "indicationValue": "Indication: {{indication}}", "dentistValue": "Dentist: {{name}}", "expandItem": "Expand item {{count}}", "collapseItem": "Collapse item {{count}}"
+  },
   "visitList": {
     "title": "Related treatment plans", "description": "Treatment plans related to this visit.",
     "detailPageDescription": "Manage treatment plan content and state without interrupting the Visit record.",
@@ -55,7 +62,7 @@
     "toothPositionValue": "Tooth position: {{position}}", "progress": "{{completed}} / {{total}} completed",
     "columns": { "plan": "Plan", "createdAt": "Created", "dentist": "Dentist", "progress": "Progress", "status": "Status", "cost": "Estimated cost", "actions": "Actions" }
   },
-  "events": { "title": "Event history", "loading": "Loading event history...", "loadError": "Could not load event history. Please try again.", "empty": "No execution events have been recorded.", "loadMore": "Load more", "types": { "IN_PROGRESS": "In progress", "COMPLETED": "Completed", "CANCELLED": "Cancelled" } },
+  "events": { "title": "Treatment history", "fullTitle": "Full treatment history", "loading": "Loading event history...", "loadError": "Could not load event history. Please try again.", "empty": "No execution events have been recorded.", "noResults": "No matching events found.", "recent": "{{count}} most recent events", "viewAll": "View full history", "performedBy": "Performed by: {{id}}", "searchPlaceholder": "Search treatment history...", "all": "All", "loadMore": "Load more", "types": { "IN_PROGRESS": "In progress", "COMPLETED": "Completed", "CANCELLED": "Cancelled" } },
   "errors": { "plansLoad": "Could not load treatment plans. Please retry.", "planLoad": "Could not load this treatment plan. Please retry." },
   "dialogs": {
     "clearAll": { "title": "Clear all treatment items?", "description": "Items are removed from the draft only after you save it." },

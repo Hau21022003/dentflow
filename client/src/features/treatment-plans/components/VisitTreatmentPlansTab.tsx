@@ -13,7 +13,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import type { AuthUser } from "@/features/auth/auth.types";
 import { PatientTreatmentPlanStatusBadge } from "@/features/patients/components/PatientTreatmentPlanStatusBadge";
+import { TreatmentPlanDetailSheet } from "@/features/treatment-plans/components/TreatmentPlanDetailSheet";
 import {
   useCreateTreatmentPlanMutation,
   useTreatmentPlansQuery,
@@ -45,6 +47,7 @@ type Props = {
   branchSlug: string;
   date: string;
   tenantSlug: string;
+  user: AuthUser | null | undefined;
   visitId: string;
 };
 
@@ -163,6 +166,7 @@ export function VisitTreatmentPlansTab({
   branchSlug,
   date,
   tenantSlug,
+  user,
   visitId,
 }: Props) {
   const { i18n, t } = useTranslation("treatmentPlans");
@@ -177,6 +181,9 @@ export function VisitTreatmentPlansTab({
     null,
   );
   const [createError, setCreateError] = useState("");
+  const [detailPlan, setDetailPlan] = useState<TreatmentPlanListItem | null>(
+    null,
+  );
   const locale = i18n.resolvedLanguage === "en" ? "en-US" : "vi-VN";
 
   useEffect(() => {
@@ -206,7 +213,7 @@ export function VisitTreatmentPlansTab({
   );
   const hasActiveFilters = Boolean(search.trim() || status !== ALL_STATUSES);
 
-  const openDetail = useCallback(
+  const openDraftEditor = useCallback(
     (planId: string) => {
       navigate(
         pathFor.workspaceDoctorTreatmentPlan(
@@ -219,6 +226,17 @@ export function VisitTreatmentPlansTab({
       );
     },
     [appointmentId, branchSlug, date, navigate, tenantSlug],
+  );
+
+  const openDetail = useCallback(
+    (plan: TreatmentPlanListItem) => {
+      if (plan.status === "DRAFT") {
+        openDraftEditor(plan.id);
+        return;
+      }
+      setDetailPlan(plan);
+    },
+    [openDraftEditor],
   );
 
   function resetToFirstPage() {
@@ -238,7 +256,7 @@ export function VisitTreatmentPlansTab({
         idempotencyKey: intent.key,
       });
       setCreateIntent(null);
-      openDetail(plan.id);
+      openDraftEditor(plan.id);
     } catch (error) {
       handleApiError({ error, onMessage: setCreateError });
     }
@@ -316,7 +334,7 @@ export function VisitTreatmentPlansTab({
         header: () => t("visitList.columns.actions"),
         cell: ({ row }) => (
           <Button
-            onClick={() => openDetail(row.original.id)}
+            onClick={() => openDetail(row.original)}
             size="sm"
             type="button"
             variant="outline"
@@ -331,7 +349,8 @@ export function VisitTreatmentPlansTab({
   );
 
   return (
-    <Card>
+    <>
+      <Card>
       <CardHeader className="flex flex-col items-stretch justify-between gap-4 border-b p-5 sm:flex-row sm:items-start">
         <div>
           <CardTitle>{t("visitList.title")}</CardTitle>
@@ -487,7 +506,7 @@ export function VisitTreatmentPlansTab({
                 </div>
                 <Button
                   className="w-full sm:w-auto"
-                  onClick={() => openDetail(plan.id)}
+                  onClick={() => openDetail(plan)}
                   size="sm"
                   type="button"
                   variant="outline"
@@ -501,6 +520,15 @@ export function VisitTreatmentPlansTab({
           toolbar={{ search: false, viewOptions: false }}
         />
       </CardContent>
-    </Card>
+      </Card>
+      <TreatmentPlanDetailSheet
+        onEditDraft={openDraftEditor}
+        onOpenChange={(open) => !open && setDetailPlan(null)}
+        open={Boolean(detailPlan)}
+        plan={detailPlan}
+        scope={scope}
+        user={user}
+      />
+    </>
   );
 }

@@ -699,6 +699,7 @@ export function DoctorVisitPage() {
               branchSlug={branchSlug}
               date={date}
               tenantSlug={tenantSlug}
+              user={user}
               visitId={visit.id}
             />
           )}

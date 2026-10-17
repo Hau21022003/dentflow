@@ -10,6 +10,7 @@ export function DentalChart({
   expanded = false,
   lowerLabel,
   onToggle,
+  readOnly = false,
   selectedCodes,
   teeth,
   toothLabel,
@@ -19,6 +20,7 @@ export function DentalChart({
   expanded?: boolean;
   lowerLabel: string;
   onToggle: (code: string) => void;
+  readOnly?: boolean;
   selectedCodes: readonly string[];
   teeth: readonly ToothLayout[];
   toothLabel: (code: string) => string;
@@ -86,18 +88,30 @@ export function DentalChart({
           return (
             <g key={tooth.number}>
               <g
-                aria-disabled={isDisabled || undefined}
+                aria-disabled={!readOnly && isDisabled ? true : undefined}
                 aria-label={toothLabel(tooth.number)}
-                aria-pressed={isSelected}
-                className={cn("group outline-none", isDisabled ? "cursor-not-allowed opacity-40" : "cursor-pointer")}
-                onClick={() => !isDisabled && onToggle(tooth.number)}
+                aria-pressed={readOnly ? undefined : isSelected}
+                className={cn(
+                  "group outline-none",
+                  readOnly
+                    ? "cursor-default"
+                    : isDisabled
+                      ? "cursor-not-allowed opacity-40"
+                      : "cursor-pointer",
+                )}
+                onClick={() => !readOnly && !isDisabled && onToggle(tooth.number)}
                 onKeyDown={(event) => {
-                  if (isDisabled || (event.key !== "Enter" && event.key !== " ")) return;
+                  if (
+                    readOnly ||
+                    isDisabled ||
+                    (event.key !== "Enter" && event.key !== " ")
+                  )
+                    return;
                   event.preventDefault();
                   onToggle(tooth.number);
                 }}
-                role="button"
-                tabIndex={isDisabled ? -1 : 0}
+                role={readOnly ? "img" : "button"}
+                tabIndex={readOnly || isDisabled ? -1 : 0}
                 transform={`translate(${tooth.x} ${tooth.y}) rotate(${tooth.rotation})`}
               >
                 <rect
