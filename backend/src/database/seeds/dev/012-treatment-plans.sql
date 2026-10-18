@@ -116,3 +116,22 @@ JOIN "treatment_items" AS "item" ON "item"."id" = md5('brightsmile-treatment-ite
 JOIN "appointments" AS "appointment" ON "appointment"."id" = md5('brightsmile-appointment-' || "seed_events"."appointment_n")::uuid AND "appointment"."tenant_id" = "plan"."tenant_id" AND "appointment"."branch_id" = "plan"."branch_id" AND "appointment"."patient_id" = "plan"."patient_id" AND "appointment"."status" = 'IN_PROGRESS'
 JOIN "visits" AS "visit" ON "visit"."appointment_id" = "appointment"."id" AND "visit"."status" = 'OPEN'
 ON CONFLICT ("id") DO NOTHING;
+
+WITH "seed_progress_notes" ("plan_key", "item_key", "appointment_n", "note_order", "content") AS (
+  VALUES
+    ('partially-completed', 'root-canal', 24, 4, 'Synthetic progress note: root canal preparation completed; continue monitoring before obturation.'),
+    ('partially-completed-01', 'in-progress-ceramic-braces', 23, 4, 'Synthetic progress note: appliance fit checked and routine adjustment completed.'),
+    ('partially-completed-02', 'in-progress-orthodontic-adjustment', 24, 4, 'Synthetic progress note: alignment is progressing as planned; reviewed home-care instructions.'),
+    ('partially-completed-03', 'in-progress-take-home-whitening', 21, 4, 'Synthetic progress note: reviewed tray fit and recorded good tolerance to the current regimen.'),
+    ('partially-completed-04', 'in-progress-consultation-new', 22, 4, 'Synthetic progress note: initial consultation completed; treatment options remain under review.')
+)
+INSERT INTO "treatment_item_events" ("id", "treatment_item_id", "treatment_plan_id", "visit_id", "performed_by_user_id", "event_type", "content", "created_at")
+SELECT md5('brightsmile-treatment-progress-note-' || "seed_progress_notes"."plan_key" || '-' || "seed_progress_notes"."item_key" || '-' || "seed_progress_notes"."note_order")::uuid,
+       "item"."id", "plan"."id", "visit"."id", "appointment"."assigned_dentist_user_id", 'PROGRESS_NOTE'::"treatment_item_event_type_enum", "seed_progress_notes"."content",
+       LEAST(CURRENT_TIMESTAMP, "appointment"."start_at" + "seed_progress_notes"."note_order" * INTERVAL '10 minutes')
+FROM "seed_progress_notes"
+JOIN "treatment_plans" AS "plan" ON "plan"."id" = md5('brightsmile-treatment-plan-' || "seed_progress_notes"."plan_key")::uuid
+JOIN "treatment_items" AS "item" ON "item"."id" = md5('brightsmile-treatment-item-' || "seed_progress_notes"."plan_key" || '-' || "seed_progress_notes"."item_key")::uuid AND "item"."treatment_plan_id" = "plan"."id" AND "item"."status" = 'IN_PROGRESS'
+JOIN "appointments" AS "appointment" ON "appointment"."id" = md5('brightsmile-appointment-' || "seed_progress_notes"."appointment_n")::uuid AND "appointment"."tenant_id" = "plan"."tenant_id" AND "appointment"."branch_id" = "plan"."branch_id" AND "appointment"."patient_id" = "plan"."patient_id" AND "appointment"."status" = 'IN_PROGRESS'
+JOIN "visits" AS "visit" ON "visit"."appointment_id" = "appointment"."id" AND "visit"."status" = 'OPEN'
+ON CONFLICT ("id") DO NOTHING;
