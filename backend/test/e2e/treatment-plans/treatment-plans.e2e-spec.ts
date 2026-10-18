@@ -533,6 +533,67 @@ describe('Treatment plan V1 (e2e)', () => {
     expect(maxLengthNote.body.content).toHaveLength(2000);
 
     const secondItemId = detail.body.items[1].id as string;
+    const cancelItemRoute = `${root}/visits/${visit.id}/treatment-plans/${planId}/items/${secondItemId}/events`;
+    await dentist.agent
+      .post(cancelItemRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ eventType: 'CANCELLED', reasonCode: 'OTHER' })
+      .expect(422);
+    await dentist.agent
+      .post(cancelItemRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ eventType: 'CANCELLED', reasonCode: 'OTHER', note: '   ' })
+      .expect(422);
+    await dentist.agent
+      .post(cancelItemRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        eventType: 'CANCELLED',
+        reasonCode: 'OTHER',
+        note: 'x'.repeat(501),
+      })
+      .expect(422);
+    const itemCancellationNote =
+      'Synthetic item cancellation note for clinical follow-up.';
+    const cancelledItem = await dentist.agent
+      .post(cancelItemRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        eventType: 'CANCELLED',
+        reasonCode: 'OTHER',
+        note: `  ${itemCancellationNote}  `,
+      })
+      .expect(200);
+    expect(cancelledItem.body).toMatchObject({
+      eventType: 'CANCELLED',
+      itemStatus: TreatmentItemStatus.CANCELLED,
+      planStatus: TreatmentPlanStatus.ACCEPTED,
+    });
+    await dentist.agent
+      .get(cancelItemRoute)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.items).toEqual([
+          expect.objectContaining({
+            eventType: 'CANCELLED',
+            reasonCode: 'OTHER',
+            note: itemCancellationNote,
+          }),
+        ]);
+      });
+    const itemCancellationAudit = await dataSource
+      .getRepository(AuditLog)
+      .findOneBy({
+        action: AuditAction.TREATMENT_ITEM_EVENT_RECORDED,
+        resourceId: cancelledItem.body.id as string,
+      });
+    expect(itemCancellationAudit).toMatchObject({
+      metadata: { reasonCode: 'OTHER' },
+    });
+    expect(JSON.stringify(itemCancellationAudit)).not.toContain(
+      itemCancellationNote,
+    );
+
     await dentist.agent
       .post(
         `${root}/visits/${visit.id}/treatment-plans/${planId}/items/${secondItemId}/progress-notes`,

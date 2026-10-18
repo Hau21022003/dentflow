@@ -2,12 +2,12 @@ import http from "@/shared/lib/http";
 import type { IdempotentCommand } from "@/shared/lib/idempotency";
 import type {
   CancelTreatmentPlanInput,
+  RecordTreatmentItemEventInput,
   RecordTreatmentItemEventResponse,
   CreateTreatmentProgressNoteInput,
   SyncTreatmentPlanInput,
   TreatmentItemEventPage,
   TreatmentItemEvent,
-  TreatmentItemStateEventType,
   TreatmentPlan,
   TreatmentPlanListQuery,
   TreatmentPlanPage,
@@ -119,7 +119,7 @@ export const treatmentPlansService = {
       IdempotentCommand & {
         planId: string;
         itemId: string;
-        input: { eventType: TreatmentItemStateEventType; reasonCode?: string };
+        input: RecordTreatmentItemEventInput;
       },
   ): Promise<RecordTreatmentItemEventResponse> {
     const { planId, itemId, input, idempotencyKey, ...scope } = command;

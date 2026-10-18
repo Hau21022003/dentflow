@@ -220,6 +220,14 @@
     "viewAll": "Xem toàn bộ lịch sử",
     "performedBy": "Bác sĩ: {{name}}",
     "cancelReason": "Lý do: {{reason}}",
+    "cancellationReasons": {
+      "PATIENT_REQUEST": "Bệnh nhân yêu cầu",
+      "ENTERED_IN_ERROR": "Nhập nhầm",
+      "DUPLICATE": "Trùng lặp",
+      "NO_LONGER_APPLICABLE": "Không còn phù hợp",
+      "TRANSFER_OF_CARE": "Chuyển điều trị",
+      "OTHER": "Khác"
+    },
     "searchPlaceholder": "Tìm theo nội dung, bác sĩ, loại sự kiện...",
     "all": "Tất cả",
     "loadMore": "Tải thêm",
@@ -305,8 +313,41 @@
     },
     "cancelItem": {
       "title": "Hủy hạng mục điều trị",
-      "description": "Ghi nhận sự kiện hủy cho hạng mục này.",
-      "submit": "Hủy hạng mục"
+      "description": "Hành động này sẽ hủy hạng mục điều trị hiện tại và ghi nhận lý do vào lịch sử điều trị của bệnh nhân.",
+      "submit": "Hủy hạng mục",
+      "reasonLabel": "Lý do hủy",
+      "noteLabel": "Ghi chú thêm",
+      "noteOptional": "(không bắt buộc)",
+      "noteRequired": "(bắt buộc)",
+      "notePlaceholder": "Nhập thêm thông tin về lý do hủy hạng mục (nếu có)...",
+      "noteCount": "{{count}}/500",
+      "auditHint": "Hành động này sẽ được ghi vào lịch sử điều trị.",
+      "validation": {
+        "noteRequired": "Vui lòng nhập ghi chú khi chọn lý do Khác.",
+        "noteMax": "Ghi chú không được vượt quá 500 ký tự."
+      },
+      "reasons": {
+        "PATIENT_REQUEST": {
+          "label": "Bệnh nhân yêu cầu",
+          "description": "Theo yêu cầu của bệnh nhân."
+        },
+        "ENTERED_IN_ERROR": {
+          "label": "Nhập nhầm hạng mục",
+          "description": "Chọn nhầm dịch vụ hoặc răng."
+        },
+        "NO_LONGER_APPLICABLE": {
+          "label": "Không còn phù hợp",
+          "description": "Không phù hợp với tình trạng hiện tại."
+        },
+        "DUPLICATE": {
+          "label": "Trùng hạng mục",
+          "description": "Đã có hạng mục tương tự."
+        },
+        "OTHER": {
+          "label": "Khác",
+          "description": "Lý do khác."
+        }
+      }
     }
   }
 }

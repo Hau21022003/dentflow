@@ -225,6 +225,14 @@
     "viewAll": "View full history",
     "performedBy": "Dentist: {{name}}",
     "cancelReason": "Reason: {{reason}}",
+    "cancellationReasons": {
+      "PATIENT_REQUEST": "Patient request",
+      "ENTERED_IN_ERROR": "Entered in error",
+      "DUPLICATE": "Duplicate",
+      "NO_LONGER_APPLICABLE": "No longer applicable",
+      "TRANSFER_OF_CARE": "Transfer of care",
+      "OTHER": "Other"
+    },
     "searchPlaceholder": "Search by content, dentist, or event type...",
     "all": "All",
     "loadMore": "Load more",
@@ -310,8 +318,41 @@
     },
     "cancelItem": {
       "title": "Cancel treatment item",
-      "description": "Record a cancellation event for this item.",
-      "submit": "Cancel item"
+      "description": "This will cancel the current treatment item and record the reason in the patient's treatment history.",
+      "submit": "Cancel item",
+      "reasonLabel": "Cancellation reason",
+      "noteLabel": "Additional note",
+      "noteOptional": "(optional)",
+      "noteRequired": "(required)",
+      "notePlaceholder": "Add more information about the cancellation if needed...",
+      "noteCount": "{{count}}/500",
+      "auditHint": "This action will be recorded in treatment history.",
+      "validation": {
+        "noteRequired": "Enter a note when the reason is Other.",
+        "noteMax": "The note must not exceed 500 characters."
+      },
+      "reasons": {
+        "PATIENT_REQUEST": {
+          "label": "Patient request",
+          "description": "Requested by the patient."
+        },
+        "ENTERED_IN_ERROR": {
+          "label": "Item entered in error",
+          "description": "The wrong service or tooth was selected."
+        },
+        "NO_LONGER_APPLICABLE": {
+          "label": "No longer applicable",
+          "description": "No longer suitable for the current condition."
+        },
+        "DUPLICATE": {
+          "label": "Duplicate item",
+          "description": "A similar treatment item already exists."
+        },
+        "OTHER": {
+          "label": "Other",
+          "description": "Another reason."
+        }
+      }
     }
   }
 }

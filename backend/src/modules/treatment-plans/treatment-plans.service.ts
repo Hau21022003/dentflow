@@ -675,6 +675,10 @@ export class TreatmentPlansService {
         input.eventType === TreatmentItemEventType.CANCELLED
           ? input.reasonCode
           : undefined;
+      const note =
+        input.eventType === TreatmentItemEventType.CANCELLED
+          ? input.note
+          : undefined;
       const event = await manager.save(
         manager.create(TreatmentItemEvent, {
           treatmentItemId: item.id,
@@ -683,6 +687,7 @@ export class TreatmentPlansService {
           performedByUserId: context.actor.userId,
           eventType: input.eventType,
           reasonCode: reasonCode ?? null,
+          note: note ?? null,
         }),
       );
       if (

@@ -29,6 +29,7 @@ import type { TreatmentPlanScope } from "@/features/treatment-plans/treatment-pl
 import {
   TREATMENT_ITEM_EVENT_TYPES,
   TREATMENT_PLAN_CANCELLATION_REASON_CODES,
+  type CancelTreatmentItemInput,
   type CancelTreatmentPlanInput,
   type TreatmentItemEvent,
   type TreatmentItemEventType,
@@ -79,13 +80,11 @@ import {
 } from "./TreatmentPlanReasonDialog";
 import { TreatmentImagePreviewDialog } from "./TreatmentImagePreviewDialog";
 import { TreatmentProgressNoteDialog } from "./TreatmentProgressNoteDialog";
+import { CancelTreatmentItemDialog } from "./CancelTreatmentItemDialog";
 import { CancelTreatmentPlanDialog } from "./CancelTreatmentPlanDialog";
 
 type Presentation = "page" | "sheet";
-type ReasonAction = {
-  kind: "reopen" | "cancelItem";
-  itemId?: string;
-};
+type ReasonAction = { kind: "reopen" };
 
 const cancellationReasonCodes = new Set<string>(
   TREATMENT_PLAN_CANCELLATION_REASON_CODES,
@@ -272,11 +271,7 @@ const eventIconStyles: Record<TreatmentItemEventType, string> = {
   PROGRESS_NOTE: "bg-cyan-100 text-cyan-700",
 };
 
-function formatEventDateTime(
-  value: string,
-  locale: string,
-  timeZone: string,
-) {
+function formatEventDateTime(value: string, locale: string, timeZone: string) {
   const date = new Date(value);
   const formattedTime = new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
@@ -315,7 +310,7 @@ function EventRow({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const reasonLabel = event.reasonCode
     ? cancellationReasonCodes.has(event.reasonCode)
-      ? t(`dialogs.cancelPlan.reasons.${event.reasonCode}.label`)
+      ? t(`events.cancellationReasons.${event.reasonCode}`)
       : event.reasonCode
     : null;
   return (
@@ -511,7 +506,7 @@ function TreatmentHistoryDialog({
     if (!normalizedSearch) return true;
     const reason = event.reasonCode
       ? cancellationReasonCodes.has(event.reasonCode)
-        ? t(`dialogs.cancelPlan.reasons.${event.reasonCode}.label`)
+        ? t(`events.cancellationReasons.${event.reasonCode}`)
         : event.reasonCode
       : "";
     return `${t(`events.types.${event.eventType}`)} ${event.performedBy.fullName} ${event.content ?? ""} ${reason} ${event.note ?? ""}`
@@ -555,7 +550,11 @@ function TreatmentHistoryDialog({
           formatEventDateTime(event.createdAt, locale, timeZone),
           t(`events.types.${event.eventType}`),
           event.performedBy.fullName,
-          event.reasonCode ?? "",
+          event.reasonCode
+            ? cancellationReasonCodes.has(event.reasonCode)
+              ? t(`events.cancellationReasons.${event.reasonCode}`)
+              : event.reasonCode
+            : "",
           event.note ?? "",
           event.content ?? "",
           event.images.length,
@@ -637,10 +636,7 @@ function TreatmentHistoryDialog({
               value={search}
             />
           </div>
-          <div
-            className="flex gap-2 overflow-x-auto pb-0.5"
-            role="group"
-          >
+          <div className="flex gap-2 overflow-x-auto pb-0.5" role="group">
             {(["ALL", ...TREATMENT_ITEM_EVENT_TYPES] as const).map((value) => {
               const isActive = type === value;
               return (
@@ -849,6 +845,7 @@ export function TreatmentPlanDetail({
   const eventMutation = useRecordTreatmentItemEventMutation();
   const [reasonAction, setReasonAction] = useState<ReasonAction | null>(null);
   const [cancelPlanOpen, setCancelPlanOpen] = useState(false);
+  const [cancelItemId, setCancelItemId] = useState<string | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [historyItemId, setHistoryItemId] = useState<string | null>(null);
   const [progressItemId, setProgressItemId] = useState<string | null>(null);
@@ -900,36 +897,42 @@ export function TreatmentPlanDetail({
 
   async function submitReason({ reasonCode }: TreatmentReasonForm) {
     if (!reasonAction) return;
-    const operation = `${reasonAction.kind}:${plan.id}:${reasonAction.itemId ?? ""}`;
+    const operation = `${reasonAction.kind}:${plan.id}`;
     const command = {
       operation: `clinical.treatment-plan.${reasonAction.kind}`,
       ...scope,
       planId: plan.id,
-      itemId: reasonAction.itemId,
       reasonCode,
     };
 
-    if (reasonAction.kind === "reopen") {
-      const updated = await reopen.mutateAsync({
-        ...scope,
-        idempotencyKey: keyFor(operation, command),
-        input: { reasonCode },
-        planId: plan.id,
-      });
-      completeIntent(operation);
-      onPlanBecameDraft?.(updated.id);
-      return;
-    }
-    if (reasonAction.itemId) {
-      await eventMutation.mutateAsync({
-        ...scope,
-        idempotencyKey: keyFor(operation, command),
-        input: { eventType: "CANCELLED", reasonCode },
-        itemId: reasonAction.itemId,
-        planId: plan.id,
-      });
-      completeIntent(operation);
-    }
+    const updated = await reopen.mutateAsync({
+      ...scope,
+      idempotencyKey: keyFor(operation, command),
+      input: { reasonCode },
+      planId: plan.id,
+    });
+    completeIntent(operation);
+    onPlanBecameDraft?.(updated.id);
+  }
+
+  async function cancelItem(input: CancelTreatmentItemInput) {
+    if (!cancelItemId) return;
+    const operation = `cancelItem:${plan.id}:${cancelItemId}`;
+    const command = {
+      operation: "clinical.treatment-item.event.record",
+      ...scope,
+      planId: plan.id,
+      itemId: cancelItemId,
+      ...input,
+    };
+    await eventMutation.mutateAsync({
+      ...scope,
+      idempotencyKey: keyFor(operation, command),
+      input: { eventType: "CANCELLED", ...input },
+      itemId: cancelItemId,
+      planId: plan.id,
+    });
+    completeIntent(operation);
   }
 
   async function cancelPlan(input: CancelTreatmentPlanInput) {
@@ -1177,12 +1180,7 @@ export function TreatmentPlanDetail({
                       <Button
                         className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                         disabled={eventMutation.isPending}
-                        onClick={() =>
-                          setReasonAction({
-                            kind: "cancelItem",
-                            itemId: item.id,
-                          })
-                        }
+                        onClick={() => setCancelItemId(item.id)}
                         size="sm"
                         type="button"
                         variant="outline"
@@ -1206,12 +1204,7 @@ export function TreatmentPlanDetail({
                       <Button
                         className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                         disabled={eventMutation.isPending}
-                        onClick={() =>
-                          setReasonAction({
-                            kind: "cancelItem",
-                            itemId: item.id,
-                          })
-                        }
+                        onClick={() => setCancelItemId(item.id)}
                         size="sm"
                         type="button"
                         variant="outline"
@@ -1326,12 +1319,7 @@ export function TreatmentPlanDetail({
                           className="w-auto min-w-40"
                         >
                           <DropdownMenuItem
-                            onSelect={() =>
-                              setReasonAction({
-                                kind: "cancelItem",
-                                itemId: item.id,
-                              })
-                            }
+                            onSelect={() => setCancelItemId(item.id)}
                             variant="destructive"
                           >
                             <X aria-hidden="true" />
@@ -1404,8 +1392,7 @@ export function TreatmentPlanDetail({
     </footer>
   );
 
-  const reasonPending =
-    reopen.isPending || eventMutation.isPending;
+  const reasonPending = reopen.isPending;
   const reasonTitle = reasonAction
     ? t(`dialogs.${reasonAction.kind}.title`)
     : "";
@@ -1441,6 +1428,12 @@ export function TreatmentPlanDetail({
         onSubmit={cancelPlan}
         open={cancelPlanOpen}
         pending={cancel.isPending}
+      />
+      <CancelTreatmentItemDialog
+        onOpenChange={(open) => !open && setCancelItemId(null)}
+        onSubmit={cancelItem}
+        open={Boolean(cancelItemId)}
+        pending={eventMutation.isPending}
       />
       <TreatmentHistoryDialog
         item={historyItem}

@@ -784,20 +784,118 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   const itemCancelDialog = page.getByRole("dialog", {
     name: "Cancel treatment item",
   });
-  await itemCancelDialog.getByLabel("Reason code").fill("PATIENT_REQUEST");
+  await expect(itemCancelDialog.getByRole("radio")).toHaveCount(5);
+  await expect(
+    itemCancelDialog.getByRole("radio", { name: /Patient request/ }),
+  ).toBeChecked();
+  await itemCancelDialog.getByText("Other", { exact: true }).click();
+  const itemCancellationNote = "Synthetic browser item cancellation note.";
+  const itemCancellationNoteInput =
+    itemCancelDialog.getByLabel(/Additional note/);
+  const itemCancelSubmit = itemCancelDialog.locator('button[type="submit"]');
+  await expect(itemCancelSubmit).toBeDisabled();
+  await expect(itemCancelDialog.getByText("0/500", { exact: true })).toBeVisible();
+  await itemCancellationNoteInput.fill(itemCancellationNote);
+  await expect(
+    itemCancelDialog.getByText(`${itemCancellationNote.length}/500`, {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await itemCancellationNoteInput.evaluate(
+      (element) => window.getComputedStyle(element).fontSize,
+    ),
+  ).toBe("14px");
+  const itemCancelScrollRegion = itemCancelDialog.locator(
+    ".min-h-0.flex-1.overflow-y-auto",
+  );
+  await expect(itemCancelScrollRegion).toBeVisible();
+  expect(
+    await itemCancelScrollRegion.evaluate(
+      (element) => element.scrollHeight > element.clientHeight,
+    ),
+  ).toBe(true);
+  await itemCancelScrollRegion.evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(itemCancelSubmit).toBeVisible();
+
+  let failedItemCancelKey = "";
+  await page.route(
+    /\/events$/,
+    async (route) => {
+      failedItemCancelKey = route.request().headers()["idempotency-key"] ?? "";
+      await route.fulfill({
+        body: JSON.stringify({ message: "Synthetic item cancellation failure" }),
+        contentType: "application/json",
+        status: 500,
+      });
+    },
+    { times: 1 },
+  );
+  await itemCancelSubmit.click();
+  await expect(
+    itemCancelDialog.getByText("Synthetic item cancellation failure", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(itemCancellationNoteInput).toHaveValue(itemCancellationNote);
+
+  let releaseItemCancelRequest!: () => void;
+  const itemCancelRequestGate = new Promise<void>((resolve) => {
+    releaseItemCancelRequest = resolve;
+  });
+  await page.route(
+    /\/events$/,
+    async (route) => {
+      await itemCancelRequestGate;
+      await route.continue();
+    },
+    { times: 1 },
+  );
+  const cancelEventRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname.endsWith("/events"),
+  );
   const cancelEventResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
       new URL(response.url()).pathname.endsWith("/events"),
   );
-  await itemCancelDialog
-    .getByRole("button", { name: "Cancel item", exact: true })
-    .click();
+  await itemCancelSubmit.click();
+  await expect(itemCancelSubmit).toBeDisabled();
+  await expect(
+    itemCancelDialog.getByRole("button", { name: "Close" }).first(),
+  ).toBeDisabled();
+  releaseItemCancelRequest();
+  const recordedCancelEventRequest = await cancelEventRequest;
   expectIdempotencyKey(
-    (await cancelEventResponse).request().headers()["idempotency-key"],
+    recordedCancelEventRequest.headers()["idempotency-key"],
   );
+  expect(recordedCancelEventRequest.headers()["idempotency-key"]).toBe(
+    failedItemCancelKey,
+  );
+  expect(recordedCancelEventRequest.postDataJSON()).toEqual({
+    eventType: "CANCELLED",
+    reasonCode: "OTHER",
+    note: itemCancellationNote,
+  });
+  await cancelEventResponse;
+  await page.setViewportSize({ width: 1280, height: 720 });
   await expect(
     detailSheet.getByText("Completed", { exact: true }).first(),
+  ).toBeVisible();
+  await detailSheet
+    .getByRole("button", { name: "Treatment history" })
+    .last()
+    .click();
+  await expect(
+    detailSheet.getByText("Reason: Other", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    detailSheet.getByText(itemCancellationNote, { exact: true }),
   ).toBeVisible();
   await expect(detailSheet.getByRole("button", { name: "Start" })).toHaveCount(
     0,

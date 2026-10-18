@@ -121,7 +121,7 @@ Mọi route bên dưới nằm dưới base branch-scoped đã xác minh:
 | `POST` | `/visits/:visitId/treatment-plans/:planId/reopen` | Chỉ `PROPOSED`; body bắt buộc `reasonCode`; xóa acceptance. |
 | `POST` | `/visits/:visitId/treatment-plans/:planId/cancel` | Hủy trực tiếp Plan theo quy tắc tại mục 4; body `{ reasonCode, note? }`, `OTHER` bắt buộc note sau trim. |
 | `GET` | `/visits/:visitId/treatment-plans/:planId/items/:itemId/events` | Event history phân trang cursor `(createdAt,id)`; trả thêm nullable `reasonCode`/`note`; chỉ Dentist với current Visit hợp lệ. |
-| `POST` | `/visits/:visitId/treatment-plans/:planId/items/:itemId/events` | Ghi event thực hiện; body chỉ có `eventType` và `reasonCode` bắt buộc khi `CANCELLED`. |
+| `POST` | `/visits/:visitId/treatment-plans/:planId/items/:itemId/events` | Ghi event thực hiện; khi `CANCELLED`, body nhận `eventType`, `reasonCode` bắt buộc và `note?` tối đa 500 ký tự; `OTHER` bắt buộc note khác rỗng sau trim. |
 
 `PATCH` nhận list Item cuối cùng: item có `id` là update Item thuộc đúng Plan;
 không có `id` là create; Item hiện hữu không có trong list bị delete. ID trùng,
@@ -207,8 +207,9 @@ vẫn không chặn current Visit hợp lệ thao tác Plan.
   `IN_PROGRESS`. Event `IN_PROGRESS` tiếp theo khi Item đang `IN_PROGRESS` chỉ
   ghi thêm buổi điều trị, không đổi Item state.
 - `COMPLETED` chỉ hợp lệ từ `IN_PROGRESS`; `CANCELLED` chỉ hợp lệ từ `PENDING`
-  hoặc `IN_PROGRESS`, bắt buộc reason code. Cả hai ghi event với current Visit
-  và Dentist thực tế.
+  hoặc `IN_PROGRESS`, bắt buộc reason code, nhận `note?` tối đa 500 ký tự và
+  bắt buộc note khác rỗng sau trim khi reason code là `OTHER`. Cả hai ghi event
+  với current Visit và Dentist thực tế.
 - Event và Item status được lock/cập nhật trong một transaction. Sau mỗi event,
   Plan state được suy ra từ toàn bộ Item:
   - Có Item `COMPLETED` và chưa tất cả Item terminal: `PARTIALLY_COMPLETED`.

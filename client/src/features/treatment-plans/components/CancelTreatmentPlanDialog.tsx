@@ -70,6 +70,9 @@ export function CancelTreatmentPlanDialog({
     name: "reasonCode",
   });
   const noteRequired = reasonCode === "OTHER";
+  const hasFieldErrors = Boolean(
+    form.formState.errors.note || form.formState.errors.reasonCode,
+  );
 
   useEffect(() => {
     if (open) {
@@ -89,37 +92,14 @@ export function CancelTreatmentPlanDialog({
   return (
     <Dialog onOpenChange={handleOpenChange} open={open}>
       <DialogContent
-        className="max-h-[90svh] gap-0 overflow-y-auto p-0 sm:max-w-xl"
+        className="flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl"
         showCloseButton={false}
       >
-        <DialogHeader className="gap-3 border-b p-5 pr-14">
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-orange-100 text-orange-600">
-              <TriangleAlert aria-hidden="true" className="size-5" />
-            </span>
-            <DialogTitle className="text-xl font-semibold">
-              {t("dialogs.cancelPlan.title")}
-            </DialogTitle>
-          </div>
-          <DialogDescription className="text-left leading-6">
-            {t("dialogs.cancelPlan.description")}
-          </DialogDescription>
-          <Button
-            aria-label={t("actions.close")}
-            className="absolute top-4 right-4"
-            disabled={pending}
-            onClick={() => handleOpenChange(false)}
-            size="icon"
-            type="button"
-            variant="ghost"
-          >
-            <X aria-hidden="true" />
-          </Button>
-        </DialogHeader>
-
         <form
+          className="flex min-h-0 flex-1 flex-col"
           onSubmit={form.handleSubmit(async (values) => {
             if (pending) return;
+            form.clearErrors("root.server");
             try {
               const trimmedNote = values.note.trim();
               await onSubmit({
@@ -135,7 +115,34 @@ export function CancelTreatmentPlanDialog({
             }
           })}
         >
-          <div className="space-y-4 p-5">
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border/70 px-5 py-4">
+            <DialogHeader className="gap-3 pr-3">
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-orange-100 text-orange-600">
+                  <TriangleAlert aria-hidden="true" className="size-5" />
+                </span>
+                <DialogTitle className="text-xl font-semibold">
+                  {t("dialogs.cancelPlan.title")}
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-left leading-6">
+                {t("dialogs.cancelPlan.description")}
+              </DialogDescription>
+            </DialogHeader>
+            <Button
+              aria-label={t("actions.close")}
+              className="shrink-0"
+              disabled={pending}
+              onClick={() => handleOpenChange(false)}
+              size="icon-sm"
+              type="button"
+              variant="ghost"
+            >
+              <X aria-hidden="true" />
+            </Button>
+          </div>
+
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
             {form.formState.errors.root?.server && (
               <Alert variant="destructive">
                 {form.formState.errors.root.server.message}
@@ -223,12 +230,12 @@ export function CancelTreatmentPlanDialog({
             </fieldset>
 
             <RHFTextarea
-              className="min-h-20 resize-none"
+              className="min-h-20 resize-none text-sm"
               control={form.control}
               disabled={pending}
               label={
                 <>
-                  {t("dialogs.cancelPlan.noteLabel")} {" "}
+                  {t("dialogs.cancelPlan.noteLabel")}{" "}
                   <span className="font-normal text-muted-foreground">
                     {t(
                       noteRequired
@@ -256,14 +263,9 @@ export function CancelTreatmentPlanDialog({
             <p className="-mt-2 text-right text-xs text-muted-foreground tabular-nums">
               {t("dialogs.cancelPlan.noteCount", { count: note.length })}
             </p>
-
-            <p className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-              <History aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-              {t("dialogs.cancelPlan.historyHint")}
-            </p>
           </div>
 
-          <DialogFooter className="m-0 rounded-none px-5 py-4 sm:justify-between">
+          <DialogFooter className="mx-0 mb-0 shrink-0 rounded-none px-5 py-4 sm:justify-between">
             <p className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
               <History aria-hidden="true" className="size-4" />
               {t("dialogs.cancelPlan.auditHint")}
@@ -279,7 +281,12 @@ export function CancelTreatmentPlanDialog({
               </Button>
               <Button
                 className="bg-destructive text-white hover:bg-destructive/90 hover:text-white"
-                disabled={pending || !form.formState.isValid}
+                disabled={
+                  pending ||
+                  hasFieldErrors ||
+                  !reasonCode ||
+                  (noteRequired && note.trim().length === 0)
+                }
                 type="submit"
                 variant="destructive"
               >
