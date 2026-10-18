@@ -19,9 +19,19 @@ import {
   UserImageUploadFolder,
 } from './dto/create-user-image-upload-intent.dto';
 import {
+  BranchImageUploadPurpose,
+  IMAGE_CONTENT_TYPES,
   IMAGE_EXTENSION_BY_CONTENT_TYPE,
+  IMAGE_UPLOAD_POLICIES,
   type ImageContentType,
+  type ImageUploadPolicy,
 } from './upload.constants';
+
+const BRANCH_IMAGE_UPLOAD_DIRECTORY_BY_PURPOSE: Readonly<
+  Record<BranchImageUploadPurpose, string>
+> = {
+  [BranchImageUploadPurpose.TREATMENT_PROGRESS]: 'treatment-progress',
+};
 
 export interface ImageUploadIntentResponse {
   objectKey: string;
@@ -52,20 +62,58 @@ export class UploadsService {
       );
     }
 
-    const extension = this.extensionFor(input);
-    const objectKey = `temp/${tenantId}/${branchId}/${randomUUID()}.${extension}`;
+    const policy = this.branchImageUploadPolicy(input.purpose);
+    const extension = this.extensionFor(input, policy);
+    const objectKey = this.branchObjectKey(
+      tenantId,
+      branchId,
+      context.actor.userId,
+      input.purpose,
+      extension,
+    );
 
-    return this.createIntent(objectKey, input);
+    return this.createIntent(objectKey, input, policy);
   }
 
   async createUserImageUploadIntent(
     userId: string,
     input: CreateUserImageUploadIntentDto,
   ): Promise<ImageUploadIntentResponse> {
-    const extension = this.extensionFor(input);
+    const policy = this.defaultImageUploadPolicy();
+    const extension = this.extensionFor(input, policy);
     const objectKey = this.userObjectKey(userId, input.folder, extension);
 
-    return this.createIntent(objectKey, input);
+    return this.createIntent(objectKey, input, policy);
+  }
+
+  private branchImageUploadPolicy(
+    purpose: BranchImageUploadPurpose | undefined,
+  ): ImageUploadPolicy {
+    return purpose
+      ? IMAGE_UPLOAD_POLICIES[purpose]
+      : this.defaultImageUploadPolicy();
+  }
+
+  private defaultImageUploadPolicy(): ImageUploadPolicy {
+    return {
+      maxFileSizeBytes: this.config.uploadConfig.maxFileSizeBytes,
+      allowedContentTypes: IMAGE_CONTENT_TYPES,
+    };
+  }
+
+  private branchObjectKey(
+    tenantId: string,
+    branchId: string,
+    userId: string,
+    purpose: BranchImageUploadPurpose | undefined,
+    extension: string,
+  ): string {
+    if (!purpose) {
+      return `temp/${tenantId}/${branchId}/${randomUUID()}.${extension}`;
+    }
+
+    const directory = BRANCH_IMAGE_UPLOAD_DIRECTORY_BY_PURPOSE[purpose];
+    return `temp/${tenantId}/${branchId}/${directory}/${userId}/${randomUUID()}.${extension}`;
   }
 
   private userObjectKey(
@@ -79,9 +127,15 @@ export class UploadsService {
     }
   }
 
-  private extensionFor(input: CreateImageUploadIntentDto): string {
-    this.assertImageSize(input);
+  private extensionFor(
+    input: CreateImageUploadIntentDto,
+    policy: ImageUploadPolicy,
+  ): string {
+    this.assertImageSize(input, policy.maxFileSizeBytes);
     const contentType = input.contentType as ImageContentType;
+    if (!policy.allowedContentTypes.includes(contentType)) {
+      throw new BadRequestException('Unsupported image content type.');
+    }
     const extension = IMAGE_EXTENSION_BY_CONTENT_TYPE[contentType];
     if (!extension) {
       throw new BadRequestException('Unsupported image content type.');
@@ -89,14 +143,16 @@ export class UploadsService {
     return extension;
   }
 
-  private assertImageSize(input: CreateImageUploadIntentDto): void {
-    const maxFileSizeBytes = this.config.uploadConfig.maxFileSizeBytes;
+  private assertImageSize(
+    input: CreateImageUploadIntentDto,
+    maxFileSizeBytes: number,
+  ): void {
     if (input.sizeBytes < 1) {
       throw new BadRequestException('Image file must not be empty.');
     }
     if (input.sizeBytes > maxFileSizeBytes) {
       throw new PayloadTooLargeException(
-        `Image size must not exceed ${this.config.uploadConfig.maxFileSizeMb} MB.`,
+        `Image size must not exceed ${maxFileSizeBytes / (1024 * 1024)} MB.`,
       );
     }
   }
@@ -104,13 +160,13 @@ export class UploadsService {
   private async createIntent(
     objectKey: string,
     input: CreateImageUploadIntentDto,
+    policy: ImageUploadPolicy,
   ): Promise<ImageUploadIntentResponse> {
-    const maxFileSizeBytes = this.config.uploadConfig.maxFileSizeBytes;
     try {
       const upload = await this.objectStorage.createPresignedPost({
         key: objectKey,
         contentType: input.contentType,
-        maxBytes: maxFileSizeBytes,
+        maxBytes: policy.maxFileSizeBytes,
       });
       const expiresAt = new Date(
         Date.now() + this.config.s3Config.presignedPostTtlMs,

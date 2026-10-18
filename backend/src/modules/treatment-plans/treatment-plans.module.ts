@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { StorageModule } from '../../infrastructure/storage';
 import { AuditModule } from '../audit/audit.module';
 import { AppointmentsModule } from '../appointments/appointments.module';
 import { AuthorizationModule } from '../authorization/authorization.module';
 import { TreatmentItemEvent } from './entities/treatment-item-event.entity';
+import { TreatmentItemEventImage } from './entities/treatment-item-event-image.entity';
 import { TreatmentItem } from './entities/treatment-item.entity';
 import { TreatmentPlan } from './entities/treatment-plan.entity';
 import { Patient } from '../patients/entities/patient.entity';
@@ -20,11 +22,13 @@ import { TreatmentPlanAcceptanceService } from './treatment-plan-acceptance.serv
       TreatmentPlan,
       TreatmentItem,
       TreatmentItemEvent,
+      TreatmentItemEventImage,
       Patient,
     ]),
     AppointmentsModule,
     AuditModule,
     AuthorizationModule,
+    StorageModule,
   ],
   controllers: [TreatmentPlansController, TreatmentPlanAcceptanceController],
   providers: [

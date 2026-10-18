@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   Matches,
@@ -9,7 +9,11 @@ import {
 import { TreatmentItemEventType } from '../entities/treatment-item-event.entity';
 export class RecordTreatmentItemEventDto {
   @ApiProperty({ enum: TreatmentItemEventType })
-  @IsEnum(TreatmentItemEventType)
+  @IsIn([
+    TreatmentItemEventType.IN_PROGRESS,
+    TreatmentItemEventType.COMPLETED,
+    TreatmentItemEventType.CANCELLED,
+  ])
   eventType: TreatmentItemEventType;
   @ApiPropertyOptional()
   @ValidateIf(

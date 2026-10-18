@@ -18,12 +18,21 @@ export const TREATMENT_ITEM_EVENT_TYPES = [
   "IN_PROGRESS",
   "COMPLETED",
   "CANCELLED",
+  "PROGRESS_NOTE",
+] as const;
+
+export const TREATMENT_ITEM_STATE_EVENT_TYPES = [
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
 ] as const;
 
 export type TreatmentPlanStatus = (typeof TREATMENT_PLAN_STATUSES)[number];
 export type TreatmentItemStatus = (typeof TREATMENT_ITEM_STATUSES)[number];
 export type TreatmentItemEventType =
   (typeof TREATMENT_ITEM_EVENT_TYPES)[number];
+export type TreatmentItemStateEventType =
+  (typeof TREATMENT_ITEM_STATE_EVENT_TYPES)[number];
 
 export type TreatmentPlanItem = {
   id: string;
@@ -90,7 +99,15 @@ export type TreatmentItemEvent = {
   id: string;
   visitId: string;
   performedByUserId: string;
+  performedBy: { id: string; fullName: string };
   eventType: TreatmentItemEventType;
+  content: string | null;
+  images: Array<{
+    id: string;
+    contentType: string;
+    sizeBytes: number;
+    url: string | null;
+  }>;
   createdAt: string;
 };
 
@@ -99,7 +116,17 @@ export type TreatmentItemEventPage = {
   nextCursor: string | null;
 };
 
-export type RecordTreatmentItemEventResponse = TreatmentItemEvent & {
+export type RecordTreatmentItemEventResponse = {
+  id: string;
+  visitId: string;
+  performedByUserId: string;
+  eventType: TreatmentItemStateEventType;
+  createdAt: string;
   itemStatus: TreatmentItemStatus;
   planStatus: TreatmentPlanStatus;
+};
+
+export type CreateTreatmentProgressNoteInput = {
+  content: string;
+  imageObjectKeys: string[];
 };

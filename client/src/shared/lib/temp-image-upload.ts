@@ -2,6 +2,7 @@ import http from "./http";
 import { SHARED_ENDPOINTS } from "../constants/endpoint.constants";
 
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
+export const TREATMENT_PROGRESS_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const IMAGE_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 interface ImageUploadIntentResponse {
@@ -17,6 +18,7 @@ export interface UploadTempImageInput {
   tenantSlug: string;
   branchSlug: string;
   file: File;
+  purpose?: "TREATMENT_PROGRESS";
   signal?: AbortSignal;
 }
 
@@ -40,7 +42,12 @@ export interface UploadUserTempImageInput {
 export async function uploadTempImage(
   input: UploadTempImageInput,
 ): Promise<UploadedTempImage> {
-  validateImage(input.file);
+  validateImage(
+    input.file,
+    input.purpose === "TREATMENT_PROGRESS"
+      ? TREATMENT_PROGRESS_IMAGE_MAX_BYTES
+      : MAX_IMAGE_SIZE_BYTES,
+  );
 
   const tenantSlug = encodeURIComponent(input.tenantSlug);
   const branchSlug = encodeURIComponent(input.branchSlug);
@@ -49,6 +56,7 @@ export async function uploadTempImage(
     {
       contentType: input.file.type,
       sizeBytes: input.file.size,
+      ...(input.purpose ? { purpose: input.purpose } : {}),
     },
     { signal: input.signal },
   );
@@ -118,14 +126,16 @@ export async function uploadUserTempImage(
   };
 }
 
-function validateImage(file: File): void {
+function validateImage(file: File, maxBytes = MAX_IMAGE_SIZE_BYTES): void {
   if (!IMAGE_CONTENT_TYPES.has(file.type)) {
     throw new Error("Only JPG, PNG, and WEBP images are supported.");
   }
   if (file.size < 1) {
     throw new Error("Image file must not be empty.");
   }
-  if (file.size > MAX_IMAGE_SIZE_BYTES) {
-    throw new Error("Image size must not exceed 2 MB.");
+  if (file.size > maxBytes) {
+    throw new Error(
+      `Image size must not exceed ${maxBytes / 1024 / 1024} MiB.`,
+    );
   }
 }

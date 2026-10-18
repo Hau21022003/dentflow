@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { AppConfigService } from 'src/config/app-config.service';
+import { AuditAction } from 'src/modules/audit';
+import { AuditLog } from 'src/modules/audit/entities/audit-log.entity';
 import {
   Appointment,
   AppointmentSource,
@@ -15,6 +17,8 @@ import {
 import { ServiceGroup } from 'src/modules/service-groups/entities/service-group.entity';
 import { Service } from 'src/modules/services/entities/service.entity';
 import { TreatmentItemEvent } from 'src/modules/treatment-plans/entities/treatment-item-event.entity';
+import { TreatmentItemEventImage } from 'src/modules/treatment-plans/entities/treatment-item-event-image.entity';
+import { TreatmentItemStatus } from 'src/modules/treatment-plans/entities/treatment-item.entity';
 import { TreatmentPlanStatus } from 'src/modules/treatment-plans/entities/treatment-plan.entity';
 import { Visit, VisitStatus } from 'src/modules/visits/entities/visit.entity';
 import { createAuthFixtures } from 'test/fixtures/auth.fixture';
@@ -416,11 +420,189 @@ describe('Treatment plan V1 (e2e)', () => {
           planStatus: TreatmentPlanStatus.ACCEPTED,
         }),
       );
-    const event = await dataSource
+    const progressKey = randomUUID();
+    const progressRoute = `${root}/visits/${visit.id}/treatment-plans/${planId}/items/${itemId}/progress-notes`;
+    const progressNote = await dentist.agent
+      .post(progressRoute)
+      .set('Idempotency-Key', progressKey)
+      .send({
+        content: '  Synthetic progress note\nwith a second line.  ',
+        imageObjectKeys: [],
+      })
+      .expect(200);
+    expect(progressNote.body).toMatchObject({
+      eventType: 'PROGRESS_NOTE',
+      performedByUserId: dentist.user.id,
+      performedBy: {
+        id: dentist.user.id,
+        fullName: dentist.user.fullName,
+      },
+      content: 'Synthetic progress note\nwith a second line.',
+      images: [],
+    });
+    await dentist.agent
+      .post(progressRoute)
+      .set('Idempotency-Key', progressKey)
+      .send({
+        content: '  Synthetic progress note\nwith a second line.  ',
+        imageObjectKeys: [],
+      })
+      .expect(200)
+      .expect((response) => expect(response.body).toEqual(progressNote.body));
+    await dentist.agent
+      .post(progressRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ content: '   ', imageObjectKeys: [] })
+      .expect(422);
+    await dentist.agent
+      .post(progressRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ content: 'x'.repeat(2001), imageObjectKeys: [] })
+      .expect(422);
+    await dentist.agent
+      .post(progressRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        content: 'Too many images.',
+        imageObjectKeys: Array.from(
+          { length: 6 },
+          (_, index) => `synthetic-${index}`,
+        ),
+      })
+      .expect(422);
+    await dentist.agent
+      .post(progressRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        content: 'Duplicate image.',
+        imageObjectKeys: ['synthetic-key', 'synthetic-key'],
+      })
+      .expect(422);
+    await dentist.agent
+      .post(progressRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        content: 'Wrong upload scope.',
+        imageObjectKeys: [
+          `temp/${randomUUID()}/${branch.id}/treatment-progress/${dentist.user.id}/${randomUUID()}.jpg`,
+        ],
+      })
+      .expect(422);
+    await dentist.agent
+      .post(
+        `${root}/visits/${visit.id}/treatment-plans/${planId}/items/${itemId}/events`,
+      )
+      .set('Idempotency-Key', randomUUID())
+      .send({ eventType: 'PROGRESS_NOTE' })
+      .expect(422);
+    await secondDentist.agent
+      .post(progressRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ content: 'Not the assigned dentist.', imageObjectKeys: [] })
+      .expect(403);
+
+    const progressAudit = await dataSource.getRepository(AuditLog).findOneBy({
+      action: AuditAction.TREATMENT_ITEM_EVENT_RECORDED,
+      resourceId: progressNote.body.id as string,
+    });
+    expect(progressAudit).toMatchObject({
+      after: { status: 'IN_PROGRESS', visitId: visit.id },
+      metadata: {},
+    });
+    expect(JSON.stringify(progressAudit)).not.toContain(
+      'Synthetic progress note',
+    );
+    expect(JSON.stringify(progressAudit)).not.toContain('objectKey');
+
+    const oneCharacterNote = await dentist.agent
+      .post(progressRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ content: 'x', imageObjectKeys: [] })
+      .expect(200);
+    expect(oneCharacterNote.body.content).toBe('x');
+    const maxLengthNote = await dentist.agent
+      .post(progressRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ content: 'x'.repeat(2000), imageObjectKeys: [] })
+      .expect(200);
+    expect(maxLengthNote.body.content).toHaveLength(2000);
+
+    const secondItemId = detail.body.items[1].id as string;
+    await dentist.agent
+      .post(
+        `${root}/visits/${visit.id}/treatment-plans/${planId}/items/${secondItemId}/progress-notes`,
+      )
+      .set('Idempotency-Key', randomUUID())
+      .send({ content: 'Not allowed while pending.', imageObjectKeys: [] })
+      .expect(409);
+
+    await dentist.agent
+      .get(
+        `${root}/visits/${visit.id}/treatment-plans/${planId}/items/${itemId}/events`,
+      )
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.items).toHaveLength(4);
+        expect(response.body.items).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: progressNote.body.id,
+              eventType: 'PROGRESS_NOTE',
+              content: 'Synthetic progress note\nwith a second line.',
+            }),
+            expect.objectContaining({ id: oneCharacterNote.body.id }),
+            expect.objectContaining({ id: maxLengthNote.body.id }),
+          ]),
+        );
+        expect(response.body.items.at(-1)).toMatchObject({
+          eventType: 'IN_PROGRESS',
+          content: null,
+          images: [],
+        });
+        const createdAtValues = response.body.items.map(
+          (event: { createdAt: string }) => Date.parse(event.createdAt),
+        );
+        expect(createdAtValues).toEqual(
+          [...createdAtValues].sort((left, right) => right - left),
+        );
+      });
+    const persistedEvents = await dataSource
       .getRepository(TreatmentItemEvent)
-      .findOneByOrFail({ treatmentItemId: itemId });
+      .findBy({ treatmentItemId: itemId });
+    expect(
+      persistedEvents.filter((event) => event.eventType === 'IN_PROGRESS'),
+    ).toHaveLength(1);
+    expect(
+      persistedEvents.filter((event) => event.eventType === 'PROGRESS_NOTE'),
+    ).toHaveLength(3);
+    const refreshedDetail = await dentist.agent
+      .get(`${root}/visits/${visit.id}/treatment-plans/${planId}`)
+      .expect(200);
+    expect(
+      refreshedDetail.body.items.find(
+        (candidate: { id: string }) => candidate.id === itemId,
+      ).status,
+    ).toBe(TreatmentItemStatus.IN_PROGRESS);
+    expect(refreshedDetail.body.status).toBe(TreatmentPlanStatus.ACCEPTED);
+
+    const imageRepository = dataSource.getRepository(TreatmentItemEventImage);
+    const persistedImage = await imageRepository.save(
+      imageRepository.create({
+        eventId: progressNote.body.id as string,
+        objectKey: `clinical/${tenant.id}/${branch.id}/${patient.id}/treatment-progress/${progressNote.body.id as string}/${randomUUID()}.jpg`,
+        contentType: 'image/jpeg',
+        sizeBytes: 1,
+        sortOrder: 0,
+      }),
+    );
+    await expect(imageRepository.delete(persistedImage.id)).rejects.toThrow(
+      'treatment_item_event_images are append-only',
+    );
+
     await expect(
-      dataSource.getRepository(TreatmentItemEvent).delete(event.id),
+      dataSource
+        .getRepository(TreatmentItemEvent)
+        .delete(progressNote.body.id as string),
     ).rejects.toThrow('treatment_item_events are append-only');
   }, 15_000);
 

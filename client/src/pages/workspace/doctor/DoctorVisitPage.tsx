@@ -68,10 +68,16 @@ type VisitTab = "clinical" | "safety" | "treatment-plans";
 
 function isValidDate(value: string | null): value is string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  return new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value;
+  return (
+    new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value
+  );
 }
 
-function formatVisitDateTime(isoTimestamp: string, timeZone: string, locale: string) {
+function formatVisitDateTime(
+  isoTimestamp: string,
+  timeZone: string,
+  locale: string,
+) {
   return new Intl.DateTimeFormat(locale, {
     timeZone,
     dateStyle: "medium",
@@ -88,7 +94,10 @@ function initials(fullName: string): string {
     .toLocaleUpperCase();
 }
 
-function ageOnDate(dateOfBirth: string | null, timeZone: string): number | null {
+function ageOnDate(
+  dateOfBirth: string | null,
+  timeZone: string,
+): number | null {
   if (!dateOfBirth) return null;
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -120,7 +129,10 @@ function VisitAddenda({
 }) {
   const { t } = useTranslation("visits");
   return (
-    <section className="space-y-4 border-t pt-6" aria-labelledby="visit-addenda">
+    <section
+      className="space-y-4 border-t pt-6"
+      aria-labelledby="visit-addenda"
+    >
       <div>
         <h2 className="text-lg font-semibold" id="visit-addenda">
           {t("addendum.title")}
@@ -143,7 +155,9 @@ function VisitAddenda({
                   {formatVisitDateTime(addendum.createdAt, timeZone, locale)}
                 </p>
               </div>
-              <p className="mt-3 whitespace-pre-wrap text-sm">{addendum.content}</p>
+              <p className="mt-3 whitespace-pre-wrap text-sm">
+                {addendum.content}
+              </p>
             </li>
           ))}
         </ol>
@@ -213,7 +227,9 @@ function CompactVisitHeader({
         <div className="flex gap-3 border-b p-4 sm:border-r xl:border-b-0">
           <CalendarDays className="mt-0.5 size-5 shrink-0 text-primary" />
           <div>
-            <dt className="text-xs text-muted-foreground">{t("header.visitTime")}</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("header.visitTime")}
+            </dt>
             <dd className="mt-0.5 text-sm font-semibold">
               {formatAppointmentDate(
                 dateInTimeZone(appointment.startAt, timeZone),
@@ -230,7 +246,9 @@ function CompactVisitHeader({
         <div className="flex gap-3 border-b p-4 xl:border-r xl:border-b-0">
           <ClipboardList className="mt-0.5 size-5 shrink-0 text-primary" />
           <div>
-            <dt className="text-xs text-muted-foreground">{t("header.operatory")}</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("header.operatory")}
+            </dt>
             <dd className="mt-0.5 text-sm font-semibold">
               {appointment.operatory
                 ? `${appointment.operatory.code} · ${appointment.operatory.name}`
@@ -241,17 +259,25 @@ function CompactVisitHeader({
         <div className="flex gap-3 border-b p-4 sm:border-r sm:border-b-0">
           <UserRound className="mt-0.5 size-5 shrink-0 text-primary" />
           <div>
-            <dt className="text-xs text-muted-foreground">{t("header.dentist")}</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("header.dentist")}
+            </dt>
             <dd className="mt-0.5 text-sm font-semibold">{userName}</dd>
           </div>
         </div>
         <div className="flex gap-3 p-4">
           <Stethoscope className="mt-0.5 size-5 shrink-0 text-primary" />
           <div>
-            <dt className="text-xs text-muted-foreground">{t("header.status")}</dt>
+            <dt className="text-xs text-muted-foreground">
+              {t("header.status")}
+            </dt>
             <dd className="mt-1">
               {visit ? (
-                <Badge variant={visit.status === "COMPLETED" ? "secondary" : "default"}>
+                <Badge
+                  variant={
+                    visit.status === "COMPLETED" ? "secondary" : "default"
+                  }
+                >
                   {t(`statuses.${visit.status}`)}
                 </Badge>
               ) : (
@@ -297,7 +323,9 @@ function ClinicalReferenceSidebar({
         <CardHeader className="flex-row items-center justify-between gap-3 border-b p-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="size-5 text-red-600" />
-            <CardTitle className="text-base">{t("references.safetyTitle")}</CardTitle>
+            <CardTitle className="text-base">
+              {t("references.safetyTitle")}
+            </CardTitle>
           </div>
           <Button
             className="shrink-0 rounded-full"
@@ -330,11 +358,13 @@ function ClinicalReferenceSidebar({
               {t("references.alertLoadError")}
             </p>
           )}
-          {!alerts.isLoading && !alerts.isError && activeAlerts.length === 0 && (
-            <p className="p-4 text-sm text-muted-foreground">
-              {t("references.noActiveAlerts")}
-            </p>
-          )}
+          {!alerts.isLoading &&
+            !alerts.isError &&
+            activeAlerts.length === 0 && (
+              <p className="p-4 text-sm text-muted-foreground">
+                {t("references.noActiveAlerts")}
+              </p>
+            )}
           {activeAlerts.map((alert) => {
             const categoryVisual =
               PATIENT_ALERT_CATEGORY_VISUALS[alert.category];
@@ -385,29 +415,46 @@ function ClinicalReferenceSidebar({
         <CardHeader className="flex-row items-center justify-between gap-3 border-b p-4">
           <div className="flex items-center gap-2">
             <ClipboardList className="size-5 text-primary" />
-            <CardTitle className="text-base">{t("references.plansTitle")}</CardTitle>
+            <CardTitle className="text-base">
+              {t("references.plansTitle")}
+            </CardTitle>
           </div>
-          <Button onClick={onShowPlans} size="sm" type="button" variant="outline">
+          <Button
+            onClick={onShowPlans}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
             {t("references.viewAll")}
             <ChevronRight aria-hidden="true" />
           </Button>
         </CardHeader>
         <CardContent className="divide-y p-0">
-          {plans.isLoading && <div className="m-4 h-24 animate-pulse rounded-xl bg-muted" />}
-          {plans.isError && (
-            <p className="p-4 text-sm text-destructive">{t("references.planLoadError")}</p>
+          {plans.isLoading && (
+            <div className="m-4 h-24 animate-pulse rounded-xl bg-muted" />
           )}
-          {!plans.isLoading && !plans.isError && plans.data?.items.length === 0 && (
-            <p className="p-4 text-sm text-muted-foreground">
-              {t("references.noPlans")}
+          {plans.isError && (
+            <p className="p-4 text-sm text-destructive">
+              {t("references.planLoadError")}
             </p>
           )}
+          {!plans.isLoading &&
+            !plans.isError &&
+            plans.data?.items.length === 0 && (
+              <p className="p-4 text-sm text-muted-foreground">
+                {t("references.noPlans")}
+              </p>
+            )}
           {plans.data?.items.map((plan: TreatmentPlan) => (
-            <article className="flex items-center justify-between gap-3 p-4" key={plan.id}>
+            <article
+              className="flex items-center justify-between gap-3 p-4"
+              key={plan.id}
+            >
               <div className="min-w-0">
                 <p className="font-semibold">{plan.code}</p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {plan.items[0]?.serviceName ?? t("references.planWithoutItems")}
+                  {plan.items[0]?.serviceName ??
+                    t("references.planWithoutItems")}
                 </p>
               </div>
               <PatientTreatmentPlanStatusBadge status={plan.status} />
@@ -432,13 +479,18 @@ export function DoctorVisitPage() {
     () => (validDate ? agendaRange(date, timeZone) : { from: "", to: "" }),
     [date, timeZone, validDate],
   );
-  const agenda = useAssignedAppointmentsAgendaQuery(tenantSlug, branchSlug, range);
+  const agenda = useAssignedAppointmentsAgendaQuery(
+    tenantSlug,
+    branchSlug,
+    range,
+  );
   const appointment = useMemo(
     () => agenda.data?.find((item) => item.id === appointmentId),
     [agenda.data, appointmentId],
   );
   const shouldLoadVisit =
-    appointment?.status === "IN_PROGRESS" || appointment?.status === "COMPLETED";
+    appointment?.status === "IN_PROGRESS" ||
+    appointment?.status === "COMPLETED";
   const visitQuery = useVisitQuery(
     tenantSlug,
     branchSlug,
@@ -447,12 +499,15 @@ export function DoctorVisitPage() {
   );
   const startMutation = useStartVisitMutation();
   const [startedVisit, setStartedVisit] = useState<Visit | null>(null);
-  const [startIntent, setStartIntent] = useState<IdempotencyIntent | null>(null);
+  const [startIntent, setStartIntent] = useState<IdempotencyIntent | null>(
+    null,
+  );
   const [startError, setStartError] = useState("");
   const visit = visitQuery.data ?? startedVisit;
   const requestedTab = searchParams.get("tab") as VisitTab | null;
   const safetyAvailable = Boolean(
-    appointment && !["COMPLETED", "CANCELLED", "NO_SHOW"].includes(appointment.status),
+    appointment &&
+    !["COMPLETED", "CANCELLED", "NO_SHOW"].includes(appointment.status),
   );
   const plansAvailable = visit?.status === "OPEN";
   const activeTab: VisitTab =
@@ -535,7 +590,9 @@ export function DoctorVisitPage() {
               <CalendarDays aria-hidden="true" />
             </EmptyMedia>
             <EmptyTitle>{t("states.invalidLinkTitle")}</EmptyTitle>
-            <EmptyDescription>{t("states.invalidLinkDescription")}</EmptyDescription>
+            <EmptyDescription>
+              {t("states.invalidLinkDescription")}
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : agenda.isLoading ? (
@@ -564,7 +621,9 @@ export function DoctorVisitPage() {
               <CalendarDays aria-hidden="true" />
             </EmptyMedia>
             <EmptyTitle>{t("states.notFoundTitle")}</EmptyTitle>
-            <EmptyDescription>{t("states.notFoundDescription")}</EmptyDescription>
+            <EmptyDescription>
+              {t("states.notFoundDescription")}
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -583,7 +642,10 @@ export function DoctorVisitPage() {
             visit={visit ?? null}
           />
 
-          <Tabs onValueChange={(value) => selectTab(value as VisitTab)} value={activeTab}>
+          <Tabs
+            onValueChange={(value) => selectTab(value as VisitTab)}
+            value={activeTab}
+          >
             <div className="overflow-x-auto">
               <TabsList aria-label={t("tabs.label")}>
                 <TabsTrigger value="clinical">
@@ -602,28 +664,34 @@ export function DoctorVisitPage() {
             </div>
           </Tabs>
 
-          {appointment.status === "CHECKED_IN" && !visit && activeTab === "clinical" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("start.title")}</CardTitle>
-                <p className="text-sm text-muted-foreground">{t("start.description")}</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {startError && <Alert variant="destructive">{startError}</Alert>}
-                <Button
-                  disabled={startMutation.isPending}
-                  onClick={() => void startVisit()}
-                  type="button"
-                >
-                  {startMutation.isPending && (
-                    <Spinner aria-label={t("actions.starting")} />
+          {appointment.status === "CHECKED_IN" &&
+            !visit &&
+            activeTab === "clinical" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("start.title")}</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {t("start.description")}
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {startError && (
+                    <Alert variant="destructive">{startError}</Alert>
                   )}
-                  <Stethoscope aria-hidden="true" />
-                  {t("actions.start")}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+                  <Button
+                    disabled={startMutation.isPending}
+                    onClick={() => void startVisit()}
+                    type="button"
+                  >
+                    {startMutation.isPending && (
+                      <Spinner aria-label={t("actions.starting")} />
+                    )}
+                    <Stethoscope aria-hidden="true" />
+                    {t("actions.start")}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
           {activeTab === "safety" && safetyAvailable && (
             <PatientAlertsPanel
@@ -634,24 +702,28 @@ export function DoctorVisitPage() {
             />
           )}
 
-          {appointment.status !== "CHECKED_IN" && !visit && visitQuery.isLoading && (
-            <div className="h-96 animate-pulse rounded-xl bg-muted" />
-          )}
-          {appointment.status !== "CHECKED_IN" && !visit && visitQuery.isError && (
-            <Alert variant="destructive">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span>{t("errors.visitLoad")}</span>
-                <Button
-                  onClick={() => void visitQuery.refetch()}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {t("actions.retry")}
-                </Button>
-              </div>
-            </Alert>
-          )}
+          {appointment.status !== "CHECKED_IN" &&
+            !visit &&
+            visitQuery.isLoading && (
+              <div className="h-96 animate-pulse rounded-xl bg-muted" />
+            )}
+          {appointment.status !== "CHECKED_IN" &&
+            !visit &&
+            visitQuery.isError && (
+              <Alert variant="destructive">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span>{t("errors.visitLoad")}</span>
+                  <Button
+                    onClick={() => void visitQuery.refetch()}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    {t("actions.retry")}
+                  </Button>
+                </div>
+              </Alert>
+            )}
 
           {visit && (
             <VisitClinicalForm
@@ -699,6 +771,7 @@ export function DoctorVisitPage() {
               branchSlug={branchSlug}
               date={date}
               tenantSlug={tenantSlug}
+              timeZone={timeZone}
               user={user}
               visitId={visit.id}
             />
@@ -714,7 +787,9 @@ export function DoctorVisitPage() {
                     <FilePenLine aria-hidden="true" />
                   </EmptyMedia>
                   <EmptyTitle>{t("states.unavailableTitle")}</EmptyTitle>
-                  <EmptyDescription>{t("states.unavailableDescription")}</EmptyDescription>
+                  <EmptyDescription>
+                    {t("states.unavailableDescription")}
+                  </EmptyDescription>
                 </EmptyHeader>
               </Empty>
             )}

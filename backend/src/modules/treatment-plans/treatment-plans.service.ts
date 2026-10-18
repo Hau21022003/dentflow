@@ -2,10 +2,13 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
+import { randomUUID } from 'node:crypto';
 import { Brackets, DataSource, EntityManager, In } from 'typeorm';
 import {
   allocateTenantDisplayNumber,
@@ -16,6 +19,12 @@ import {
   toPageMeta,
 } from '../../common/database/query-builder-list.util';
 import { RequestFieldValidationException } from '../../common/exceptions/request-field-validation.exception';
+import {
+  OBJECT_STORAGE,
+  ObjectStorageUnavailableError,
+  type ObjectStorage,
+  type StoredObjectMetadata,
+} from '../../infrastructure/storage';
 import { AuditAction } from '../audit/audit-actions';
 import { AuditLogService } from '../audit/audit-log.service';
 import { AuditActorType } from '../audit/entities/audit-log.entity';
@@ -34,6 +43,7 @@ import { TenantUserMembershipStatus } from '../staff/entities/tenant-user-member
 import { User } from '../users/entities/user.entity';
 import { Visit, VisitStatus } from '../visits/entities/visit.entity';
 import { ListTreatmentItemEventsDto } from './dto/list-treatment-item-events.dto';
+import { CreateTreatmentProgressNoteDto } from './dto/create-treatment-progress-note.dto';
 import { ListTreatmentPlansQueryDto } from './dto/list-treatment-plans-query.dto';
 import { RecordTreatmentItemEventDto } from './dto/record-treatment-item-event.dto';
 import {
@@ -45,6 +55,7 @@ import {
   TreatmentItemEvent,
   TreatmentItemEventType,
 } from './entities/treatment-item-event.entity';
+import { TreatmentItemEventImage } from './entities/treatment-item-event-image.entity';
 import {
   TreatmentItem,
   TreatmentItemStatus,
@@ -54,8 +65,22 @@ import {
   TreatmentPlanStatus,
 } from './entities/treatment-plan.entity';
 import { TreatmentPlansRepository } from './treatment-plans.repository';
+import {
+  BranchImageUploadPurpose,
+  IMAGE_EXTENSION_BY_CONTENT_TYPE,
+  IMAGE_UPLOAD_POLICIES,
+  type ImageContentType,
+} from '../uploads/upload.constants';
 
 type CurrentCase = { appointment: Appointment; visit: Visit };
+type PreparedProgressImage = {
+  id: string;
+  temporaryObjectKey: string;
+  permanentObjectKey: string;
+  contentType: ImageContentType;
+  sizeBytes: number;
+  sortOrder: number;
+};
 export interface TreatmentPlanResponse {
   id: string;
   code: string;
@@ -97,6 +122,7 @@ export class TreatmentPlansService {
     private readonly appointments: AppointmentsRepository,
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly audit: AuditLogService,
+    @Inject(OBJECT_STORAGE) private readonly objectStorage: ObjectStorage,
   ) {}
 
   async list(
@@ -428,20 +454,169 @@ export class TreatmentPlansService {
     );
     const page = records.length > 50 ? records.slice(0, 50) : records;
     const last = page.at(-1);
+    const eventIds = page.map((event) => event.id);
+    const performerIds = [
+      ...new Set(page.map((event) => event.performedByUserId)),
+    ];
+    const imageRecords: Promise<TreatmentItemEventImage[]> = eventIds.length
+      ? this.repository.eventImages.find({
+          where: { eventId: In(eventIds) },
+          order: { eventId: 'ASC', sortOrder: 'ASC' },
+        })
+      : Promise.resolve([]);
+    const performerRecords: Promise<User[]> = performerIds.length
+      ? this.dataSource.getRepository(User).find({
+          where: { id: In(performerIds) },
+        })
+      : Promise.resolve([]);
+    const [images, performers] = await Promise.all([
+      imageRecords,
+      performerRecords,
+    ]);
+    const imagesByEvent = new Map<string, TreatmentItemEventImage[]>();
+    for (const image of images) {
+      const eventImages = imagesByEvent.get(image.eventId) ?? [];
+      eventImages.push(image);
+      imagesByEvent.set(image.eventId, eventImages);
+    }
+    const performerById = new Map<string, User>(
+      performers.map((performer) => [performer.id, performer] as const),
+    );
     return {
-      items: page.map((e) => ({
-        id: e.id,
-        visitId: e.visitId,
-        performedByUserId: e.performedByUserId,
-        eventType: e.eventType,
-        createdAt: e.createdAt,
-      })),
+      items: await Promise.all(
+        page.map((event) =>
+          this.toEventHistoryResponse(
+            event,
+            performerById.get(event.performedByUserId),
+            imagesByEvent.get(event.id) ?? [],
+          ),
+        ),
+      ),
       nextCursor:
         records.length > 50 && last
           ? this.encodeCursor(last.createdAt, last.id)
           : null,
     };
   }
+
+  async createProgressNote(
+    context: AuthorizationContext,
+    visitId: string,
+    planId: string,
+    itemId: string,
+    input: CreateTreatmentProgressNoteDto,
+  ) {
+    const current = await this.resolveCurrentCase(context, visitId);
+    const plan = await this.findPlanForCaseOrFail(context, current, planId);
+    const item = await this.repository.items.findOneBy({
+      id: itemId,
+      treatmentPlanId: plan.id,
+    });
+    if (!item) throw new NotFoundException('Treatment Item was not found.');
+    this.assertProgressNoteEligible(item);
+    const performer = await this.dataSource
+      .getRepository(User)
+      .findOneByOrFail({
+        id: context.actor.userId,
+      });
+
+    const eventId = randomUUID();
+    const preparedImages = await this.prepareProgressImages(
+      context,
+      plan.patientId,
+      eventId,
+      input.imageObjectKeys ?? [],
+    );
+
+    let event: TreatmentItemEvent;
+    try {
+      event = await this.dataSource.transaction(async (manager) => {
+        const lockedCurrent = await this.resolveCurrentCase(
+          context,
+          visitId,
+          manager,
+        );
+        const lockedPlan = await this.findPlanForCaseOrFail(
+          context,
+          lockedCurrent,
+          planId,
+          manager,
+        );
+        const lockedItem = await this.repository.findItemForUpdate(
+          manager,
+          lockedPlan.id,
+          itemId,
+        );
+        if (!lockedItem)
+          throw new NotFoundException('Treatment Item was not found.');
+        this.assertProgressNoteEligible(lockedItem);
+
+        const createdEvent = await manager.save(
+          manager.create(TreatmentItemEvent, {
+            id: eventId,
+            treatmentItemId: lockedItem.id,
+            treatmentPlanId: lockedPlan.id,
+            visitId: lockedCurrent.visit.id,
+            performedByUserId: context.actor.userId,
+            eventType: TreatmentItemEventType.PROGRESS_NOTE,
+            content: input.content,
+          }),
+        );
+        if (preparedImages.length) {
+          await manager.save(
+            preparedImages.map((image) =>
+              manager.create(TreatmentItemEventImage, {
+                id: image.id,
+                eventId: createdEvent.id,
+                objectKey: image.permanentObjectKey,
+                contentType: image.contentType,
+                sizeBytes: image.sizeBytes,
+                sortOrder: image.sortOrder,
+              }),
+            ),
+          );
+        }
+        await this.record(
+          manager,
+          context,
+          AuditAction.TREATMENT_ITEM_EVENT_RECORDED,
+          createdEvent.id,
+          {
+            after: {
+              status: lockedItem.status,
+              visitId: createdEvent.visitId,
+            },
+          },
+        );
+        return createdEvent;
+      });
+    } catch (error) {
+      await Promise.all(
+        preparedImages.map((image) =>
+          this.deleteObjectQuietly(image.permanentObjectKey),
+        ),
+      );
+      throw error;
+    }
+
+    await Promise.all(
+      preparedImages.map((image) =>
+        this.deleteObjectQuietly(image.temporaryObjectKey),
+      ),
+    );
+    const imageEntities = preparedImages.map((image) =>
+      this.repository.eventImages.create({
+        id: image.id,
+        eventId: event.id,
+        objectKey: image.permanentObjectKey,
+        contentType: image.contentType,
+        sizeBytes: image.sizeBytes,
+        sortOrder: image.sortOrder,
+      }),
+    );
+    return this.toEventHistoryResponse(event, performer, imageEntities);
+  }
+
   async recordEvent(
     context: AuthorizationContext,
     visitId: string,
@@ -706,6 +881,11 @@ export class TreatmentPlansService {
     item: TreatmentItem,
     input: RecordTreatmentItemEventDto,
   ) {
+    if (input.eventType === TreatmentItemEventType.PROGRESS_NOTE) {
+      throw new BadRequestException(
+        'Progress notes must use the progress note command.',
+      );
+    }
     if (
       input.eventType === TreatmentItemEventType.IN_PROGRESS &&
       ![TreatmentItemStatus.PENDING, TreatmentItemStatus.IN_PROGRESS].includes(
@@ -850,6 +1030,171 @@ export class TreatmentPlansService {
         updatedAt: i.updatedAt,
       })),
     };
+  }
+
+  private assertProgressNoteEligible(item: TreatmentItem): void {
+    if (item.status !== TreatmentItemStatus.IN_PROGRESS) {
+      throw new ConflictException(
+        'Progress notes can only be recorded for in-progress Items.',
+      );
+    }
+  }
+
+  private async prepareProgressImages(
+    context: AuthorizationContext,
+    patientId: string,
+    eventId: string,
+    temporaryObjectKeys: string[],
+  ): Promise<PreparedProgressImage[]> {
+    const policy =
+      IMAGE_UPLOAD_POLICIES[BranchImageUploadPurpose.TREATMENT_PROGRESS];
+    const prepared: PreparedProgressImage[] = [];
+    try {
+      for (const [
+        sortOrder,
+        temporaryObjectKey,
+      ] of temporaryObjectKeys.entries()) {
+        const extension = this.progressImageTempExtension(
+          context,
+          temporaryObjectKey,
+        );
+        let metadata: StoredObjectMetadata;
+        try {
+          metadata = await this.objectStorage.headObject(temporaryObjectKey);
+        } catch (error) {
+          if (error instanceof ObjectStorageUnavailableError) {
+            throw new ServiceUnavailableException(
+              'Image uploads are not configured for this environment.',
+            );
+          }
+          throw new RequestFieldValidationException(
+            'imageObjectKeys',
+            'A treatment progress image upload was not found.',
+          );
+        }
+        const contentType = metadata.contentType as
+          ImageContentType | undefined;
+        const expectedExtension = contentType
+          ? IMAGE_EXTENSION_BY_CONTENT_TYPE[contentType]
+          : undefined;
+        if (
+          !contentType ||
+          !policy.allowedContentTypes.includes(contentType) ||
+          expectedExtension !== extension ||
+          !metadata.sizeBytes ||
+          metadata.sizeBytes < 1 ||
+          metadata.sizeBytes > policy.maxFileSizeBytes
+        ) {
+          throw new RequestFieldValidationException(
+            'imageObjectKeys',
+            'A treatment progress image upload is invalid.',
+          );
+        }
+
+        const imageId = randomUUID();
+        const permanentObjectKey = `clinical/${context.tenant!.id}/${context.branch!.id}/${patientId}/treatment-progress/${eventId}/${imageId}.${extension}`;
+        try {
+          await this.objectStorage.copyObject({
+            sourceKey: temporaryObjectKey,
+            destinationKey: permanentObjectKey,
+          });
+        } catch (error) {
+          if (error instanceof ObjectStorageUnavailableError) {
+            throw new ServiceUnavailableException(
+              'Image uploads are not configured for this environment.',
+            );
+          }
+          throw new ServiceUnavailableException(
+            'A treatment progress image could not be stored.',
+          );
+        }
+        prepared.push({
+          id: imageId,
+          temporaryObjectKey,
+          permanentObjectKey,
+          contentType,
+          sizeBytes: metadata.sizeBytes,
+          sortOrder,
+        });
+      }
+      return prepared;
+    } catch (error) {
+      await Promise.all(
+        prepared.map((image) =>
+          this.deleteObjectQuietly(image.permanentObjectKey),
+        ),
+      );
+      throw error;
+    }
+  }
+
+  private progressImageTempExtension(
+    context: AuthorizationContext,
+    objectKey: string,
+  ): string {
+    const segments = objectKey.split('/');
+    const filename = segments[5] ?? '';
+    const match = /^([0-9a-f-]{36})\.(jpg|png|webp)$/i.exec(filename);
+    if (
+      segments.length !== 6 ||
+      segments[0] !== 'temp' ||
+      segments[1] !== context.tenant!.id ||
+      segments[2] !== context.branch!.id ||
+      segments[3] !== 'treatment-progress' ||
+      segments[4] !== context.actor.userId ||
+      !match
+    ) {
+      throw new RequestFieldValidationException(
+        'imageObjectKeys',
+        'A treatment progress image upload key is invalid.',
+      );
+    }
+    return match[2].toLowerCase();
+  }
+
+  private async toEventHistoryResponse(
+    event: TreatmentItemEvent,
+    performer: User | undefined,
+    images: TreatmentItemEventImage[],
+  ) {
+    return {
+      id: event.id,
+      visitId: event.visitId,
+      performedByUserId: event.performedByUserId,
+      performedBy: {
+        id: event.performedByUserId,
+        fullName: performer?.fullName ?? event.performedByUserId,
+      },
+      eventType: event.eventType,
+      content: event.content,
+      images: await Promise.all(
+        images
+          .sort((left, right) => left.sortOrder - right.sortOrder)
+          .map(async (image) => ({
+            id: image.id,
+            contentType: image.contentType,
+            sizeBytes: image.sizeBytes,
+            url: await this.signedImageUrl(image.objectKey),
+          })),
+      ),
+      createdAt: event.createdAt,
+    };
+  }
+
+  private async signedImageUrl(objectKey: string): Promise<string | null> {
+    try {
+      return await this.objectStorage.createPresignedGet(objectKey);
+    } catch {
+      return null;
+    }
+  }
+
+  private async deleteObjectQuietly(objectKey: string): Promise<void> {
+    try {
+      await this.objectStorage.deleteObject(objectKey);
+    } catch {
+      // Temp lifecycle and operational cleanup handle failed best-effort deletes.
+    }
   }
   private encodeCursor(createdAt: Date, id: string) {
     return Buffer.from(

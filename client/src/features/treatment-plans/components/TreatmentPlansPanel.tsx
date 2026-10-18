@@ -31,6 +31,7 @@ type TreatmentPlansPanelProps = TreatmentPlanScope & {
   onDraftCancel?: () => void;
   onProposed?: () => void;
   showList?: boolean;
+  timeZone: string;
   user: AuthUser | null | undefined;
 };
 
@@ -59,6 +60,7 @@ export function TreatmentPlansPanel({
   onDraftCancel,
   onProposed,
   showList = true,
+  timeZone,
   user,
 }: TreatmentPlansPanelProps) {
   const { t } = useTranslation("treatmentPlans");
@@ -69,7 +71,11 @@ export function TreatmentPlansPanel({
     branchSlug,
     PERMISSIONS.treatmentPlanWrite,
   );
-  const plans = useTreatmentPlansQuery(scope, { page: 1, limit: 100 }, canWrite);
+  const plans = useTreatmentPlansQuery(
+    scope,
+    { page: 1, limit: 100 },
+    canWrite,
+  );
   const create = useCreateTreatmentPlanMutation();
   const cancel = useCancelTreatmentPlanMutation();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(
@@ -213,6 +219,7 @@ export function TreatmentPlansPanel({
           plan={currentPlan}
           plannedDentists={selectedSummary?.plannedDentists}
           scope={scope}
+          timeZone={timeZone}
           user={user}
         />
       )}

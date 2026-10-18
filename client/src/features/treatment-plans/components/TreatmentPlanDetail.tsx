@@ -31,6 +31,7 @@ import {
   TREATMENT_ITEM_EVENT_TYPES,
   type TreatmentItemEvent,
   type TreatmentItemEventType,
+  type TreatmentItemStateEventType,
   type TreatmentPlan,
   type TreatmentPlanItem,
   type TreatmentPlanListItem,
@@ -56,6 +57,7 @@ import {
   Ellipsis,
   History,
   ListChecks,
+  NotebookPen,
   Play,
   RotateCcw,
   Search,
@@ -67,14 +69,13 @@ import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DentalChart } from "./DentalChart";
 import { parseFdiPosition } from "./treatment-plan-odontogram";
-import {
-  PERMANENT_TOOTH_LAYOUT,
-  PRIMARY_TOOTH_LAYOUT,
-} from "./tooth-layout";
+import { PERMANENT_TOOTH_LAYOUT, PRIMARY_TOOTH_LAYOUT } from "./tooth-layout";
 import {
   TreatmentPlanReasonDialog,
   type TreatmentReasonForm,
 } from "./TreatmentPlanReasonDialog";
+import { TreatmentImagePreviewDialog } from "./TreatmentImagePreviewDialog";
+import { TreatmentProgressNoteDialog } from "./TreatmentProgressNoteDialog";
 
 type Presentation = "page" | "sheet";
 type ReasonAction = {
@@ -90,6 +91,7 @@ type Props = {
   presentation?: Presentation;
   scope: TreatmentPlanScope;
   user: AuthUser | null | undefined;
+  timeZone: string;
 };
 
 const planStatusStyles: Record<TreatmentPlanStatus, string> = {
@@ -246,40 +248,103 @@ function ReadOnlyOdontogram({ plan }: { plan: TreatmentPlan }) {
 
 function EventIcon({ type }: { type: TreatmentItemEventType }) {
   const className = "size-4";
-  if (type === "COMPLETED") return <Check aria-hidden="true" className={className} />;
-  if (type === "CANCELLED") return <X aria-hidden="true" className={className} />;
+  if (type === "COMPLETED")
+    return <Check aria-hidden="true" className={className} />;
+  if (type === "CANCELLED")
+    return <X aria-hidden="true" className={className} />;
+  if (type === "PROGRESS_NOTE")
+    return <NotebookPen aria-hidden="true" className={className} />;
   return <Play aria-hidden="true" className={className} />;
 }
 
-function EventRow({ event, locale }: { event: TreatmentItemEvent; locale: string }) {
+function EventRow({
+  event,
+  locale,
+  timeZone,
+}: {
+  event: TreatmentItemEvent;
+  locale: string;
+  timeZone: string;
+}) {
   const { t } = useTranslation("treatmentPlans");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   return (
-    <li className="flex gap-3 border-b py-3 last:border-b-0">
-      <span
-        className={cn(
-          "mt-0.5 grid size-8 shrink-0 place-items-center rounded-full",
-          event.eventType === "COMPLETED" && "bg-emerald-100 text-emerald-700",
-          event.eventType === "IN_PROGRESS" && "bg-blue-100 text-blue-700",
-          event.eventType === "CANCELLED" && "bg-red-100 text-red-700",
-        )}
-      >
-        <EventIcon type={event.eventType} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="font-medium">{t(`events.types.${event.eventType}`)}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {t("events.performedBy", {
-            id: event.performedByUserId.slice(0, 8),
-          })}
-        </p>
-      </div>
-      <time className="shrink-0 text-right text-xs text-muted-foreground">
-        {new Intl.DateTimeFormat(locale, {
-          dateStyle: "short",
-          timeStyle: "short",
-        }).format(new Date(event.createdAt))}
-      </time>
-    </li>
+    <>
+      <li className="flex gap-3 border-b py-3 last:border-b-0">
+        <span
+          className={cn(
+            "mt-0.5 grid size-8 shrink-0 place-items-center rounded-full",
+            event.eventType === "COMPLETED" &&
+              "bg-emerald-100 text-emerald-700",
+            event.eventType === "IN_PROGRESS" && "bg-blue-100 text-blue-700",
+            event.eventType === "CANCELLED" && "bg-red-100 text-red-700",
+            event.eventType === "PROGRESS_NOTE" && "bg-cyan-100 text-cyan-700",
+          )}
+        >
+          <EventIcon type={event.eventType} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+            <p className="font-medium">
+              {t(`events.types.${event.eventType}`)}
+            </p>
+            <time className="shrink-0 text-xs text-muted-foreground">
+              {new Intl.DateTimeFormat(locale, {
+                dateStyle: "short",
+                timeStyle: "short",
+                timeZone,
+              }).format(new Date(event.createdAt))}
+            </time>
+          </div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {t("events.performedBy", {
+              name: event.performedBy.fullName,
+            })}
+          </p>
+          {event.content && (
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm">
+              {event.content}
+            </p>
+          )}
+          {event.images.length > 0 && (
+            <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {event.images.map((image, index) =>
+                image.url ? (
+                  <button
+                    aria-label={t("progress.previewImage", {
+                      count: index + 1,
+                    })}
+                    className="aspect-square overflow-hidden rounded-lg border bg-muted"
+                    key={image.id}
+                    onClick={() => setPreviewUrl(image.url)}
+                    type="button"
+                  >
+                    <img
+                      alt={t("progress.imageAlt", { count: index + 1 })}
+                      className="size-full object-cover"
+                      loading="lazy"
+                      src={image.url}
+                    />
+                  </button>
+                ) : (
+                  <span
+                    className="grid aspect-square place-items-center rounded-lg border bg-muted p-1 text-center text-[10px] text-muted-foreground"
+                    key={image.id}
+                  >
+                    {t("progress.imageUnavailable")}
+                  </span>
+                ),
+              )}
+            </div>
+          )}
+        </div>
+      </li>
+      <TreatmentImagePreviewDialog
+        onOpenChange={(nextOpen) => !nextOpen && setPreviewUrl(null)}
+        open={Boolean(previewUrl)}
+        src={previewUrl}
+      />
+    </>
   );
 }
 
@@ -288,11 +353,13 @@ function EventHistoryPreview({
   onViewAll,
   planId,
   scope,
+  timeZone,
 }: {
   item: TreatmentPlanItem;
   onViewAll: () => void;
   planId: string;
   scope: TreatmentPlanScope;
+  timeZone: string;
 }) {
   const { i18n, t } = useTranslation("treatmentPlans");
   const locale = localeForLanguage(i18n.resolvedLanguage);
@@ -314,11 +381,18 @@ function EventHistoryPreview({
           {t("events.loadError")}
         </Alert>
       ) : records.length === 0 ? (
-        <p className="py-4 text-sm text-muted-foreground">{t("events.empty")}</p>
+        <p className="py-4 text-sm text-muted-foreground">
+          {t("events.empty")}
+        </p>
       ) : (
         <ol>
           {records.slice(0, 3).map((event) => (
-            <EventRow event={event} key={event.id} locale={locale} />
+            <EventRow
+              event={event}
+              key={event.id}
+              locale={locale}
+              timeZone={timeZone}
+            />
           ))}
         </ol>
       )}
@@ -338,12 +412,14 @@ function TreatmentHistoryDialog({
   open,
   planId,
   scope,
+  timeZone,
 }: {
   item: TreatmentPlanItem | null;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   planId: string;
   scope: TreatmentPlanScope;
+  timeZone: string;
 }) {
   const { i18n, t } = useTranslation("treatmentPlans");
   const locale = localeForLanguage(i18n.resolvedLanguage);
@@ -360,7 +436,7 @@ function TreatmentHistoryDialog({
   const filtered = records.filter((event) => {
     if (type !== "ALL" && event.eventType !== type) return false;
     if (!normalizedSearch) return true;
-    return `${t(`events.types.${event.eventType}`)} ${event.performedByUserId}`
+    return `${t(`events.types.${event.eventType}`)} ${event.performedBy.fullName} ${event.content ?? ""}`
       .toLocaleLowerCase(locale)
       .includes(normalizedSearch);
   });
@@ -416,20 +492,22 @@ function TreatmentHistoryDialog({
               />
             </div>
             <div className="flex flex-wrap gap-1" role="group">
-              {(["ALL", ...TREATMENT_ITEM_EVENT_TYPES] as const).map((value) => (
-                <Button
-                  aria-pressed={type === value}
-                  key={value}
-                  onClick={() => setType(value)}
-                  size="sm"
-                  type="button"
-                  variant={type === value ? "secondary" : "ghost"}
-                >
-                  {value === "ALL"
-                    ? t("events.all")
-                    : t(`events.types.${value}`)}
-                </Button>
-              ))}
+              {(["ALL", ...TREATMENT_ITEM_EVENT_TYPES] as const).map(
+                (value) => (
+                  <Button
+                    aria-pressed={type === value}
+                    key={value}
+                    onClick={() => setType(value)}
+                    size="sm"
+                    type="button"
+                    variant={type === value ? "secondary" : "ghost"}
+                  >
+                    {value === "ALL"
+                      ? t("events.all")
+                      : t(`events.types.${value}`)}
+                  </Button>
+                ),
+              )}
             </div>
           </div>
         </DialogHeader>
@@ -448,7 +526,12 @@ function TreatmentHistoryDialog({
           ) : (
             <ol>
               {filtered.map((event) => (
-                <EventRow event={event} key={event.id} locale={locale} />
+                <EventRow
+                  event={event}
+                  key={event.id}
+                  locale={locale}
+                  timeZone={timeZone}
+                />
               ))}
             </ol>
           )}
@@ -486,7 +569,8 @@ function ProgressSummary({ plan }: { plan: TreatmentPlan }) {
   const counts = {
     cancelled: plan.items.filter((item) => item.status === "CANCELLED").length,
     completed: plan.items.filter((item) => item.status === "COMPLETED").length,
-    inProgress: plan.items.filter((item) => item.status === "IN_PROGRESS").length,
+    inProgress: plan.items.filter((item) => item.status === "IN_PROGRESS")
+      .length,
     pending: plan.items.filter((item) => item.status === "PENDING").length,
   };
   const total = plan.items.length;
@@ -585,6 +669,7 @@ export function TreatmentPlanDetail({
   plannedDentists = [],
   presentation = "page",
   scope,
+  timeZone,
   user,
 }: Props) {
   const { i18n, t } = useTranslation("treatmentPlans");
@@ -609,10 +694,13 @@ export function TreatmentPlanDetail({
   const [reasonAction, setReasonAction] = useState<ReasonAction | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [historyItemId, setHistoryItemId] = useState<string | null>(null);
+  const [progressItemId, setProgressItemId] = useState<string | null>(null);
   const [commandError, setCommandError] = useState("");
   const intents = useRef<Record<string, IdempotencyIntent | null>>({});
   const historyItem =
     plan.items.find((item) => item.id === historyItemId) ?? null;
+  const progressItem =
+    plan.items.find((item) => item.id === progressItemId) ?? null;
   const dentistNames = useMemo(() => {
     const byId = new Map(
       plannedDentists.map((dentist) => [dentist.id, dentist.fullName]),
@@ -627,9 +715,7 @@ export function TreatmentPlanDetail({
   }, [plan.items, plannedDentists]);
   const dentistById = useMemo(
     () =>
-      new Map(
-        plannedDentists.map((dentist) => [dentist.id, dentist.fullName]),
-      ),
+      new Map(plannedDentists.map((dentist) => [dentist.id, dentist.fullName])),
     [plannedDentists],
   );
   const readOnly = plan.status === "COMPLETED" || plan.status === "CANCELLED";
@@ -701,7 +787,7 @@ export function TreatmentPlanDetail({
 
   async function recordEvent(
     itemId: string,
-    eventType: Exclude<TreatmentItemEventType, "CANCELLED">,
+    eventType: Exclude<TreatmentItemStateEventType, "CANCELLED">,
   ) {
     const operation = `event:${plan.id}:${itemId}:${eventType}`;
     setCommandError("");
@@ -788,9 +874,7 @@ export function TreatmentPlanDetail({
             </dt>
             <dd className="truncate text-sm font-semibold">
               {dentistNames[0] ?? t("visitList.notAssigned")}
-              {dentistNames.length > 1
-                ? ` +${dentistNames.length - 1}`
-                : ""}
+              {dentistNames.length > 1 ? ` +${dentistNames.length - 1}` : ""}
             </dd>
           </div>
         </div>
@@ -828,7 +912,10 @@ export function TreatmentPlanDetail({
             const isExpanded = expandedItemId === item.id;
             const canActOnItem = canExecute && eligibleForExecution;
             return (
-              <article className="rounded-xl border bg-card p-3 sm:p-4" key={item.id}>
+              <article
+                className="rounded-xl border bg-card p-3 sm:p-4"
+                key={item.id}
+              >
                 <div className="flex items-start gap-3">
                   <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-sm font-semibold">
                     {index + 1}
@@ -941,9 +1028,7 @@ export function TreatmentPlanDetail({
                       </Button>
                       <Button
                         disabled={eventMutation.isPending}
-                        onClick={() =>
-                          void recordEvent(item.id, "IN_PROGRESS")
-                        }
+                        onClick={() => void recordEvent(item.id, "IN_PROGRESS")}
                         size="sm"
                         type="button"
                       >
@@ -972,9 +1057,7 @@ export function TreatmentPlanDetail({
                       </Button>
                       <Button
                         disabled={eventMutation.isPending}
-                        onClick={() =>
-                          void recordEvent(item.id, "IN_PROGRESS")
-                        }
+                        onClick={() => setProgressItemId(item.id)}
                         size="sm"
                         type="button"
                         variant="outline"
@@ -1033,9 +1116,7 @@ export function TreatmentPlanDetail({
                       <Button
                         className="min-w-0 flex-1 px-1.5 text-xs"
                         disabled={eventMutation.isPending}
-                        onClick={() =>
-                          void recordEvent(item.id, "IN_PROGRESS")
-                        }
+                        onClick={() => setProgressItemId(item.id)}
                         size="sm"
                         type="button"
                         variant="outline"
@@ -1053,7 +1134,9 @@ export function TreatmentPlanDetail({
                         type="button"
                       >
                         <Check aria-hidden="true" />
-                        <span className="truncate">{t("actions.complete")}</span>
+                        <span className="truncate">
+                          {t("actions.complete")}
+                        </span>
                       </Button>
                     </>
                   )}
@@ -1101,6 +1184,7 @@ export function TreatmentPlanDetail({
                     onViewAll={() => setHistoryItemId(item.id)}
                     planId={plan.id}
                     scope={scope}
+                    timeZone={timeZone}
                   />
                 )}
               </article>
@@ -1194,7 +1278,18 @@ export function TreatmentPlanDetail({
         open={Boolean(historyItem)}
         planId={plan.id}
         scope={scope}
+        timeZone={timeZone}
       />
+      {progressItem && (
+        <TreatmentProgressNoteDialog
+          item={progressItem}
+          onOpenChange={(open) => !open && setProgressItemId(null)}
+          open
+          planId={plan.id}
+          scope={scope}
+          timeZone={timeZone}
+        />
+      )}
     </div>
   );
 }

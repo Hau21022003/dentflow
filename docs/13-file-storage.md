@@ -4,23 +4,23 @@
 
 Ảnh được upload trực tiếp từ browser tới S3-compatible object storage qua presigned POST. Backend không nhận byte file và không dùng `FileInterceptor`; backend là control plane xác thực actor, tenant/branch scope, loại file, dung lượng và tạo key.
 
-V1 tạo **upload intent** cho ảnh `image/jpeg`, `image/png` và `image/webp`, tối đa 2 MiB. Không có database entity, public URL, endpoint download hay attachment Patient/Visit. Object dưới `temp/` luôn là staging; avatar là ngoại lệ có liên kết bền vững trực tiếp qua `users.avatar_object_key`, không cần media entity riêng.
+V1 tạo **upload intent** cho ảnh `image/jpeg`, `image/png` và `image/webp`. Upload generic/avatar tối đa 2 MiB; purpose `TREATMENT_PROGRESS` tối đa 5 MiB (`5 * 1024 * 1024`) mỗi ảnh. Không có media entity tổng quát hoặc public URL. Object dưới `temp/` luôn là staging; avatar liên kết qua `users.avatar_object_key`, còn ảnh tiến độ liên kết append-only qua `treatment_item_event_images`.
 
 ## API và tenant isolation
 
 `POST /tenants/:tenantSlug/branches/:branchSlug/uploads/image-intents` yêu cầu JWT, `@TenantScope('branch')` và permission `file.upload`. Body chỉ gồm:
 
 ```json
-{ "contentType": "image/jpeg", "sizeBytes": 524288 }
+{ "contentType": "image/jpeg", "sizeBytes": 524288, "purpose": "TREATMENT_PROGRESS" }
 ```
 
-Backend lấy tenant/branch từ route context đã guard xác minh, không từ body. Backend tạo key theo mẫu `temp/{tenantId}/{branchId}/{uuid}.{extension}`; key không có filename, tên bệnh nhân hoặc dữ liệu lâm sàng. Response trả `objectKey`, `expiresAt` và cặp `upload.url`/`upload.fields` để browser tạo `FormData`, append toàn bộ fields rồi append `file` cuối cùng và POST trực tiếp tới object storage.
+Backend lấy tenant/branch từ route context đã guard xác minh, không từ body. Không có purpose thì backend tạo key `temp/{tenantId}/{branchId}/{uuid}.{extension}` với giới hạn 2 MiB. Purpose `TREATMENT_PROGRESS` tạo key `temp/{tenantId}/{branchId}/treatment-progress/{actorUserId}/{uuid}.{extension}` với giới hạn 5 MiB; client không gửi path, tenant/branch/Patient/actor ID. Key không có filename, tên bệnh nhân hoặc dữ liệu lâm sàng. Response trả `objectKey`, `expiresAt` và cặp `upload.url`/`upload.fields` để browser tạo `FormData`, append toàn bộ fields rồi append `file` cuối cùng và POST trực tiếp tới object storage.
 
 `POST /uploads/image-intents` là route chung chỉ yêu cầu JWT cho ảnh user-owned. Body thêm `folder`; V1 chỉ có enum `AVATAR`, không nhận path/folder tự do, tenant ID hoặc user ID. Policy map trong Uploads module lấy actor từ JWT và sinh key `temp/users/{userId}/avatar/{uuid}.{extension}`. Thêm user-owned purpose sau này bằng enum/policy map, không thêm endpoint.
 
 Khi `PATCH /users/me` nhận temporary avatar key hợp lệ của chính actor, backend `HeadObject` đối chiếu MIME/dung lượng và exact prefix, copy object sang `avatars/users/{userId}/{uuid}.{extension}`, rồi mới lưu `avatar_object_key`. Sau commit, backend best-effort xóa source temp và avatar cũ. Response nghiệp vụ không trả object key; safe user/staff response và dentist booking option đã được phân quyền chỉ trả `avatarUrl` signed ngắn hạn. `null` xóa avatar hiện hữu. Client không được dùng temp key sau khi save.
 
-Policy được ký khóa đúng bucket, key, MIME và content-length từ 1 byte đến 2 MiB. `objectKey` chỉ là tham chiếu tạm; tính ngẫu nhiên của key không thay thế kiểm tra authorization. Module gắn attachment sau này phải `HeadObject`/đối chiếu exact prefix tenant-branch trước khi copy sang key lâu dài hoặc tạo quan hệ nghiệp vụ.
+Policy được ký khóa đúng bucket, key, MIME và content-length từ 1 byte đến giới hạn của purpose. `objectKey` chỉ là tham chiếu tạm; tính ngẫu nhiên của key không thay thế kiểm tra authorization. Khi tạo progress note, backend resolve lại current Visit, Patient, Plan và Item trong tenant/branch đã xác minh; chỉ nhận exact temp prefix của actor, `HeadObject` để kiểm tra MIME/extension/kích thước, rồi copy sang `clinical/{tenantId}/{branchId}/{patientId}/treatment-progress/{eventId}/{imageId}.{extension}`. Database transaction chỉ lưu quan hệ sau khi copy thành công; lỗi copy/transaction xóa permanent object best-effort, còn thành công xóa temp best-effort. Object clinical là private và signed GET ngắn hạn chỉ được tạo sau cùng kiểm tra quyền ca/Patient; API không trả object key.
 
 ## Cấu hình và local MinIO
 
@@ -57,6 +57,6 @@ Client route test-only `/workspace/:tenantSlug/branches/:branchSlug/upload-test`
 
 - Bucket private, Block Public Access và default encryption at rest.
 - CORS chỉ cho deployed frontend origin, chỉ các method/header thật sự cần cho presigned POST.
-- IAM principal ký upload có `s3:PutObject` trên `temp/*`; backend control plane có thêm `s3:HeadObject`, `s3:GetObject`, `s3:CopyObject` và `s3:DeleteObject` trên `temp/*`/`avatars/*`. Không cấp list/public-read.
+- IAM principal ký upload có `s3:PutObject` trên `temp/*`; backend control plane có thêm `s3:HeadObject`, `s3:GetObject`, `s3:CopyObject` và `s3:DeleteObject` trên `temp/*`, `avatars/*` và `clinical/*`. Không cấp list/public-read.
 - Lifecycle xóa `temp/` sau một ngày. Lifecycle chạy bất đồng bộ nên object có thể tồn tại lâu hơn một ít; client không được dựa vào object tạm sau cửa sổ này.
 - Không log presigned fields, AWS credentials, file contents, filename hoặc dữ liệu bệnh nhân. Upload intent không tạo audit log vì chưa có thay đổi nghiệp vụ/persistence.

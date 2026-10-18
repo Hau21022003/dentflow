@@ -5,18 +5,25 @@ import { TreatmentPlansPanel } from "@/features/treatment-plans/components/Treat
 import { useVisitQuery } from "@/features/visits/visits.hooks";
 import { ChevronLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
 function validDate(value: string | null): value is string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  return new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value;
+  return (
+    new Date(`${value}T00:00:00.000Z`).toISOString().slice(0, 10) === value
+  );
 }
 
 export function DoctorTreatmentPlanPage() {
   const { appointmentId = "", planId = "" } = useParams();
   const [searchParams] = useSearchParams();
-  const { branchSlug, tenantSlug, user } = useRouteWorkspaceContext();
+  const { branch, branchSlug, tenantSlug, user } = useRouteWorkspaceContext();
   const navigate = useNavigate();
   const { t } = useTranslation("treatmentPlans");
   const { t: tVisits } = useTranslation("visits");
@@ -28,11 +35,19 @@ export function DoctorTreatmentPlanPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-3 sm:space-y-5">
-      <Button asChild className="-ml-2 sm:ml-0" size="sm" type="button" variant="ghost">
+      <Button
+        asChild
+        className="-ml-2 sm:ml-0"
+        size="sm"
+        type="button"
+        variant="ghost"
+      >
         <Link to={backPath}>
           <ChevronLeft aria-hidden="true" />
           <span className="sm:hidden">{t("title")}</span>
-          <span className="hidden sm:inline">{tVisits("actions.backToVisit")}</span>
+          <span className="hidden sm:inline">
+            {tVisits("actions.backToVisit")}
+          </span>
         </Link>
       </Button>
 
@@ -46,7 +61,9 @@ export function DoctorTreatmentPlanPage() {
         </p>
       </div>
 
-      {visit.isLoading && <div className="h-96 animate-pulse rounded-xl bg-muted" />}
+      {visit.isLoading && (
+        <div className="h-96 animate-pulse rounded-xl bg-muted" />
+      )}
       {visit.isError && (
         <Alert variant="destructive">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -70,6 +87,7 @@ export function DoctorTreatmentPlanPage() {
           onProposed={() => navigate(backPath)}
           showList={false}
           tenantSlug={tenantSlug}
+          timeZone={branch?.branch.timezone ?? "Asia/Ho_Chi_Minh"}
           user={user}
           visitId={visit.data.id}
         />

@@ -47,6 +47,7 @@ type Props = {
   branchSlug: string;
   date: string;
   tenantSlug: string;
+  timeZone: string;
   user: AuthUser | null | undefined;
   visitId: string;
 };
@@ -166,6 +167,7 @@ export function VisitTreatmentPlansTab({
   branchSlug,
   date,
   tenantSlug,
+  timeZone,
   user,
   visitId,
 }: Props) {
@@ -351,175 +353,175 @@ export function VisitTreatmentPlansTab({
   return (
     <>
       <Card>
-      <CardHeader className="flex flex-col items-stretch justify-between gap-4 border-b p-5 sm:flex-row sm:items-start">
-        <div>
-          <CardTitle>{t("visitList.title")}</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("visitList.description")}
-          </p>
-        </div>
-        <Button
-          className="shrink-0"
-          disabled={create.isPending}
-          onClick={() => void createDraft()}
-          type="button"
-        >
-          {create.isPending ? <Spinner /> : <Plus aria-hidden="true" />}
-          {t("actions.createPlan")}
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-4 p-5">
-        {createError && <Alert variant="destructive">{createError}</Alert>}
+        <CardHeader className="flex flex-col items-stretch justify-between gap-4 border-b p-5 sm:flex-row sm:items-start">
+          <div>
+            <CardTitle>{t("visitList.title")}</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("visitList.description")}
+            </p>
+          </div>
+          <Button
+            className="shrink-0"
+            disabled={create.isPending}
+            onClick={() => void createDraft()}
+            type="button"
+          >
+            {create.isPending ? <Spinner /> : <Plus aria-hidden="true" />}
+            {t("actions.createPlan")}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-4 p-5">
+          {createError && <Alert variant="destructive">{createError}</Alert>}
 
-        <div className="grid gap-3 md:grid-cols-[minmax(16rem,1fr)_minmax(12rem,14rem)]">
-          <div className="relative">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              aria-label={t("visitList.searchPlaceholder")}
-              className="pl-9"
+          <div className="grid gap-3 md:grid-cols-[minmax(16rem,1fr)_minmax(12rem,14rem)]">
+            <div className="relative">
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                aria-label={t("visitList.searchPlaceholder")}
+                className="pl-9"
+                disabled={plans.isLoading}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  resetToFirstPage();
+                }}
+                placeholder={t("visitList.searchPlaceholder")}
+                value={search}
+              />
+            </div>
+            <Select
               disabled={plans.isLoading}
-              onChange={(event) => {
-                setSearch(event.target.value);
+              onValueChange={(value) => {
+                setStatus(value);
                 resetToFirstPage();
               }}
-              placeholder={t("visitList.searchPlaceholder")}
-              value={search}
-            />
-          </div>
-          <Select
-            disabled={plans.isLoading}
-            onValueChange={(value) => {
-              setStatus(value);
-              resetToFirstPage();
-            }}
-            value={status}
-          >
-            <SelectTrigger aria-label={t("visitList.allStatuses")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_STATUSES}>
-                {t("visitList.allStatuses")}
-              </SelectItem>
-              {TREATMENT_PLAN_STATUSES.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {t(`statuses.plan.${value}`)}
+              value={status}
+            >
+              <SelectTrigger aria-label={t("visitList.allStatuses")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_STATUSES}>
+                  {t("visitList.allStatuses")}
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+                {TREATMENT_PLAN_STATUSES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(`statuses.plan.${value}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <DataTable
-          columns={columns}
-          data={plans.data?.items ?? []}
-          emptyState={
-            <div className="grid place-items-center gap-2 py-10 text-center">
-              <ClipboardList className="size-8 text-muted-foreground" />
-              <p className="font-medium">
-                {plans.isError
-                  ? t("errors.plansLoad")
-                  : t(hasActiveFilters ? "visitList.noResults" : "empty")}
-              </p>
-              {plans.isError && (
-                <Button
-                  onClick={() => void plans.refetch()}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {t("visitList.retry")}
-                </Button>
-              )}
-            </div>
-          }
-          isFetching={plans.isFetching}
-          isLoading={plans.isLoading}
-          locale={dataTableLocale}
-          pagination={{
-            manual: true,
-            pageIndex: pagination.pageIndex,
-            pageSize: pagination.pageSize,
-            pageSizeOptions: PAGE_SIZE_OPTIONS,
-            rowCount: plans.data?.meta.total ?? 0,
-            onPaginationChange: (next) =>
-              setPagination((current) => ({
-                pageIndex:
-                  next.pageSize === current.pageSize ? next.pageIndex : 0,
-                pageSize: next.pageSize,
-              })),
-          }}
-          renderMobileItem={(plan) => {
-            const completed = completedItemCount(plan);
-            const total = plan.items.length;
-            const first = plan.items[0];
-            return (
-              <div className="space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold">{plan.code}</p>
-                    <p className="truncate text-sm font-medium">
-                      {planSummary(plan, t("visitList.noItems"))}
-                    </p>
-                    {first && (first.indication || first.toothPosition) && (
-                      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                        {first.indication ??
-                          t("visitList.toothPositionValue", {
-                            position: first.toothPosition,
-                          })}
-                      </p>
-                    )}
-                  </div>
-                  <PatientTreatmentPlanStatusBadge status={plan.status} />
-                </div>
-                <div className="grid gap-4 text-sm sm:grid-cols-2">
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">
-                      {t("visitList.columns.dentist")}
-                    </p>
-                    <PlannedDentists
-                      dentists={plan.plannedDentists}
-                      notAssigned={t("visitList.notAssigned")}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">
-                      {t("visitList.columns.cost")}
-                    </p>
-                    <p className="font-semibold">
-                      <PlanTotals locale={locale} plan={plan} />
-                    </p>
-                  </div>
-                  <div className="space-y-1 sm:col-span-2">
-                    <p className="text-xs text-muted-foreground">
-                      {t("visitList.columns.progress")}
-                    </p>
-                    <PlanProgress
-                      completed={completed}
-                      label={t("visitList.progress", { completed, total })}
-                      total={total}
-                    />
-                  </div>
-                </div>
-                <Button
-                  className="w-full sm:w-auto"
-                  onClick={() => openDetail(plan)}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                >
-                  {t("visitList.openDetail")}
-                  <ChevronRight aria-hidden="true" />
-                </Button>
+          <DataTable
+            columns={columns}
+            data={plans.data?.items ?? []}
+            emptyState={
+              <div className="grid place-items-center gap-2 py-10 text-center">
+                <ClipboardList className="size-8 text-muted-foreground" />
+                <p className="font-medium">
+                  {plans.isError
+                    ? t("errors.plansLoad")
+                    : t(hasActiveFilters ? "visitList.noResults" : "empty")}
+                </p>
+                {plans.isError && (
+                  <Button
+                    onClick={() => void plans.refetch()}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    {t("visitList.retry")}
+                  </Button>
+                )}
               </div>
-            );
-          }}
-          toolbar={{ search: false, viewOptions: false }}
-        />
-      </CardContent>
+            }
+            isFetching={plans.isFetching}
+            isLoading={plans.isLoading}
+            locale={dataTableLocale}
+            pagination={{
+              manual: true,
+              pageIndex: pagination.pageIndex,
+              pageSize: pagination.pageSize,
+              pageSizeOptions: PAGE_SIZE_OPTIONS,
+              rowCount: plans.data?.meta.total ?? 0,
+              onPaginationChange: (next) =>
+                setPagination((current) => ({
+                  pageIndex:
+                    next.pageSize === current.pageSize ? next.pageIndex : 0,
+                  pageSize: next.pageSize,
+                })),
+            }}
+            renderMobileItem={(plan) => {
+              const completed = completedItemCount(plan);
+              const total = plan.items.length;
+              const first = plan.items[0];
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold">{plan.code}</p>
+                      <p className="truncate text-sm font-medium">
+                        {planSummary(plan, t("visitList.noItems"))}
+                      </p>
+                      {first && (first.indication || first.toothPosition) && (
+                        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                          {first.indication ??
+                            t("visitList.toothPositionValue", {
+                              position: first.toothPosition,
+                            })}
+                        </p>
+                      )}
+                    </div>
+                    <PatientTreatmentPlanStatusBadge status={plan.status} />
+                  </div>
+                  <div className="grid gap-4 text-sm sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        {t("visitList.columns.dentist")}
+                      </p>
+                      <PlannedDentists
+                        dentists={plan.plannedDentists}
+                        notAssigned={t("visitList.notAssigned")}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        {t("visitList.columns.cost")}
+                      </p>
+                      <p className="font-semibold">
+                        <PlanTotals locale={locale} plan={plan} />
+                      </p>
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <p className="text-xs text-muted-foreground">
+                        {t("visitList.columns.progress")}
+                      </p>
+                      <PlanProgress
+                        completed={completed}
+                        label={t("visitList.progress", { completed, total })}
+                        total={total}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full sm:w-auto"
+                    onClick={() => openDetail(plan)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    {t("visitList.openDetail")}
+                    <ChevronRight aria-hidden="true" />
+                  </Button>
+                </div>
+              );
+            }}
+            toolbar={{ search: false, viewOptions: false }}
+          />
+        </CardContent>
       </Card>
       <TreatmentPlanDetailSheet
         onEditDraft={openDraftEditor}
@@ -527,6 +529,7 @@ export function VisitTreatmentPlansTab({
         open={Boolean(detailPlan)}
         plan={detailPlan}
         scope={scope}
+        timeZone={timeZone}
         user={user}
       />
     </>

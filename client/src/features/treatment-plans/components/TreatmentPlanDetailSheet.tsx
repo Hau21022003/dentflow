@@ -16,6 +16,7 @@ type Props = {
   open: boolean;
   plan: TreatmentPlanListItem | null;
   scope: TreatmentPlanScope;
+  timeZone: string;
   user: AuthUser | null | undefined;
 };
 
@@ -25,6 +26,7 @@ export function TreatmentPlanDetailSheet({
   open,
   plan,
   scope,
+  timeZone,
   user,
 }: Props) {
   const { t } = useTranslation("treatmentPlans");
@@ -47,6 +49,7 @@ export function TreatmentPlanDetailSheet({
             plannedDentists={plan?.plannedDentists}
             presentation="sheet"
             scope={scope}
+            timeZone={timeZone}
             user={user}
           />
         ) : (
