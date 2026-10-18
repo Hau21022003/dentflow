@@ -172,10 +172,10 @@ export function AppLayout() {
   );
 
   return (
-    <div className="min-h-svh bg-background lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+    <div className="min-h-svh bg-background xl:grid xl:grid-cols-[17rem_minmax(0,1fr)]">
       <aside
         aria-label={t("layout.sidebar")}
-        className="hidden h-svh flex-col border-r border-border/80 bg-card lg:sticky lg:top-0 lg:flex"
+        className="hidden h-svh flex-col border-r border-border/80 bg-card xl:sticky xl:top-0 xl:flex"
       >
         <div className="flex h-16 items-center border-b border-border/80 px-5">
           <SidebarBrand />
@@ -219,7 +219,7 @@ export function AppLayout() {
       </aside>
 
       <Sheet onOpenChange={setMobileNavigationOpen} open={mobileNavigationOpen}>
-        <SheetContent aria-describedby={undefined} className="lg:hidden">
+        <SheetContent aria-describedby={undefined} className="xl:hidden">
           <div className="flex items-center justify-between border-b border-border/80 px-5 py-4">
             <SheetTitle>{t("layout.primaryNavigation")}</SheetTitle>
             <SheetCloseButton aria-label={t("layout.closeNavigation")} />
@@ -270,7 +270,7 @@ export function AppLayout() {
           <div className="flex h-full min-w-0 items-center gap-2 px-4 sm:gap-3 sm:px-6">
             <Button
               aria-label={t("layout.openNavigation")}
-              className="lg:hidden"
+              className="xl:hidden"
               onClick={() => setMobileNavigationOpen(true)}
               size="icon"
               type="button"
@@ -279,15 +279,21 @@ export function AppLayout() {
               <Menu aria-hidden="true" />
             </Button>
 
+            <div className="xl:hidden">
+              <SidebarBrand />
+            </div>
+
             <div className="flex flex-1 items-center justify-end gap-2 sm:gap-3">
               {workspaceContext && user && (
-                <WorkspaceSwitcher
-                  branchOptions={branchOptions}
-                  context={workspaceContext}
-                  isLoadingBranchOptions={isLoadingBranchOptions}
-                  onSelect={changeWorkspace}
-                  user={user}
-                />
+                <div className="hidden min-w-0 flex-1 justify-end sm:flex">
+                  <WorkspaceSwitcher
+                    branchOptions={branchOptions}
+                    context={workspaceContext}
+                    isLoadingBranchOptions={isLoadingBranchOptions}
+                    onSelect={changeWorkspace}
+                    user={user}
+                  />
+                </div>
               )}
               <Button
                 aria-label={t("layout.notificationsComingSoon")}

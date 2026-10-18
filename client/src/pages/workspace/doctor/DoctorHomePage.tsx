@@ -28,6 +28,7 @@ import {
 } from "@/shared/lib/idempotency";
 import { localeForLanguage } from "@/shared/lib/money";
 import { cn } from "@/shared/lib/utils";
+import { IconDental } from "@tabler/icons-react";
 import {
   CalendarDays,
   ChevronRight,
@@ -172,12 +173,12 @@ export function DoctorHomePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl xl:text-4xl">
           {t("doctorTitle")}
         </h1>
-        <p className="text-sm leading-6 text-muted-foreground sm:text-base">
+        <p className="text-xs leading-5 text-muted-foreground sm:text-sm sm:leading-6 xl:text-base">
           {t("doctorDescription")}
         </p>
       </div>
@@ -201,11 +202,11 @@ export function DoctorHomePage() {
 
         <Card className="overflow-hidden">
           <CardContent className="p-0">
-            <div className="border-b px-5 py-5 sm:px-7">
-              <h2 className="text-xl font-bold tracking-tight sm:text-2xl">
+            <div className="border-b px-4 py-4 sm:px-5 sm:py-5 xl:px-7">
+              <h2 className="text-lg font-bold tracking-tight sm:text-xl xl:text-2xl">
                 {formatAppointmentDate(date, timeZone, locale)}
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
                 {t("doctorSchedule.agendaMeta", {
                   count: appointments.length,
                   duration: t("doctorSchedule.totalDuration", {
@@ -259,8 +260,8 @@ export function DoctorHomePage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <ol className="divide-y sm:min-w-[48rem]">
+              <>
+                <ol className="space-y-3 p-4 md:hidden">
                   {appointments.map((appointment) => {
                     const appointmentDate = dateInTimeZone(
                       appointment.startAt,
@@ -283,73 +284,90 @@ export function DoctorHomePage() {
 
                     return (
                       <li
-                        className="grid gap-4 px-5 py-5 sm:grid-cols-[5.25rem_minmax(13rem,1.15fr)_minmax(10rem,1fr)_auto_auto] sm:items-center sm:px-7 xl:grid-cols-[5.25rem_minmax(12rem,1.2fr)_minmax(10rem,1fr)_8.25rem_8.75rem]"
+                        className="rounded-xl border border-border/80 bg-background p-4"
                         key={appointment.id}
                       >
-                        <div className="tabular-nums">
-                          <p className="whitespace-nowrap font-bold">
-                            {formatAppointmentTime(
-                              appointment.startAt,
-                              timeZone,
-                              locale,
-                            )}
-                          </p>
-                          <p className="whitespace-nowrap text-sm text-muted-foreground">
-                            {formatAppointmentTime(
-                              appointment.endAt,
-                              timeZone,
-                              locale,
-                            )}
-                          </p>
-                        </div>
-                        <div className="flex min-w-0 items-center gap-3">
-                          <span
-                            aria-hidden="true"
-                            className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary"
-                          >
-                            {initials(appointment.patient.fullName)}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold">
-                              {appointment.patient.fullName}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {t(
-                                `detail.genders.${appointment.patient.gender}`,
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="tabular-nums">
+                            <p className="whitespace-nowrap text-xl font-bold leading-none">
+                              {formatAppointmentTime(
+                                appointment.startAt,
+                                timeZone,
+                                locale,
                               )}
-                              {age !== null &&
-                                ` · ${t("detail.age", { count: age })}`}
+                            </p>
+                            <p className="mt-1 whitespace-nowrap text-sm text-muted-foreground">
+                              {formatAppointmentTime(
+                                appointment.endAt,
+                                timeZone,
+                                locale,
+                              )}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              aria-hidden="true"
+                              className={cn(
+                                "size-2 rounded-full",
+                                statusAccentClass[appointment.status],
+                              )}
+                            />
+                            <AppointmentStatusBadge
+                              status={appointment.status}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span
+                              aria-hidden="true"
+                              className="grid size-11 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary"
+                            >
+                              {initials(appointment.patient.fullName)}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-base font-semibold">
+                                {appointment.patient.fullName}
+                              </p>
+                              <p className="truncate text-sm text-muted-foreground">
+                                {t(
+                                  `detail.genders.${appointment.patient.gender}`,
+                                )}
+                                {age !== null &&
+                                  ` · ${t("detail.age", { count: age })}`}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex min-w-0 items-center gap-4 text-sm">
+                            <p className="flex min-w-0 flex-1 items-center gap-1.5 font-medium">
+                              <IconDental
+                                aria-hidden="true"
+                                className="size-4 shrink-0 text-primary"
+                                stroke={2}
+                              />
+                              <span className="truncate">
+                                {appointment.service?.name ??
+                                  appointment.visitReason ??
+                                  t("detail.notProvided")}
+                              </span>
+                            </p>
+                            <p className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
+                              <Clock3 aria-hidden="true" className="size-4" />
+                              {t("detail.duration", {
+                                count: Math.round(
+                                  (new Date(appointment.endAt).getTime() -
+                                    new Date(appointment.startAt).getTime()) /
+                                    60000,
+                                ),
+                              })}
                             </p>
                           </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold">
-                            {appointment.service?.name ??
-                              appointment.visitReason ??
-                              t("detail.notProvided")}
-                          </p>
-                          <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Clock3 aria-hidden="true" className="size-4" />
-                            {t("detail.duration", {
-                              count: Math.round(
-                                (new Date(appointment.endAt).getTime() -
-                                  new Date(appointment.startAt).getTime()) /
-                                  60000,
-                              ),
-                            })}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            aria-hidden="true"
-                            className={cn(
-                              "size-2.5 rounded-full",
-                              statusAccentClass[appointment.status],
-                            )}
-                          />
-                          <AppointmentStatusBadge status={appointment.status} />
-                        </div>
+
                         <Button
+                          className="mt-3 w-full"
                           disabled={isStarting}
                           onClick={() =>
                             appointment.status === "CHECKED_IN"
@@ -378,7 +396,130 @@ export function DoctorHomePage() {
                     );
                   })}
                 </ol>
-              </div>
+
+                <ol className="hidden divide-y md:block">
+                  {appointments.map((appointment) => {
+                    const appointmentDate = dateInTimeZone(
+                      appointment.startAt,
+                      timeZone,
+                    );
+                    const age = ageAt(
+                      appointment.patient.dateOfBirth,
+                      appointmentDate,
+                    );
+                    const isStarting =
+                      startVisitMutation.isPending &&
+                      startVisitMutation.variables?.appointmentId ===
+                        appointment.id;
+                    const actionLabel =
+                      appointment.status === "CHECKED_IN"
+                        ? t("doctorSchedule.startVisit")
+                        : appointment.status === "IN_PROGRESS"
+                          ? t("doctorSchedule.continueVisit")
+                          : t("doctorSchedule.viewAppointment");
+
+                    return (
+                      <li
+                        className="grid grid-cols-[4.5rem_minmax(0,1fr)_max-content] items-center gap-x-4 gap-y-2 px-5 py-4 xl:grid-cols-[4.25rem_minmax(0,1.1fr)_minmax(0,0.9fr)_8.25rem_8.75rem] xl:gap-x-5 xl:px-7 xl:py-5"
+                        key={appointment.id}
+                      >
+                        <div className="row-span-2 self-center tabular-nums xl:row-span-1">
+                          <p className="whitespace-nowrap text-sm font-bold xl:text-base">
+                            {formatAppointmentTime(
+                              appointment.startAt,
+                              timeZone,
+                              locale,
+                            )}
+                          </p>
+                          <p className="whitespace-nowrap text-xs text-muted-foreground xl:text-sm">
+                            {formatAppointmentTime(
+                              appointment.endAt,
+                              timeZone,
+                              locale,
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex min-w-0 items-center gap-2.5 xl:gap-3">
+                          <span
+                            aria-hidden="true"
+                            className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary xl:size-11 xl:text-sm"
+                          >
+                            {initials(appointment.patient.fullName)}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold xl:text-base">
+                              {appointment.patient.fullName}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground xl:text-sm">
+                              {t(
+                                `detail.genders.${appointment.patient.gender}`,
+                              )}
+                              {age !== null &&
+                                ` · ${t("detail.age", { count: age })}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="col-start-2 row-start-2 min-w-0 xl:col-start-3 xl:row-start-1">
+                          <p className="truncate text-sm font-semibold xl:text-base">
+                            {appointment.service?.name ??
+                              appointment.visitReason ??
+                              t("detail.notProvided")}
+                          </p>
+                          <p className="flex items-center gap-1 text-xs text-muted-foreground xl:text-sm">
+                            <Clock3
+                              aria-hidden="true"
+                              className="size-3.5 xl:size-4"
+                            />
+                            {t("detail.duration", {
+                              count: Math.round(
+                                (new Date(appointment.endAt).getTime() -
+                                  new Date(appointment.startAt).getTime()) /
+                                  60000,
+                              ),
+                            })}
+                          </p>
+                        </div>
+                        <div className="col-start-3 row-start-1 flex items-center gap-1.5 xl:col-start-4">
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              "size-2.5 rounded-full",
+                              statusAccentClass[appointment.status],
+                            )}
+                          />
+                          <AppointmentStatusBadge status={appointment.status} />
+                        </div>
+                        <Button
+                          className="col-start-3 row-start-2 xl:col-start-5 xl:row-start-1"
+                          disabled={isStarting}
+                          onClick={() =>
+                            appointment.status === "CHECKED_IN"
+                              ? void startVisit(appointment)
+                              : openVisit(appointment)
+                          }
+                          size="sm"
+                          type="button"
+                          variant={
+                            appointment.status === "CHECKED_IN"
+                              ? "default"
+                              : "outline"
+                          }
+                        >
+                          {appointment.status === "CHECKED_IN" && (
+                            <Stethoscope aria-hidden="true" />
+                          )}
+                          {isStarting
+                            ? t("doctorSchedule.startingVisit")
+                            : actionLabel}
+                          {appointment.status !== "CHECKED_IN" && (
+                            <ChevronRight aria-hidden="true" />
+                          )}
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </>
             )}
           </CardContent>
         </Card>

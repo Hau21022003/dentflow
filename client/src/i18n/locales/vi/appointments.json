@@ -8,6 +8,7 @@
     "previousMonth": "Tháng trước",
     "nextMonth": "Tháng sau",
     "daySummaryTitle": "Tổng hợp lịch hẹn",
+    "appointmentLabel": "lịch hẹn",
     "appointmentCount": "{{count}} lịch hẹn",
     "agendaMeta": "{{count}} lịch hẹn · tổng {{duration}}",
     "totalDuration": "{{hours}} giờ {{minutes}} phút",

@@ -8,6 +8,8 @@
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
     "daySummaryTitle": "Appointments summary",
+    "appointmentLabel_one": "appointment",
+    "appointmentLabel_other": "appointments",
     "appointmentCount_one": "{{count}} appointment",
     "appointmentCount_other": "{{count}} appointments",
     "agendaMeta_one": "{{count}} appointment · {{duration}} total",
