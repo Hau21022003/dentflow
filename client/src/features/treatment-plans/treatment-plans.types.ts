@@ -27,12 +27,23 @@ export const TREATMENT_ITEM_STATE_EVENT_TYPES = [
   "CANCELLED",
 ] as const;
 
+export const TREATMENT_PLAN_CANCELLATION_REASON_CODES = [
+  "PATIENT_REQUEST",
+  "ENTERED_IN_ERROR",
+  "DUPLICATE",
+  "NO_LONGER_APPLICABLE",
+  "TRANSFER_OF_CARE",
+  "OTHER",
+] as const;
+
 export type TreatmentPlanStatus = (typeof TREATMENT_PLAN_STATUSES)[number];
 export type TreatmentItemStatus = (typeof TREATMENT_ITEM_STATUSES)[number];
 export type TreatmentItemEventType =
   (typeof TREATMENT_ITEM_EVENT_TYPES)[number];
 export type TreatmentItemStateEventType =
   (typeof TREATMENT_ITEM_STATE_EVENT_TYPES)[number];
+export type TreatmentPlanCancellationReasonCode =
+  (typeof TREATMENT_PLAN_CANCELLATION_REASON_CODES)[number];
 
 export type TreatmentPlanItem = {
   id: string;
@@ -94,6 +105,10 @@ export type SyncTreatmentPlanItemInput = {
 
 export type SyncTreatmentPlanInput = { items: SyncTreatmentPlanItemInput[] };
 export type TreatmentReasonInput = { reasonCode: string };
+export type CancelTreatmentPlanInput = {
+  reasonCode: TreatmentPlanCancellationReasonCode;
+  note?: string;
+};
 
 export type TreatmentItemEvent = {
   id: string;
@@ -102,6 +117,8 @@ export type TreatmentItemEvent = {
   performedBy: { id: string; fullName: string };
   eventType: TreatmentItemEventType;
   content: string | null;
+  reasonCode: string | null;
+  note: string | null;
   images: Array<{
     id: string;
     contentType: string;

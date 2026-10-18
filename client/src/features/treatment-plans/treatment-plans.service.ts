@@ -1,6 +1,7 @@
 import http from "@/shared/lib/http";
 import type { IdempotentCommand } from "@/shared/lib/idempotency";
 import type {
+  CancelTreatmentPlanInput,
   RecordTreatmentItemEventResponse,
   CreateTreatmentProgressNoteInput,
   SyncTreatmentPlanInput,
@@ -89,7 +90,7 @@ export const treatmentPlansService = {
   },
   async cancel(
     command: TreatmentPlanScope &
-      IdempotentCommand & { planId: string; input: TreatmentReasonInput },
+      IdempotentCommand & { planId: string; input: CancelTreatmentPlanInput },
   ): Promise<TreatmentPlan> {
     const { planId, input, idempotencyKey, ...scope } = command;
     const { payload } = await http.post<TreatmentPlan>(

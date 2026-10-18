@@ -99,6 +99,7 @@ export function useTreatmentItemEventsQuery(
 
 function usePlanMutation<TVariables, TResult extends TreatmentPlan>(
   mutationFn: (variables: TVariables) => Promise<TResult>,
+  options: { invalidateHistory?: boolean } = {},
 ) {
   const queryClient = useQueryClient();
   return useMutation<TResult, Error, TVariables>({
@@ -111,9 +112,21 @@ function usePlanMutation<TVariables, TResult extends TreatmentPlan>(
         treatmentPlanQueryKeys.detail(resolvedScope, plan.id),
         plan,
       );
-      await queryClient.invalidateQueries({
-        queryKey: treatmentPlanQueryKeys.lists(resolvedScope),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: treatmentPlanQueryKeys.lists(resolvedScope),
+        }),
+        ...(options.invalidateHistory
+          ? [
+              queryClient.invalidateQueries({
+                queryKey: treatmentPlanQueryKeys.detail(
+                  resolvedScope,
+                  plan.id,
+                ),
+              }),
+            ]
+          : []),
+      ]);
     },
   });
 }
@@ -127,7 +140,7 @@ export const useProposeTreatmentPlanMutation = () =>
 export const useReopenTreatmentPlanMutation = () =>
   usePlanMutation(treatmentPlansService.reopen);
 export const useCancelTreatmentPlanMutation = () =>
-  usePlanMutation(treatmentPlansService.cancel);
+  usePlanMutation(treatmentPlansService.cancel, { invalidateHistory: true });
 
 export function useRecordTreatmentItemEventMutation() {
   const queryClient = useQueryClient();

@@ -37,6 +37,10 @@ export class TreatmentItemEvent {
   })
   eventType: TreatmentItemEventType;
   @Column({ type: 'text', nullable: true }) content: string | null;
+  @Column({ name: 'reason_code', type: 'varchar', length: 80, nullable: true })
+  reasonCode: string | null;
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  note: string | null;
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

@@ -10,7 +10,10 @@ import {
   useTreatmentPlansQuery,
 } from "@/features/treatment-plans/treatment-plans.hooks";
 import type { TreatmentPlanScope } from "@/features/treatment-plans/treatment-plans.service";
-import type { TreatmentPlanStatus } from "@/features/treatment-plans/treatment-plans.types";
+import type {
+  CancelTreatmentPlanInput,
+  TreatmentPlanStatus,
+} from "@/features/treatment-plans/treatment-plans.types";
 import { getErrorMessage, handleApiError } from "@/shared/lib/error";
 import {
   idempotencyKeyForIntent,
@@ -19,12 +22,9 @@ import {
 import { Plus } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CancelTreatmentPlanDialog } from "./CancelTreatmentPlanDialog";
 import { DraftTreatmentPlanEditor } from "./DraftTreatmentPlanEditor";
 import { TreatmentPlanDetail } from "./TreatmentPlanDetail";
-import {
-  TreatmentPlanReasonDialog,
-  type TreatmentReasonForm,
-} from "./TreatmentPlanReasonDialog";
 
 type TreatmentPlansPanelProps = TreatmentPlanScope & {
   initialPlanId?: string;
@@ -121,7 +121,7 @@ export function TreatmentPlansPanel({
     }
   }
 
-  async function cancelDraft({ reasonCode }: TreatmentReasonForm) {
+  async function cancelDraft(input: CancelTreatmentPlanInput) {
     if (!currentPlan) return;
     const operation = `cancel:${currentPlan.id}`;
     await cancel.mutateAsync({
@@ -130,9 +130,9 @@ export function TreatmentPlansPanel({
         operation: "clinical.treatment-plan.cancel",
         ...scope,
         planId: currentPlan.id,
-        reasonCode,
+        ...input,
       }),
-      input: { reasonCode },
+      input,
       planId: currentPlan.id,
     });
     completeIntent(operation);
@@ -223,14 +223,11 @@ export function TreatmentPlansPanel({
           user={user}
         />
       )}
-      <TreatmentPlanReasonDialog
-        description={t("dialogs.cancelPlan.description")}
+      <CancelTreatmentPlanDialog
         onOpenChange={setCancelDraftOpen}
         onSubmit={cancelDraft}
         open={cancelDraftOpen}
         pending={cancel.isPending}
-        submitLabel={t("dialogs.cancelPlan.submit")}
-        title={t("dialogs.cancelPlan.title")}
       />
     </section>
   );

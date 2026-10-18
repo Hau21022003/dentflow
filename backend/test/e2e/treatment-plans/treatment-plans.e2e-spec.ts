@@ -420,6 +420,11 @@ describe('Treatment plan V1 (e2e)', () => {
           planStatus: TreatmentPlanStatus.ACCEPTED,
         }),
       );
+    await dentist.agent
+      .post(`${root}/visits/${visit.id}/treatment-plans/${planId}/cancel`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reasonCode: 'PATIENT_REQUEST' })
+      .expect(409);
     const progressKey = randomUUID();
     const progressRoute = `${root}/visits/${visit.id}/treatment-plans/${planId}/items/${itemId}/progress-notes`;
     const progressNote = await dentist.agent
@@ -605,6 +610,329 @@ describe('Treatment plan V1 (e2e)', () => {
         .delete(progressNote.body.id as string),
     ).rejects.toThrow('treatment_item_events are append-only');
   }, 15_000);
+
+  it('validates direct cancellation details and records one clinical event per pending item without auditing the note', async () => {
+    const tenant = await fixtures.createTenant({
+      slug: `cancel-${randomUUID().slice(0, 8)}`,
+    });
+    const branch = await fixtures.createBranch(tenant, { slug: 'main' });
+    const dentist = await actor(branch, TenantRoleCode.DENTIST);
+    const receptionist = await actor(branch, TenantRoleCode.RECEPTIONIST);
+    const patient = await dataSource.manager.save(
+      dataSource.manager.create(Patient, {
+        tenantId: tenant.id,
+        fullName: 'Synthetic Cancellation Patient',
+        phone: '+84912222222',
+        phoneNormalized: '+84912222222',
+        gender: PatientGender.OTHER,
+        dateOfBirth: null,
+        address: null,
+        emergencyContactName: null,
+        emergencyContactPhone: null,
+        emergencyContactRelationship: null,
+        referralSource: null,
+      }),
+    );
+    const serviceGroup = await dataSource.manager.save(
+      dataSource.manager.create(ServiceGroup, {
+        tenantId: tenant.id,
+        name: 'Synthetic cancellation group',
+        isActive: true,
+      }),
+    );
+    const service = await dataSource.manager.save(
+      dataSource.manager.create(Service, {
+        tenantId: tenant.id,
+        code: 'synthetic-cancellation-service',
+        name: 'Synthetic cancellation service',
+        serviceGroupId: serviceGroup.id,
+        amount: 250000,
+        currency: 'VND',
+        durationMinutes: 30,
+        isActive: true,
+      }),
+    );
+    const appointment = await dataSource.manager.save(
+      dataSource.manager.create(Appointment, {
+        tenantId: tenant.id,
+        branchId: branch.id,
+        patientId: patient.id,
+        status: AppointmentStatus.IN_PROGRESS,
+        source: AppointmentSource.WALK_IN,
+        startAt: new Date('2026-10-18T02:00:00.000Z'),
+        endAt: new Date('2026-10-18T03:00:00.000Z'),
+        assignedDentistUserId: dentist.user.id,
+        serviceId: null,
+        serviceCode: null,
+        serviceName: null,
+        serviceAmount: null,
+        serviceCurrency: null,
+        serviceDurationMinutes: null,
+        visitReason: 'Synthetic cancellation validation',
+        operationalNote: null,
+      }),
+    );
+    const visit = await dataSource.manager.save(
+      dataSource.manager.create(Visit, {
+        tenantId: tenant.id,
+        branchId: branch.id,
+        appointmentId: appointment.id,
+        openedByUserId: dentist.user.id,
+        status: VisitStatus.OPEN,
+        symptoms: null,
+        relevantHistory: null,
+        examination: null,
+        diagnosis: null,
+        clinicalNote: null,
+      }),
+    );
+    const root = `/tenants/${tenant.slug}/branches/${branch.slug}`;
+    type CancellationPlanBody = {
+      id: string;
+      status: TreatmentPlanStatus;
+      items: Array<{ id: string; status: TreatmentItemStatus }>;
+    };
+
+    const createPlan = async (
+      itemCount: number,
+      status = TreatmentPlanStatus.DRAFT,
+    ): Promise<CancellationPlanBody> => {
+      const created = await dentist.agent
+        .post(`${root}/visits/${visit.id}/treatment-plans`)
+        .set('Idempotency-Key', randomUUID())
+        .expect(201);
+      const createdBody = created.body as unknown as { id: string };
+      const planId = createdBody.id;
+      await dentist.agent
+        .patch(`${root}/visits/${visit.id}/treatment-plans/${planId}`)
+        .set('Idempotency-Key', randomUUID())
+        .send({
+          items: Array.from({ length: itemCount }, (_, index) => ({
+            serviceId: service.id,
+            quantity: index + 1,
+            discountAmount: 0,
+            toothPosition: String(11 + index),
+            indication: `Synthetic cancellation indication ${index + 1}`,
+            plannedDentistUserId: dentist.user.id,
+          })),
+        })
+        .expect(200);
+      if (
+        [TreatmentPlanStatus.PROPOSED, TreatmentPlanStatus.ACCEPTED].includes(
+          status,
+        )
+      ) {
+        await dentist.agent
+          .post(`${root}/visits/${visit.id}/treatment-plans/${planId}/propose`)
+          .set('Idempotency-Key', randomUUID())
+          .expect(200);
+      }
+      if (status === TreatmentPlanStatus.ACCEPTED) {
+        await receptionist.agent
+          .post(`${root}/treatment-plans/${planId}/accept`)
+          .set('Idempotency-Key', randomUUID())
+          .expect(200);
+      }
+      const detail = await dentist.agent
+        .get(`${root}/visits/${visit.id}/treatment-plans/${planId}`)
+        .expect(200);
+      const detailBody: unknown = detail.body;
+      return detailBody as CancellationPlanBody;
+    };
+
+    const plan = await createPlan(2);
+    const planId = plan.id;
+    const cancelRoute = `${root}/visits/${visit.id}/treatment-plans/${planId}/cancel`;
+    await dentist.agent
+      .post(cancelRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({})
+      .expect(422);
+    await dentist.agent
+      .post(cancelRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reasonCode: 'patient_request' })
+      .expect(422);
+    await dentist.agent
+      .post(cancelRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reasonCode: 'OTHER' })
+      .expect(422);
+    await dentist.agent
+      .post(cancelRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reasonCode: 'OTHER', note: '   ' })
+      .expect(422);
+    await dentist.agent
+      .post(cancelRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reasonCode: 'OTHER', note: 'x'.repeat(501) })
+      .expect(422);
+
+    await dentist.agent
+      .get(`${root}/visits/${visit.id}/treatment-plans/${planId}`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as unknown as CancellationPlanBody;
+        expect(body.status).toBe(TreatmentPlanStatus.DRAFT);
+        expect(body.items).toHaveLength(2);
+        expect(body.items).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ status: TreatmentItemStatus.PENDING }),
+          ]),
+        );
+      });
+    expect(
+      await dataSource
+        .getRepository(TreatmentItemEvent)
+        .countBy({ treatmentPlanId: planId }),
+    ).toBe(0);
+
+    const otherBranch = await fixtures.createBranch(tenant, { slug: 'other' });
+    const otherBranchDentist = await actor(
+      otherBranch,
+      TenantRoleCode.DENTIST,
+      'Synthetic Other Branch Dentist',
+    );
+    await otherBranchDentist.agent
+      .post(
+        `/tenants/${tenant.slug}/branches/${otherBranch.slug}/visits/${visit.id}/treatment-plans/${planId}/cancel`,
+      )
+      .set('Idempotency-Key', randomUUID())
+      .send({ reasonCode: 'PATIENT_REQUEST' })
+      .expect(404);
+
+    const cancellationNote =
+      'Synthetic cancellation note for clinical follow-up.';
+    const cancelledResponse = await dentist.agent
+      .post(cancelRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reasonCode: 'OTHER', note: `  ${cancellationNote}  ` })
+      .expect(200);
+    const cancelled = cancelledResponse.body as unknown as CancellationPlanBody;
+    expect(cancelled).toMatchObject({
+      id: planId,
+      status: TreatmentPlanStatus.CANCELLED,
+    });
+    expect(cancelled.items).toHaveLength(2);
+    expect(cancelled.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ status: TreatmentItemStatus.CANCELLED }),
+      ]),
+    );
+
+    const events = await dataSource.getRepository(TreatmentItemEvent).find({
+      where: { treatmentPlanId: planId },
+    });
+    expect(events).toHaveLength(2);
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          eventType: 'CANCELLED',
+          visitId: visit.id,
+          performedByUserId: dentist.user.id,
+          reasonCode: 'OTHER',
+          note: cancellationNote,
+        }),
+      ]),
+    );
+    for (const item of cancelled.items) {
+      await dentist.agent
+        .get(
+          `${root}/visits/${visit.id}/treatment-plans/${planId}/items/${item.id}/events`,
+        )
+        .expect(200)
+        .expect((response) => {
+          const body = response.body as unknown as {
+            items: Array<{
+              eventType: string;
+              content: string | null;
+              reasonCode: string | null;
+              note: string | null;
+              images: unknown[];
+            }>;
+          };
+          expect(body.items).toEqual([
+            expect.objectContaining({
+              eventType: 'CANCELLED',
+              content: null,
+              reasonCode: 'OTHER',
+              note: cancellationNote,
+              images: [],
+            }),
+          ]);
+        });
+    }
+
+    const canonicalCases = [
+      {
+        reasonCode: 'PATIENT_REQUEST',
+        status: TreatmentPlanStatus.DRAFT,
+        note: 'x'.repeat(500),
+      },
+      {
+        reasonCode: 'ENTERED_IN_ERROR',
+        status: TreatmentPlanStatus.PROPOSED,
+      },
+      {
+        reasonCode: 'DUPLICATE',
+        status: TreatmentPlanStatus.ACCEPTED,
+      },
+      {
+        reasonCode: 'NO_LONGER_APPLICABLE',
+        status: TreatmentPlanStatus.DRAFT,
+      },
+      {
+        reasonCode: 'TRANSFER_OF_CARE',
+        status: TreatmentPlanStatus.DRAFT,
+      },
+    ];
+    for (const canonicalCase of canonicalCases) {
+      const candidate = await createPlan(1, canonicalCase.status);
+      await dentist.agent
+        .post(
+          `${root}/visits/${visit.id}/treatment-plans/${candidate.id}/cancel`,
+        )
+        .set('Idempotency-Key', randomUUID())
+        .send({
+          reasonCode: canonicalCase.reasonCode,
+          ...(canonicalCase.note ? { note: canonicalCase.note } : {}),
+        })
+        .expect(200)
+        .expect((response) => {
+          const body = response.body as unknown as CancellationPlanBody;
+          expect(body.status).toBe(TreatmentPlanStatus.CANCELLED);
+          expect(body.items[0]?.status).toBe(TreatmentItemStatus.CANCELLED);
+        });
+    }
+
+    const legacyPlan = await createPlan(1);
+    await dentist.agent
+      .post(
+        `${root}/visits/${visit.id}/treatment-plans/${legacyPlan.id}/cancel`,
+      )
+      .set('Idempotency-Key', randomUUID())
+      .send({ reasonCode: 'LEGACY_REASON' })
+      .expect(200);
+
+    const auditLogs = await dataSource.getRepository(AuditLog).find({
+      where: { tenantId: tenant.id },
+    });
+    const eventIds = new Set(events.map((event) => event.id));
+    const eventAudits = auditLogs.filter(
+      (audit) =>
+        audit.action === AuditAction.TREATMENT_ITEM_EVENT_RECORDED &&
+        eventIds.has(audit.resourceId),
+    );
+    expect(eventAudits).toHaveLength(2);
+    expect(eventAudits).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ metadata: { reasonCode: 'OTHER' } }),
+      ]),
+    );
+    expect(JSON.stringify(auditLogs)).not.toContain(cancellationNote);
+    expect(JSON.stringify(auditLogs)).not.toContain('x'.repeat(500));
+  }, 45_000);
 
   async function actor(
     branch: Branch,

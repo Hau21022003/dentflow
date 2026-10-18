@@ -216,7 +216,7 @@
   },
   "events": {
     "title": "Treatment history",
-    "fullTitle": "Full treatment history",
+    "fullTitle": "Treatment history",
     "loading": "Loading event history...",
     "loadError": "Could not load event history. Please try again.",
     "empty": "No execution events have been recorded.",
@@ -224,9 +224,22 @@
     "recent": "{{count}} most recent events",
     "viewAll": "View full history",
     "performedBy": "Dentist: {{name}}",
-    "searchPlaceholder": "Search by event, note, or dentist...",
+    "cancelReason": "Reason: {{reason}}",
+    "searchPlaceholder": "Search by content, dentist, or event type...",
     "all": "All",
     "loadMore": "Load more",
+    "export": "Export history",
+    "exporting": "Exporting...",
+    "exportError": "Could not export treatment history. Please try again.",
+    "exportColumns": {
+      "time": "Time",
+      "event": "Event type",
+      "dentist": "Dentist",
+      "reason": "Cancellation reason",
+      "note": "Cancellation note",
+      "content": "Content",
+      "images": "Image count"
+    },
     "types": {
       "IN_PROGRESS": "In progress",
       "COMPLETED": "Completed",
@@ -254,8 +267,46 @@
     },
     "cancelPlan": {
       "title": "Cancel treatment plan",
-      "description": "This cancels the plan and all pending items. This cannot be used after execution events exist.",
-      "submit": "Cancel plan"
+      "description": "This will cancel the entire treatment plan and every pending item. This action cannot be undone.",
+      "submit": "Cancel plan",
+      "reasonLabel": "Cancellation reason",
+      "noteLabel": "Additional note",
+      "noteOptional": "(optional)",
+      "noteRequired": "(required)",
+      "notePlaceholder": "Add details if needed...",
+      "noteCount": "{{count}}/500",
+      "historyHint": "The cancellation reason will be stored in treatment history for follow-up and reporting.",
+      "auditHint": "This action will be recorded in treatment history.",
+      "validation": {
+        "noteRequired": "Enter a note when the reason is Other.",
+        "noteMax": "The note must not exceed 500 characters."
+      },
+      "reasons": {
+        "PATIENT_REQUEST": {
+          "label": "Patient request",
+          "description": "Requested by the patient"
+        },
+        "ENTERED_IN_ERROR": {
+          "label": "Entered in error",
+          "description": "The plan information was entered incorrectly"
+        },
+        "DUPLICATE": {
+          "label": "Duplicate plan",
+          "description": "Another treatment plan already exists"
+        },
+        "NO_LONGER_APPLICABLE": {
+          "label": "No longer applicable",
+          "description": "No longer suitable for the current condition"
+        },
+        "TRANSFER_OF_CARE": {
+          "label": "Transfer of care",
+          "description": "Transfer to another clinic or dentist"
+        },
+        "OTHER": {
+          "label": "Other",
+          "description": "Another reason"
+        }
+      }
     },
     "cancelItem": {
       "title": "Cancel treatment item",

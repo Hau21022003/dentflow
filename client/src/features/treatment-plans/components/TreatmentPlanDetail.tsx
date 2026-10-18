@@ -5,7 +5,6 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -29,6 +28,8 @@ import {
 import type { TreatmentPlanScope } from "@/features/treatment-plans/treatment-plans.service";
 import {
   TREATMENT_ITEM_EVENT_TYPES,
+  TREATMENT_PLAN_CANCELLATION_REASON_CODES,
+  type CancelTreatmentPlanInput,
   type TreatmentItemEvent,
   type TreatmentItemEventType,
   type TreatmentItemStateEventType,
@@ -54,6 +55,7 @@ import {
   CircleCheck,
   CircleDashed,
   Clock3,
+  Download,
   Ellipsis,
   History,
   ListChecks,
@@ -67,6 +69,7 @@ import {
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { DentalChart } from "./DentalChart";
 import { parseFdiPosition } from "./treatment-plan-odontogram";
 import { PERMANENT_TOOTH_LAYOUT, PRIMARY_TOOTH_LAYOUT } from "./tooth-layout";
@@ -76,12 +79,17 @@ import {
 } from "./TreatmentPlanReasonDialog";
 import { TreatmentImagePreviewDialog } from "./TreatmentImagePreviewDialog";
 import { TreatmentProgressNoteDialog } from "./TreatmentProgressNoteDialog";
+import { CancelTreatmentPlanDialog } from "./CancelTreatmentPlanDialog";
 
 type Presentation = "page" | "sheet";
 type ReasonAction = {
-  kind: "reopen" | "cancelPlan" | "cancelItem";
+  kind: "reopen" | "cancelItem";
   itemId?: string;
 };
+
+const cancellationReasonCodes = new Set<string>(
+  TREATMENT_PLAN_CANCELLATION_REASON_CODES,
+);
 
 type Props = {
   onClose?: () => void;
@@ -247,7 +255,7 @@ function ReadOnlyOdontogram({ plan }: { plan: TreatmentPlan }) {
 }
 
 function EventIcon({ type }: { type: TreatmentItemEventType }) {
-  const className = "size-4";
+  const className = "size-[18px]";
   if (type === "COMPLETED")
     return <Check aria-hidden="true" className={className} />;
   if (type === "CANCELLED")
@@ -255,6 +263,43 @@ function EventIcon({ type }: { type: TreatmentItemEventType }) {
   if (type === "PROGRESS_NOTE")
     return <NotebookPen aria-hidden="true" className={className} />;
   return <Play aria-hidden="true" className={className} />;
+}
+
+const eventIconStyles: Record<TreatmentItemEventType, string> = {
+  COMPLETED: "bg-emerald-100 text-emerald-700",
+  IN_PROGRESS: "bg-blue-100 text-blue-700",
+  CANCELLED: "bg-red-100 text-red-700",
+  PROGRESS_NOTE: "bg-cyan-100 text-cyan-700",
+};
+
+function formatEventDateTime(
+  value: string,
+  locale: string,
+  timeZone: string,
+) {
+  const date = new Date(value);
+  const formattedTime = new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone,
+  }).format(date);
+  const formattedDate = new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    timeZone,
+  }).format(date);
+
+  return `${formattedTime} ${formattedDate}`;
+}
+
+function escapeCsvCell(value: string | number) {
+  const stringValue = String(value);
+  const formulaSafeValue = /^[=+\-@]/.test(stringValue)
+    ? `'${stringValue}`
+    : stringValue;
+  return `"${formulaSafeValue.replaceAll('"', '""')}"`;
 }
 
 function EventRow({
@@ -268,32 +313,29 @@ function EventRow({
 }) {
   const { t } = useTranslation("treatmentPlans");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const reasonLabel = event.reasonCode
+    ? cancellationReasonCodes.has(event.reasonCode)
+      ? t(`dialogs.cancelPlan.reasons.${event.reasonCode}.label`)
+      : event.reasonCode
+    : null;
   return (
     <>
-      <li className="flex gap-3 border-b py-3 last:border-b-0">
+      <li className="relative flex gap-3 pb-4 before:absolute before:top-9 before:bottom-0 before:left-[17px] before:w-px before:bg-cyan-200 last:pb-0 last:before:hidden last:[&>div]:border-b-0">
         <span
           className={cn(
-            "mt-0.5 grid size-8 shrink-0 place-items-center rounded-full",
-            event.eventType === "COMPLETED" &&
-              "bg-emerald-100 text-emerald-700",
-            event.eventType === "IN_PROGRESS" && "bg-blue-100 text-blue-700",
-            event.eventType === "CANCELLED" && "bg-red-100 text-red-700",
-            event.eventType === "PROGRESS_NOTE" && "bg-cyan-100 text-cyan-700",
+            "relative z-10 grid size-9 shrink-0 place-items-center rounded-full ring-4 ring-card",
+            eventIconStyles[event.eventType],
           )}
         >
           <EventIcon type={event.eventType} />
         </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-            <p className="font-medium">
+        <div className="min-w-0 flex-1 border-b pb-4">
+          <div className="flex items-start justify-between gap-3">
+            <p className="font-semibold">
               {t(`events.types.${event.eventType}`)}
             </p>
             <time className="shrink-0 text-xs text-muted-foreground">
-              {new Intl.DateTimeFormat(locale, {
-                dateStyle: "short",
-                timeStyle: "short",
-                timeZone,
-              }).format(new Date(event.createdAt))}
+              {formatEventDateTime(event.createdAt, locale, timeZone)}
             </time>
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -306,15 +348,25 @@ function EventRow({
               {event.content}
             </p>
           )}
+          {reasonLabel && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("events.cancelReason", { reason: reasonLabel })}
+            </p>
+          )}
+          {event.note && (
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm">
+              {event.note}
+            </p>
+          )}
           {event.images.length > 0 && (
-            <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+            <div className="mt-2 flex flex-wrap gap-2">
               {event.images.map((image, index) =>
                 image.url ? (
                   <button
                     aria-label={t("progress.previewImage", {
                       count: index + 1,
                     })}
-                    className="aspect-square overflow-hidden rounded-lg border bg-muted"
+                    className="h-24 w-40 max-w-[calc(50%_-_0.25rem)] overflow-hidden rounded-xl border bg-muted transition-opacity hover:opacity-90"
                     key={image.id}
                     onClick={() => setPreviewUrl(image.url)}
                     type="button"
@@ -328,7 +380,7 @@ function EventRow({
                   </button>
                 ) : (
                   <span
-                    className="grid aspect-square place-items-center rounded-lg border bg-muted p-1 text-center text-[10px] text-muted-foreground"
+                    className="grid h-24 w-40 max-w-[calc(50%_-_0.25rem)] place-items-center rounded-xl border bg-muted p-2 text-center text-xs text-muted-foreground"
                     key={image.id}
                   >
                     {t("progress.imageUnavailable")}
@@ -364,10 +416,13 @@ function EventHistoryPreview({
   const { i18n, t } = useTranslation("treatmentPlans");
   const locale = localeForLanguage(i18n.resolvedLanguage);
   const events = useTreatmentItemEventsQuery(scope, planId, item.id);
-  const records = events.data?.pages.flatMap((page) => page.items) ?? [];
+  const records = useMemo(
+    () => events.data?.pages.flatMap((page) => page.items) ?? [],
+    [events.data?.pages],
+  );
 
   return (
-    <div className="mt-3 rounded-xl border bg-muted/20 px-3 sm:px-4">
+    <div className="mt-3 rounded-xl border bg-card px-3 sm:px-4">
       <div className="flex items-center justify-between gap-3 border-b py-3">
         <p className="text-sm font-semibold">{t("events.title")}</p>
         <span className="text-xs text-muted-foreground">
@@ -385,7 +440,7 @@ function EventHistoryPreview({
           {t("events.empty")}
         </p>
       ) : (
-        <ol>
+        <ol className="py-4">
           {records.slice(0, 3).map((event) => (
             <EventRow
               event={event}
@@ -410,6 +465,7 @@ function TreatmentHistoryDialog({
   item,
   onOpenChange,
   open,
+  planCode,
   planId,
   scope,
   timeZone,
@@ -417,6 +473,7 @@ function TreatmentHistoryDialog({
   item: TreatmentPlanItem | null;
   onOpenChange: (open: boolean) => void;
   open: boolean;
+  planCode: string;
   planId: string;
   scope: TreatmentPlanScope;
   timeZone: string;
@@ -425,18 +482,39 @@ function TreatmentHistoryDialog({
   const locale = localeForLanguage(i18n.resolvedLanguage);
   const [search, setSearch] = useState("");
   const [type, setType] = useState<"ALL" | TreatmentItemEventType>("ALL");
+  const [isExporting, setIsExporting] = useState(false);
   const events = useTreatmentItemEventsQuery(
     scope,
     planId,
     item?.id ?? null,
     open,
   );
-  const records = events.data?.pages.flatMap((page) => page.items) ?? [];
+  const records = useMemo(
+    () => events.data?.pages.flatMap((page) => page.items) ?? [],
+    [events.data?.pages],
+  );
+  const eventCounts = useMemo(() => {
+    const counts: Record<"ALL" | TreatmentItemEventType, number> = {
+      ALL: records.length,
+      IN_PROGRESS: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+      PROGRESS_NOTE: 0,
+    };
+
+    for (const event of records) counts[event.eventType] += 1;
+    return counts;
+  }, [records]);
   const normalizedSearch = search.trim().toLocaleLowerCase(locale);
   const filtered = records.filter((event) => {
     if (type !== "ALL" && event.eventType !== type) return false;
     if (!normalizedSearch) return true;
-    return `${t(`events.types.${event.eventType}`)} ${event.performedBy.fullName} ${event.content ?? ""}`
+    const reason = event.reasonCode
+      ? cancellationReasonCodes.has(event.reasonCode)
+        ? t(`dialogs.cancelPlan.reasons.${event.reasonCode}.label`)
+        : event.reasonCode
+      : "";
+    return `${t(`events.types.${event.eventType}`)} ${event.performedBy.fullName} ${event.content ?? ""} ${reason} ${event.note ?? ""}`
       .toLocaleLowerCase(locale)
       .includes(normalizedSearch);
   });
@@ -449,70 +527,157 @@ function TreatmentHistoryDialog({
     onOpenChange(nextOpen);
   }
 
+  async function exportHistory() {
+    if (!item || records.length === 0) return;
+
+    setIsExporting(true);
+    try {
+      let exportRecords = records;
+      let hasNextPage = events.hasNextPage;
+      while (hasNextPage) {
+        const result = await events.fetchNextPage();
+        exportRecords =
+          result.data?.pages.flatMap((page) => page.items) ?? exportRecords;
+        hasNextPage = result.hasNextPage;
+      }
+
+      const rows = [
+        [
+          t("events.exportColumns.time"),
+          t("events.exportColumns.event"),
+          t("events.exportColumns.dentist"),
+          t("events.exportColumns.reason"),
+          t("events.exportColumns.note"),
+          t("events.exportColumns.content"),
+          t("events.exportColumns.images"),
+        ],
+        ...exportRecords.map((event) => [
+          formatEventDateTime(event.createdAt, locale, timeZone),
+          t(`events.types.${event.eventType}`),
+          event.performedBy.fullName,
+          event.reasonCode ?? "",
+          event.note ?? "",
+          event.content ?? "",
+          event.images.length,
+        ]),
+      ];
+      const csv = rows
+        .map((row) => row.map((cell) => escapeCsvCell(cell)).join(","))
+        .join("\r\n");
+      const url = URL.createObjectURL(
+        new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `treatment-history-${planCode}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t("events.exportError"), { position: "top-right" });
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   return (
     <Dialog onOpenChange={handleOpenChange} open={open}>
       <DialogContent
         aria-describedby={undefined}
-        className="max-h-[86svh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-3xl"
+        className="max-h-[86svh] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-3xl"
         showCloseButton={false}
       >
-        <DialogHeader className="border-b p-5 pr-14">
-          <DialogTitle className="text-xl">{t("events.fullTitle")}</DialogTitle>
-          {item && (
-            <p className="text-sm text-muted-foreground">
-              {item.serviceName}
-              {item.toothPosition
-                ? ` · ${t("detail.toothValue", { position: item.toothPosition })}`
-                : ""}
-            </p>
-          )}
-          <DialogClose asChild>
-            <Button
-              aria-label={t("actions.close")}
-              className="absolute top-4 right-4"
-              size="icon"
-              type="button"
-              variant="ghost"
-            >
-              <X aria-hidden="true" />
-            </Button>
-          </DialogClose>
-          <div className="grid gap-3 pt-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-            <div className="relative">
-              <Search
-                aria-hidden="true"
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-              />
-              <Input
-                aria-label={t("events.searchPlaceholder")}
-                className="pl-9"
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t("events.searchPlaceholder")}
-                value={search}
-              />
-            </div>
-            <div className="flex flex-wrap gap-1" role="group">
-              {(["ALL", ...TREATMENT_ITEM_EVENT_TYPES] as const).map(
-                (value) => (
-                  <Button
-                    aria-pressed={type === value}
-                    key={value}
-                    onClick={() => setType(value)}
-                    size="sm"
-                    type="button"
-                    variant={type === value ? "secondary" : "ghost"}
-                  >
-                    {value === "ALL"
-                      ? t("events.all")
-                      : t(`events.types.${value}`)}
-                  </Button>
-                ),
+        <DialogHeader className="gap-4 border-b p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 space-y-1">
+              <DialogTitle className="text-xl font-semibold">
+                {t("events.fullTitle")}
+              </DialogTitle>
+              {item && (
+                <p className="truncate text-sm text-muted-foreground">
+                  {item.serviceName} · {planCode}
+                </p>
               )}
             </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                disabled={records.length === 0 || isExporting}
+                onClick={() => void exportHistory()}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                {isExporting ? <Spinner /> : <Download aria-hidden="true" />}
+                <span className="hidden sm:inline">
+                  {isExporting ? t("events.exporting") : t("events.export")}
+                </span>
+              </Button>
+              <DialogClose asChild>
+                <Button
+                  aria-label={t("actions.close")}
+                  className="rounded-full"
+                  size="icon"
+                  type="button"
+                  variant="outline"
+                >
+                  <X aria-hidden="true" />
+                </Button>
+              </DialogClose>
+            </div>
+          </div>
+          <div className="relative">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              aria-label={t("events.searchPlaceholder")}
+              className="h-9 bg-muted/20 pl-9"
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t("events.searchPlaceholder")}
+              value={search}
+            />
+          </div>
+          <div
+            className="flex gap-2 overflow-x-auto pb-0.5"
+            role="group"
+          >
+            {(["ALL", ...TREATMENT_ITEM_EVENT_TYPES] as const).map((value) => {
+              const isActive = type === value;
+              return (
+                <Button
+                  aria-pressed={isActive}
+                  className={cn(
+                    "h-8 rounded-xl border px-3",
+                    isActive
+                      ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "border-border bg-muted/20 hover:bg-muted",
+                  )}
+                  key={value}
+                  onClick={() => setType(value)}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  {value === "ALL"
+                    ? t("events.all")
+                    : t(`events.types.${value}`)}
+                  <span
+                    className={cn(
+                      "grid min-w-5 place-items-center rounded-full px-1.5 py-0.5 text-[10px] leading-none",
+                      isActive
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {eventCounts[value]}
+                  </span>
+                </Button>
+              );
+            })}
           </div>
         </DialogHeader>
 
-        <div className="min-h-0 overflow-y-auto px-5 py-2">
+        <div className="min-h-0 overflow-y-auto px-5 py-4">
           {events.isLoading ? (
             <div className="my-4 h-44 animate-pulse rounded-xl bg-muted" />
           ) : events.isError ? (
@@ -550,15 +715,6 @@ function TreatmentHistoryDialog({
             </div>
           )}
         </div>
-
-        <DialogFooter className="m-0 rounded-none px-5 py-4">
-          <DialogClose asChild>
-            <Button type="button" variant="outline">
-              <X aria-hidden="true" />
-              {t("actions.close")}
-            </Button>
-          </DialogClose>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -692,6 +848,7 @@ export function TreatmentPlanDetail({
   const cancel = useCancelTreatmentPlanMutation();
   const eventMutation = useRecordTreatmentItemEventMutation();
   const [reasonAction, setReasonAction] = useState<ReasonAction | null>(null);
+  const [cancelPlanOpen, setCancelPlanOpen] = useState(false);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
   const [historyItemId, setHistoryItemId] = useState<string | null>(null);
   const [progressItemId, setProgressItemId] = useState<string | null>(null);
@@ -763,16 +920,6 @@ export function TreatmentPlanDetail({
       onPlanBecameDraft?.(updated.id);
       return;
     }
-    if (reasonAction.kind === "cancelPlan") {
-      await cancel.mutateAsync({
-        ...scope,
-        idempotencyKey: keyFor(operation, command),
-        input: { reasonCode },
-        planId: plan.id,
-      });
-      completeIntent(operation);
-      return;
-    }
     if (reasonAction.itemId) {
       await eventMutation.mutateAsync({
         ...scope,
@@ -783,6 +930,23 @@ export function TreatmentPlanDetail({
       });
       completeIntent(operation);
     }
+  }
+
+  async function cancelPlan(input: CancelTreatmentPlanInput) {
+    const operation = `cancelPlan:${plan.id}`;
+    const command = {
+      operation: "clinical.treatment-plan.cancel",
+      ...scope,
+      planId: plan.id,
+      ...input,
+    };
+    await cancel.mutateAsync({
+      ...scope,
+      idempotencyKey: keyFor(operation, command),
+      input,
+      planId: plan.id,
+    });
+    completeIntent(operation);
   }
 
   async function recordEvent(
@@ -1227,7 +1391,7 @@ export function TreatmentPlanDetail({
           {canCancelPlan && (
             <Button
               disabled={cancel.isPending}
-              onClick={() => setReasonAction({ kind: "cancelPlan" })}
+              onClick={() => setCancelPlanOpen(true)}
               type="button"
               variant="destructive"
             >
@@ -1241,7 +1405,7 @@ export function TreatmentPlanDetail({
   );
 
   const reasonPending =
-    reopen.isPending || cancel.isPending || eventMutation.isPending;
+    reopen.isPending || eventMutation.isPending;
   const reasonTitle = reasonAction
     ? t(`dialogs.${reasonAction.kind}.title`)
     : "";
@@ -1272,10 +1436,17 @@ export function TreatmentPlanDetail({
         }
         title={reasonTitle}
       />
+      <CancelTreatmentPlanDialog
+        onOpenChange={setCancelPlanOpen}
+        onSubmit={cancelPlan}
+        open={cancelPlanOpen}
+        pending={cancel.isPending}
+      />
       <TreatmentHistoryDialog
         item={historyItem}
         onOpenChange={(open) => !open && setHistoryItemId(null)}
         open={Boolean(historyItem)}
+        planCode={plan.code}
         planId={plan.id}
         scope={scope}
         timeZone={timeZone}

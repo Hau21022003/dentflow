@@ -831,8 +831,11 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   ).toBeVisible();
   await detailSheet.getByRole("button", { name: "View full history" }).click();
   const historyDialog = page.getByRole("dialog", {
-    name: "Full treatment history",
+    name: "Treatment history",
   });
+  await expect(
+    historyDialog.getByRole("button", { name: "Export history" }),
+  ).toBeVisible();
   await expect(
     historyDialog.getByText("Completed", { exact: true }).last(),
   ).toBeVisible();
@@ -845,7 +848,7 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   ).toBeVisible();
   await expect(historyDialog.getByAltText("Treatment image 1")).toBeVisible();
   await historyDialog
-    .getByPlaceholder("Search by event, note, or dentist...")
+    .getByPlaceholder("Search by content, dentist, or event type...")
     .fill("responded well");
   await expect(
     historyDialog.getByText("Synthetic treatment progress", { exact: false }),
@@ -904,6 +907,21 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
     .getByRole("button", { name: "View details" })
     .click();
   const proposedSheet = page.getByRole("dialog", { name: /Plan details/ });
+  await proposedSheet
+    .getByRole("button", { name: "Cancel plan", exact: true })
+    .click();
+  const proposedCancelDialog = page.getByRole("dialog", {
+    name: "Cancel treatment plan",
+  });
+  await expect(proposedCancelDialog.getByRole("radio")).toHaveCount(6);
+  await expect(
+    proposedCancelDialog.getByRole("radio", { name: /Patient request/ }),
+  ).toBeChecked();
+  await proposedCancelDialog
+    .getByRole("button", { name: "Close" })
+    .last()
+    .click();
+
   await proposedSheet.getByRole("button", { name: "Reopen" }).click();
   const reopenDialog = page.getByRole("dialog", {
     name: "Reopen treatment plan",
@@ -923,18 +941,70 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   const cancelDialog = page.getByRole("dialog", {
     name: "Cancel treatment plan",
   });
-  await cancelDialog.getByLabel("Reason code").fill("PATIENT_REQUEST");
+  await expect(cancelDialog.getByRole("radio")).toHaveCount(6);
+  await expect(
+    cancelDialog.getByRole("radio", { name: /Patient request/ }),
+  ).toBeChecked();
+  await cancelDialog.getByText("Other", { exact: true }).click();
+  const cancellationNote = "Synthetic browser cancellation note.";
+  const cancellationNoteInput = cancelDialog.getByLabel(/Additional note/);
+  await expect(
+    cancelDialog.getByRole("button", { name: "Cancel plan", exact: true }),
+  ).toBeDisabled();
+  await expect(cancelDialog.getByText("0/500", { exact: true })).toBeVisible();
+  await cancellationNoteInput.fill(cancellationNote);
+  await expect(
+    cancelDialog.getByText(`${cancellationNote.length}/500`, { exact: true }),
+  ).toBeVisible();
+
+  let releaseCancelRequest!: () => void;
+  const cancelRequestGate = new Promise<void>((resolve) => {
+    releaseCancelRequest = resolve;
+  });
+  await page.route(
+    /\/cancel$/,
+    async (route) => {
+      await cancelRequestGate;
+      await route.continue();
+    },
+    { times: 1 },
+  );
   const cancelRequest = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
       new URL(request.url()).pathname.endsWith("/cancel"),
   );
-  await cancelDialog
-    .getByRole("button", { name: "Cancel plan", exact: true })
-    .click();
-  expectIdempotencyKey((await cancelRequest).headers()["idempotency-key"]);
+  const cancelResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname.endsWith("/cancel"),
+  );
+  const cancelSubmit = cancelDialog.locator('button[type="submit"]');
+  await cancelSubmit.click();
+  await expect(cancelSubmit).toBeDisabled();
+  await expect(
+    cancelDialog.getByRole("button", { name: "Close" }).first(),
+  ).toBeDisabled();
+  releaseCancelRequest();
+  const recordedCancelRequest = await cancelRequest;
+  expectIdempotencyKey(recordedCancelRequest.headers()["idempotency-key"]);
+  expect(recordedCancelRequest.postDataJSON()).toEqual({
+    reasonCode: "OTHER",
+    note: cancellationNote,
+  });
+  await cancelResponse;
   await expect(
     treatmentPlans.getByText("Cancelled", { exact: true }).last(),
+  ).toBeVisible();
+  await treatmentPlans
+    .getByRole("button", { name: "Treatment history" })
+    .first()
+    .click();
+  await expect(
+    treatmentPlans.getByText("Reason: Other", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    treatmentPlans.getByText(cancellationNote, { exact: true }),
   ).toBeVisible();
 });
 

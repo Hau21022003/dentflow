@@ -87,7 +87,8 @@ Item thuộc một Plan và lưu snapshot Service immutable gồm `serviceId`,
 
 Thêm enum event `IN_PROGRESS | COMPLETED | CANCELLED`. Event có
 `id`, `treatmentItemId`, `treatmentPlanId`, `visitId`, `performedByUserId`,
-`eventType`, `createdAt`.
+`eventType`, nullable `reasonCode`, nullable cancellation `note` tối đa 500 ký
+tự và `createdAt`. `reasonCode`/`note` chỉ hợp lệ cho event `CANCELLED`.
 
 - Mỗi event luôn tham chiếu current Visit và Dentist thực tế lấy từ actor, không
   nhận `visitId` hay `performedByUserId` từ body.
@@ -118,8 +119,8 @@ Mọi route bên dưới nằm dưới base branch-scoped đã xác minh:
 | `PATCH` | `/visits/:visitId/treatment-plans/:planId` | Chỉ `DRAFT`; nhận danh sách Item cuối cùng để đồng bộ atomically. |
 | `POST` | `/visits/:visitId/treatment-plans/:planId/propose` | Chỉ `DRAFT`, yêu cầu ít nhất một Item. |
 | `POST` | `/visits/:visitId/treatment-plans/:planId/reopen` | Chỉ `PROPOSED`; body bắt buộc `reasonCode`; xóa acceptance. |
-| `POST` | `/visits/:visitId/treatment-plans/:planId/cancel` | Hủy trực tiếp Plan theo quy tắc tại mục 4; body bắt buộc `reasonCode`. |
-| `GET` | `/visits/:visitId/treatment-plans/:planId/items/:itemId/events` | Event history phân trang cursor `(createdAt,id)`; chỉ Dentist với current Visit hợp lệ. |
+| `POST` | `/visits/:visitId/treatment-plans/:planId/cancel` | Hủy trực tiếp Plan theo quy tắc tại mục 4; body `{ reasonCode, note? }`, `OTHER` bắt buộc note sau trim. |
+| `GET` | `/visits/:visitId/treatment-plans/:planId/items/:itemId/events` | Event history phân trang cursor `(createdAt,id)`; trả thêm nullable `reasonCode`/`note`; chỉ Dentist với current Visit hợp lệ. |
 | `POST` | `/visits/:visitId/treatment-plans/:planId/items/:itemId/events` | Ghi event thực hiện; body chỉ có `eventType` và `reasonCode` bắt buộc khi `CANCELLED`. |
 
 `PATCH` nhận list Item cuối cùng: item có `id` là update Item thuộc đúng Plan;
@@ -196,9 +197,9 @@ vẫn không chặn current Visit hợp lệ thao tác Plan.
   bất kỳ `TreatmentItemEvent` nào và, khi financial module tồn tại, chỉ khi mọi
   invoice/payment liên quan đã void hoặc bù trừ. V1 chưa có financial module nên
   điều kiện tài chính hiện thỏa một cách rõ ràng, không được giả lập invoice.
-- Direct cancel chuyển Plan sang `CANCELLED` và bulk-cancel mọi Item `PENDING`
-  trong cùng transaction. Không tạo clinical event vì chưa có thực hiện; vẫn ghi
-  audit transition an toàn cho Plan/Item.
+- Direct cancel chuyển Plan sang `CANCELLED`, bulk-cancel mọi Item `PENDING` và
+  tạo một event `CANCELLED` append-only cho mỗi Item trong cùng transaction. Các
+  event dùng current Visit, actor, reason code và cancellation note của command.
 
 ### 4.4 Item event transitions và suy ra Plan state
 
@@ -252,10 +253,11 @@ state-change trong cùng transaction. Repeated `IN_PROGRESS` không đổi state
 ghi `TREATMENT_ITEM_EVENT_RECORDED`.
 
 Audit payload allowlist chỉ cho resource ID (trường chuẩn của AuditLog), `visitId`,
-state và `reasonCode` khi có; timestamp dùng `occurredAt` chuẩn. Không ghi patient
-identity, Service ID/code/name/price, quantity, tooth position, indication,
-clinical note hay free-text reason. Mọi action clinical mang tenant/branch đã
-resolve và actor/session hiện tại.
+state và `reasonCode` khi có; timestamp dùng `occurredAt` chuẩn. Cancellation note
+chỉ nằm trong clinical event và không bao giờ được sao chép vào audit. Không ghi
+patient identity, Service ID/code/name/price, quantity, tooth position,
+indication, clinical note hay free-text reason. Mọi action clinical mang
+tenant/branch đã resolve và actor/session hiện tại.
 
 ## 6. Phases triển khai
 

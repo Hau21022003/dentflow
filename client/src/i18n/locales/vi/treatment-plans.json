@@ -211,7 +211,7 @@
   },
   "events": {
     "title": "Lịch sử điều trị",
-    "fullTitle": "Toàn bộ lịch sử điều trị",
+    "fullTitle": "Lịch sử điều trị",
     "loading": "Đang tải lịch sử sự kiện...",
     "loadError": "Không thể tải lịch sử sự kiện. Vui lòng thử lại.",
     "empty": "Chưa có sự kiện thực hiện.",
@@ -219,9 +219,22 @@
     "recent": "{{count}} sự kiện gần nhất",
     "viewAll": "Xem toàn bộ lịch sử",
     "performedBy": "Bác sĩ: {{name}}",
-    "searchPlaceholder": "Tìm theo sự kiện, nội dung hoặc bác sĩ...",
+    "cancelReason": "Lý do: {{reason}}",
+    "searchPlaceholder": "Tìm theo nội dung, bác sĩ, loại sự kiện...",
     "all": "Tất cả",
     "loadMore": "Tải thêm",
+    "export": "Xuất lịch sử",
+    "exporting": "Đang xuất...",
+    "exportError": "Không thể xuất lịch sử điều trị. Vui lòng thử lại.",
+    "exportColumns": {
+      "time": "Thời gian",
+      "event": "Loại sự kiện",
+      "dentist": "Bác sĩ",
+      "reason": "Lý do hủy",
+      "note": "Ghi chú hủy",
+      "content": "Nội dung",
+      "images": "Số ảnh"
+    },
     "types": {
       "IN_PROGRESS": "Đang thực hiện",
       "COMPLETED": "Đã hoàn thành",
@@ -249,8 +262,46 @@
     },
     "cancelPlan": {
       "title": "Hủy kế hoạch điều trị",
-      "description": "Thao tác này hủy kế hoạch và mọi hạng mục đang chờ. Không dùng được sau khi đã có sự kiện thực hiện.",
-      "submit": "Hủy kế hoạch"
+      "description": "Thao tác này sẽ hủy toàn bộ kế hoạch điều trị và mọi hạng mục đang chờ. Hành động không thể hoàn tác.",
+      "submit": "Hủy kế hoạch",
+      "reasonLabel": "Lý do hủy",
+      "noteLabel": "Ghi chú thêm",
+      "noteOptional": "(không bắt buộc)",
+      "noteRequired": "(bắt buộc)",
+      "notePlaceholder": "Nhập thêm chi tiết nếu cần...",
+      "noteCount": "{{count}}/500",
+      "historyHint": "Lý do hủy sẽ được lưu vào lịch sử điều trị để phục vụ theo dõi và báo cáo.",
+      "auditHint": "Hành động này sẽ được ghi vào lịch sử điều trị.",
+      "validation": {
+        "noteRequired": "Vui lòng nhập ghi chú khi chọn lý do Khác.",
+        "noteMax": "Ghi chú không được vượt quá 500 ký tự."
+      },
+      "reasons": {
+        "PATIENT_REQUEST": {
+          "label": "Bệnh nhân yêu cầu",
+          "description": "Theo yêu cầu của bệnh nhân"
+        },
+        "ENTERED_IN_ERROR": {
+          "label": "Nhập nhầm kế hoạch",
+          "description": "Nhập sai thông tin kế hoạch"
+        },
+        "DUPLICATE": {
+          "label": "Trùng kế hoạch",
+          "description": "Đã có kế hoạch khác"
+        },
+        "NO_LONGER_APPLICABLE": {
+          "label": "Không còn phù hợp",
+          "description": "Không phù hợp tình trạng hiện tại"
+        },
+        "TRANSFER_OF_CARE": {
+          "label": "Chuyển điều trị",
+          "description": "Chuyển sang cơ sở hoặc bác sĩ khác"
+        },
+        "OTHER": {
+          "label": "Khác",
+          "description": "Lý do khác"
+        }
+      }
     },
     "cancelItem": {
       "title": "Hủy hạng mục điều trị",

@@ -42,6 +42,7 @@ import { Service } from '../services/entities/service.entity';
 import { TenantUserMembershipStatus } from '../staff/entities/tenant-user-membership.entity';
 import { User } from '../users/entities/user.entity';
 import { Visit, VisitStatus } from '../visits/entities/visit.entity';
+import { CancelTreatmentPlanDto } from './dto/cancel-treatment-plan.dto';
 import { ListTreatmentItemEventsDto } from './dto/list-treatment-item-events.dto';
 import { CreateTreatmentProgressNoteDto } from './dto/create-treatment-progress-note.dto';
 import { ListTreatmentPlansQueryDto } from './dto/list-treatment-plans-query.dto';
@@ -378,7 +379,7 @@ export class TreatmentPlansService {
     context: AuthorizationContext,
     visitId: string,
     planId: string,
-    input: TreatmentReasonDto,
+    input: CancelTreatmentPlanDto,
   ): Promise<TreatmentPlanResponse> {
     return this.dataSource.transaction(async (manager) => {
       const current = await this.resolveCurrentCase(context, visitId, manager);
@@ -410,6 +411,17 @@ export class TreatmentPlansService {
         (i) => i.status === TreatmentItemStatus.PENDING,
       )) {
         const before = item.status;
+        const event = await manager.save(
+          manager.create(TreatmentItemEvent, {
+            treatmentItemId: item.id,
+            treatmentPlanId: plan.id,
+            visitId: current.visit.id,
+            performedByUserId: context.actor.userId,
+            eventType: TreatmentItemEventType.CANCELLED,
+            reasonCode: input.reasonCode,
+            note: input.note ?? null,
+          }),
+        );
         item.status = TreatmentItemStatus.CANCELLED;
         await manager.save(item);
         await this.recordItemState(
@@ -418,6 +430,16 @@ export class TreatmentPlansService {
           item,
           before,
           input.reasonCode,
+        );
+        await this.record(
+          manager,
+          context,
+          AuditAction.TREATMENT_ITEM_EVENT_RECORDED,
+          event.id,
+          {
+            after: { status: item.status, visitId: event.visitId },
+            metadata: { reasonCode: input.reasonCode },
+          },
         );
       }
       const before = plan.status;
@@ -649,6 +671,10 @@ export class TreatmentPlansService {
       if (!item) throw new NotFoundException('Treatment Item was not found.');
       const prior = item.status;
       this.assertEventTransition(item, input);
+      const reasonCode =
+        input.eventType === TreatmentItemEventType.CANCELLED
+          ? input.reasonCode
+          : undefined;
       const event = await manager.save(
         manager.create(TreatmentItemEvent, {
           treatmentItemId: item.id,
@@ -656,6 +682,7 @@ export class TreatmentPlansService {
           visitId: current.visit.id,
           performedByUserId: context.actor.userId,
           eventType: input.eventType,
+          reasonCode: reasonCode ?? null,
         }),
       );
       if (
@@ -669,13 +696,7 @@ export class TreatmentPlansService {
         item.status = TreatmentItemStatus.CANCELLED;
       if (prior !== item.status) {
         await manager.save(item);
-        await this.recordItemState(
-          manager,
-          context,
-          item,
-          prior,
-          input.reasonCode,
-        );
+        await this.recordItemState(manager, context, item, prior, reasonCode);
       }
       const all = await this.repository.findItems(manager, plan.id, true);
       const derived = this.derivePlanStatus(all);
@@ -683,13 +704,7 @@ export class TreatmentPlansService {
         const before = plan.status;
         plan.status = derived;
         await manager.save(plan);
-        await this.recordPlanState(
-          manager,
-          context,
-          plan,
-          before,
-          input.reasonCode,
-        );
+        await this.recordPlanState(manager, context, plan, before, reasonCode);
       }
       await this.record(
         manager,
@@ -698,9 +713,7 @@ export class TreatmentPlansService {
         event.id,
         {
           after: { status: item.status, visitId: event.visitId },
-          ...(input.reasonCode
-            ? { metadata: { reasonCode: input.reasonCode } }
-            : {}),
+          ...(reasonCode ? { metadata: { reasonCode } } : {}),
         },
       );
       return {
@@ -1167,6 +1180,8 @@ export class TreatmentPlansService {
       },
       eventType: event.eventType,
       content: event.content,
+      reasonCode: event.reasonCode,
+      note: event.note,
       images: await Promise.all(
         images
           .sort((left, right) => left.sortOrder - right.sortOrder)
