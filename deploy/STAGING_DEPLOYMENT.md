@@ -1,25 +1,38 @@
 # Bàn giao triển khai DentFlow staging
 
 > Tài liệu này ghi nhận trạng thái staging trên branch `docker-cicd` tại ngày
-> 2026-10-19. Không ghi credentials, private key hoặc giá trị secret vào đây.
-> Không dùng tài liệu này như xác nhận rằng EC2 hiện đang khỏe hoặc deployment
-> thực tế đã hoàn tất.
+> 2026-10-20. Không ghi credentials, private key hoặc giá trị secret vào đây.
+> Staging vẫn deploy từ `docker-cicd`; chỉ chuyển cả CI và CD sang `master` sau
+> khi application, Dockerfiles và Compose đã được merge vào `master` qua review.
 
 ## Trạng thái hiện tại
 
-- Docker và Docker Compose đã được cài trên EC2 Ubuntu 24.04 `t3.micro` 1 GB RAM.
+- Docker và Docker Compose đã được cài trên EC2 Ubuntu 24.04 `t3.micro` 1 GB RAM;
+  SSH và Docker hiện hoạt động lại sau sự cố tài nguyên.
 - Repository đã được clone tại `/opt/dentflow`; staging target vẫn là branch
   `docker-cicd`, không phải `master`.
 - IAM Role, IMDSv2, S3 CORS/lifecycle và `/etc/dentflow/staging.env` đã được cấu
-  hình. Compose config đã từng validate thành công trước thay đổi GHCR.
+  hình. `MAIL_REDIRECT_TO` staging đã được sửa về một email hợp lệ và Compose
+  config validation thành công.
 - Docker build trực tiếp trên EC2 đã chạy hơn hai giờ, sau đó EC2 mất SSH và
-  Instance Status Check failed. EC2 đang trong quá trình khôi phục và chưa được
-  xác nhận hoạt động bình thường.
-- CI push gần nhất trước thay đổi GHCR đã pass tại commit
-  `7b1d841b27b975b392a273cd50276773eff3b059`. Lỗi Browser E2E 57/58 ghi trong
-  bản tài liệu cũ đã được sửa.
-- Thay đổi GHCR hiện chỉ có trong working tree local. Chưa commit, push, merge,
-  bootstrap workflow lên `master` hoặc deploy.
+  Instance Status Check failed. Build trên EC2 đã được loại khỏi quy trình;
+  trạng thái `2/2` trên AWS Console vẫn cần được kiểm tra định kỳ riêng.
+- Ba GitHub Actions secrets đã được cấu hình. Workflow CD đã được bootstrap lên
+  `master`, còn Compose và application staging vẫn ở `docker-cicd`.
+- Manual CD run `39293268686` đã thành công cho commit
+  `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`: build/push GHCR, pull trên EC2,
+  migration, recreate application, healthcheck và OCI revision verification đều
+  hoàn tất. Log kết thúc bằng `Deployed <full-sha>`.
+- PostgreSQL, Redis, backend và frontend hiện chạy healthy; PostgreSQL/Redis
+  volumes không bị xóa hoặc recreate trong quá trình sửa lỗi.
+- Hotfix ngăn migration container tiêu thụ phần còn lại của SSH heredoc đã merge
+  vào `master` qua PR #8 và `docker-cicd` qua PR #9.
+- Merge commit PR #9 trên `docker-cicd` là
+  `5363cbd8d9a34c3304489cf46db671baa82d7b9b`. CI push đầu tiên của commit này bị
+  hủy thủ công, nên automatic `workflow_run` CD vẫn cần được xác nhận bằng một
+  push CI thành công sau đó.
+- Root disk 19 GB còn khoảng 14 GB tại lần kiểm tra gần nhất. EC2 chưa có swap;
+  RAM cần được đo lại khi đủ bốn container đang chạy.
 
 ## Phạm vi implementation GHCR
 
@@ -143,7 +156,8 @@ CD yêu cầu `/opt/dentflow` sạch, fetch `docker-cicd`, xác minh
 1. validate Compose với `DENTFLOW_IMAGE_TAG=<resolved-sha>`;
 2. pull backend/frontend images;
 3. start và chờ PostgreSQL/Redis healthy;
-4. chạy compiled TypeORM migrations bằng backend image đã pull;
+4. chạy compiled TypeORM migrations bằng backend image đã pull, với interactive
+   input và TTY bị tắt để migration không thể đọc phần còn lại của SSH script;
 5. `up -d --wait` toàn bộ stack;
 6. kiểm tra OCI revision của container backend/frontend đúng resolved SHA;
 7. in Compose status và deployed SHA.
@@ -182,7 +196,7 @@ SSH host key hiện vẫn được thu thập bằng `ssh-keyscan` lúc chạy. 
 giản cho staging nhưng không xác minh fingerprint out-of-band; có thể chuyển sang
 pinned known-host secret trong một hardening change riêng.
 
-## Bootstrap CD lên `master`
+## Bootstrap CD lên `master` (đã thực hiện)
 
 `workflow_run` và nút `workflow_dispatch` chỉ hoạt động khi
 `.github/workflows/deploy-staging.yml` tồn tại trên default branch. Không cần
@@ -210,6 +224,10 @@ Thứ tự đề xuất:
 Workflow file chạy trên `master`, nhưng source, Dockerfiles, Compose và image đều
 được lấy từ verified SHA trên `docker-cicd`.
 
+Bootstrap workflow và ba repository secrets đã hoàn tất. Manual CD đã xác nhận
+đường build/push/pull/deploy. Automatic path vẫn cần một CI push thành công trên
+tip mới của `docker-cicd`; không chạy manual CD song song với lần kiểm tra này.
+
 ## Migration và seed
 
 CD dùng đúng lệnh migration sau khi database dependencies healthy:
@@ -217,10 +235,15 @@ CD dùng đúng lệnh migration sau khi database dependencies healthy:
 ```bash
 docker compose --env-file /etc/dentflow/staging.env \
   -f docker-compose.staging.yml \
-  run --rm --no-deps backend \
+  run --rm --no-deps --interactive=false -T backend \
   node ./node_modules/typeorm/cli.js migration:run \
-  -d dist/database/data-source.js
+  -d dist/database/data-source.js </dev/null
 ```
+
+`--interactive=false`, `-T` và `</dev/null` là bắt buộc khi lệnh chạy trong SSH
+heredoc. Nếu thiếu chúng, `docker compose run` có thể tiêu thụ các dòng script
+phía sau migration, làm workflow trả success trước khi application được start và
+kiểm tra health.
 
 Nếu migration fail, workflow không chạy bước `up` application mới. Không tự động
 revert vì độ an toàn phụ thuộc migration cụ thể. Với migration có thay đổi dữ
@@ -300,21 +323,30 @@ và một chính sách backup riêng trước khi coi staging là bền vững.
 
 ## Checklist sau triển khai
 
-- [ ] EC2 đạt `2/2` status checks, SSH ổn định và không còn build process cũ.
-- [ ] `free`, swap và disk còn đủ headroom; kernel không có OOM mới.
-- [ ] Workflow CD đã được review và tồn tại trên `master`.
-- [ ] Ba GitHub Secrets tồn tại và GHCR package Actions access đúng repository.
-- [ ] CI push thành công cho đúng tip SHA của `docker-cicd`.
-- [ ] CD resolve đúng workflow ID/path, event `push`, branch và full SHA.
-- [ ] Hai GHCR image tags và OCI revision cùng bằng resolved SHA.
-- [ ] EC2 logs không có `docker build`; chỉ có pull/migrate/up.
-- [ ] Migration hoàn tất trước application recreate.
-- [ ] `docker compose ps` báo PostgreSQL, Redis, backend và frontend healthy.
-- [ ] Containers backend/frontend chạy đúng image revision đã deploy.
-- [ ] PostgreSQL và Redis named volumes giữ nguyên dữ liệu.
+- [ ] Xác nhận lại EC2 đạt `2/2` status checks trên AWS Console; SSH hiện ổn
+  định và quy trình mới không chạy Docker build trên EC2.
+- [ ] Đo lại `free -h`, `docker stats --no-stream`, swap, disk và kernel OOM khi
+  đủ bốn container đang chạy. Disk hiện còn khoảng 14 GB; swap hiện là `0 B`.
+- [x] Workflow CD đã được review và tồn tại trên `master`.
+- [x] Ba GitHub Secrets tồn tại và `GITHUB_TOKEN` đã build/push/pull GHCR thành
+  công.
+- [ ] CI push thành công cho một tip mới của `docker-cicd`; run đầu tiên của
+  merge commit `5363cbd8d9a34c3304489cf46db671baa82d7b9b` đã bị hủy thủ công.
+- [ ] Automatic CD resolve đúng workflow ID/path, event `push`, branch và full
+  SHA. Manual resolve/deploy đã được xác nhận riêng.
+- [x] Hai GHCR image tags và OCI revision của manual deployment cùng bằng
+  `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`.
+- [x] EC2 deployment logs không có `docker build`; chỉ có pull/migrate/up.
+- [x] Migration hoàn tất trước application recreate; lần chạy xác nhận báo
+  `No migrations are pending`.
+- [x] `docker compose ps` báo PostgreSQL, Redis, backend và frontend healthy.
+- [x] Containers backend/frontend chạy đúng image revision đã deploy.
+- [x] PostgreSQL và Redis named volumes không bị xóa hoặc recreate trong deploy.
 - [ ] HTTPS frontend, `/api/`, login/refresh cookie path hoạt động.
 - [ ] S3 presigned upload và IAM Role qua IMDSv2 hoạt động từ backend container.
-- [ ] Ghi lại current SHA và previous successful SHA để rollback.
+- [ ] Baseline manual successful SHA là
+  `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`; ghi lại current và previous
+  successful SHA từ CD logs sau lần automatic deployment thành công tiếp theo.
 - [ ] Theo dõi RAM, disk, Docker logs và EC2 status checks sau deploy.
 
 ## Chuyển staging sang `master` sau này
