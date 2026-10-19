@@ -1,421 +1,324 @@
 # Bàn giao triển khai DentFlow staging
 
-> Tài liệu này ghi nhận trạng thái triển khai staging hiện có trên branch
-> `docker-cicd`. Đây là tài liệu bàn giao, không phải xác nhận rằng staging đã
-> được triển khai trên EC2. Không ghi credentials, private key hoặc giá trị
-> secret vào tài liệu này.
+> Tài liệu này ghi nhận trạng thái staging trên branch `docker-cicd` tại ngày
+> 2026-10-19. Không ghi credentials, private key hoặc giá trị secret vào đây.
+> Không dùng tài liệu này như xác nhận rằng EC2 hiện đang khỏe hoặc deployment
+> thực tế đã hoàn tất.
 
-## Phạm vi và trạng thái hiện tại
+## Trạng thái hiện tại
 
-Triển khai staging gồm đúng mười file ứng dụng và deployment dưới đây. Các file
-này đang có trong working tree tại thời điểm viết tài liệu, nhưng chưa được
-commit, push hoặc triển khai.
+- Docker và Docker Compose đã được cài trên EC2 Ubuntu 24.04 `t3.micro` 1 GB RAM.
+- Repository đã được clone tại `/opt/dentflow`; staging target vẫn là branch
+  `docker-cicd`, không phải `master`.
+- IAM Role, IMDSv2, S3 CORS/lifecycle và `/etc/dentflow/staging.env` đã được cấu
+  hình. Compose config đã từng validate thành công trước thay đổi GHCR.
+- Docker build trực tiếp trên EC2 đã chạy hơn hai giờ, sau đó EC2 mất SSH và
+  Instance Status Check failed. EC2 đang trong quá trình khôi phục và chưa được
+  xác nhận hoạt động bình thường.
+- CI push gần nhất trước thay đổi GHCR đã pass tại commit
+  `7b1d841b27b975b392a273cd50276773eff3b059`. Lỗi Browser E2E 57/58 ghi trong
+  bản tài liệu cũ đã được sửa.
+- Thay đổi GHCR hiện chỉ có trong working tree local. Chưa commit, push, merge,
+  bootstrap workflow lên `master` hoặc deploy.
 
-| File | Trạng thái | Mục đích |
-| --- | --- | --- |
-| `.dockerignore` | tạo mới | Không đưa source secret, thư mục dependencies, build output và test artifact vào Docker build context. |
-| `backend/Dockerfile` | tạo mới | Build NestJS bằng Node 22, sau đó chạy ứng dụng đã compile trong image Node 22 chỉ có production dependencies. |
-| `client/Dockerfile` | tạo mới | Build Vite ở mode `staging` và phục vụ SPA tạo ra bằng Nginx. |
-| `client/nginx.conf` | tạo mới | Cấu hình Nginx nội bộ cho frontend, gồm fallback cho React Router SPA. |
-| `docker-compose.staging.yml` | tạo mới | Topology staging gồm PostgreSQL, Redis, backend và frontend. |
-| `client/.env.staging` | chỉnh sửa | Đặt `VITE_API_ENDPOINT=/api`. |
-| `client/src/config/env.ts` | chỉnh sửa | Chỉ cho phép đúng `/api` khi Vite mode là `staging`; mọi mode khác vẫn yêu cầu URL tuyệt đối. |
-| `deploy/nginx/dentflow-staging.conf` | tạo mới | Nginx virtual-host template trên EC2 cho frontend, API proxy và bước khởi tạo Certbot. |
-| `.github/workflows/browser-e2e.yml` | chỉnh sửa | Workflow CI tên `CI`, chỉ nhắm branch `docker-cicd`. |
-| `.github/workflows/deploy-staging.yml` | tạo mới | Workflow CD staging qua SSH, chỉ dùng commit SHA đã được CI kiểm tra thành công. |
+## Phạm vi implementation GHCR
 
-### Ma trận hoàn thành
+Ba file được thay đổi:
 
-- [x] Dockerfile, Docker Compose, Nginx template, relative API URL cho frontend staging, CI workflow và CD workflow đã được viết ở local.
-- [x] Đã kiểm tra local: backend build; 70 backend unit test; frontend lint; frontend production và staging build; Docker image backend/frontend; Docker Compose YAML parsing; Nginx syntax; GitHub Actions workflow linting.
-- [x] Compose không public PostgreSQL/Redis và chỉ bind backend/frontend vào `127.0.0.1`.
-- [ ] Mười file triển khai chưa được commit hoặc push.
-- [ ] EC2, IAM role, cấu hình S3 bucket, DNS, Nginx host, certificate, GitHub Secrets và GitHub Actions run chưa được cấu hình hoặc xác minh thực tế bởi công việc này.
-- [ ] Chưa thêm hoặc sửa production configuration.
-- [ ] Chưa chạy migration, seed, reset database, xóa volume hoặc deploy nào trên staging.
+| File | Thay đổi |
+| --- | --- |
+| `docker-compose.staging.yml` | Backend/frontend dùng private GHCR image được tag bằng full commit SHA; không còn `build` trên EC2. |
+| `.github/workflows/deploy-staging.yml` | Xác minh CI SHA, build/push hai image trên GitHub runner, rồi SSH để pull/migrate/up. |
+| `deploy/STAGING_DEPLOYMENT.md` | Cập nhật kiến trúc, bootstrap, migration, rollback và rủi ro vận hành. |
 
-## Kiến trúc đã implement
+Không sửa Dockerfile, CI, Nginx, application logic, API, schema, migration, auth
+hoặc business logic. Không seed/reset database, xóa volume, prune Docker data,
+SSH vào EC2 hoặc thao tác AWS trong implementation này.
+
+## Kiến trúc staging
 
 ```text
-Internet
-  |
-  | HTTPS :443 / HTTP :80
-  v
-Nginx trên EC2 host (cài trực tiếp trên Ubuntu)
-  |-- /         -> 127.0.0.1:8080 -> Nginx trong frontend container -> Vite SPA
-  `-- /api/     -> 127.0.0.1:3000 -> backend container -> PostgreSQL / Redis
+Pull request vào docker-cicd
+  `-> CI: backend unit/build + frontend lint/build + Browser E2E
+      `-> không deploy từ pull_request
 
-Docker Compose network: dentflow-staging_default
-  |-- postgres  -> named volume: dentflow-staging_postgres_data
-  |-- redis     -> named volume: dentflow-staging_redis_data
-  |-- backend
-  `-- frontend
+Push/merge vào docker-cicd
+  `-> CI push thành công
+      `-> Deploy Staging trên default branch
+          |-> resolve đúng CI workflow, branch tip và head SHA
+          |-> GitHub runner build backend/frontend
+          |-> push ghcr.io/hau21022003/dentflow-{backend,frontend}:<full-sha>
+          `-> SSH EC2: pull -> dependencies healthy -> migration -> up --wait
+
+Internet -> Nginx trên EC2
+  |-- /     -> 127.0.0.1:8080 -> frontend container
+  `-- /api/ -> 127.0.0.1:3000 -> backend container
+
+Docker Compose
+  |-- postgres:16-alpine -> named volume postgres_data
+  |-- redis:7-alpine     -> named volume redis_data
+  |-- backend            -> immutable GHCR SHA tag
+  `-- frontend           -> immutable GHCR SHA tag
 ```
 
-### Hoạt động của Docker Compose
+Host Nginx, Certbot, IAM Role, S3 và external `/api` routing không thay đổi.
+PostgreSQL/Redis không public host ports. Backend/frontend vẫn chỉ bind vào
+`127.0.0.1`.
 
-`docker-compose.staging.yml` định nghĩa đúng bốn services:
+## Docker Compose sau thay đổi
 
-- `postgres`: `postgres:16-alpine`, dùng named volume `postgres_data`. Service
-  không có `ports`, nên không public ra EC2 host.
-- `redis`: `redis:7-alpine`, chạy `redis-server --appendonly yes`, dùng named
-  volume `redis_data`, và cũng không có host port.
-- `backend`: build từ `backend/Dockerfile`, nhận `/etc/dentflow/staging.env`,
-  và chỉ publish `127.0.0.1:3000:3000`. Compose override DB/Redis endpoint thành
-  `postgres:5432` và `redis:6379`; đồng thời ép `NODE_ENV=staging`,
-  `RUNTIME_ENV_ONLY=true` và `DB_SYNCHRONIZE=false`.
-- `frontend`: build từ `client/Dockerfile` và chỉ publish
-  `127.0.0.1:8080:80`.
+Backend và frontend dùng đúng hai image:
 
-Luôn truyền `/etc/dentflow/staging.env` bằng option `--env-file` của Compose.
-Option này cần thiết vừa để nội suy `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD` cho
-PostgreSQL, vừa để lệnh thủ công khớp với CD:
-
-```bash
-docker compose --env-file /etc/dentflow/staging.env -f docker-compose.staging.yml <command>
+```text
+ghcr.io/hau21022003/dentflow-backend:<full-commit-sha>
+ghcr.io/hau21022003/dentflow-frontend:<full-commit-sha>
 ```
 
-Backend image bao gồm TypeORM data source, migrations và seed SQL assets đã
-compile. Lệnh mặc định của container là `node dist/main.js`. Image không tự
-chạy migration hoặc seed.
-
-### Route API và cookie
-
-Ứng dụng NestJS không có global `/api` prefix. Các controller hiện có phục vụ
-route trực tiếp, ví dụ `/auth`. Host Nginx template chủ động thực hiện ánh xạ
-external prefix:
-
-- `GET /api` trả permanent redirect về `/api/`.
-- `location /api/` dùng `proxy_pass http://127.0.0.1:3000/`; dấu `/` cuối bỏ
-  external prefix `/api/` đúng một lần. Ví dụ `/api/auth/refresh` đến backend
-  route `/auth/refresh`.
-- `proxy_cookie_path /auth /api/auth` rewrite refresh-cookie path hiện có để
-  browser gửi cookie về external refresh/logout routes.
-- Mọi path khác proxy đến frontend container. Frontend container dùng
-  `try_files ... /index.html`, giữ được React Router deep link.
-
-Browser chỉ gọi `/api` trong Vite `staging` mode. Local development và mọi build
-mode khác giữ validation URL tuyệt đối trước đây. `FRONTEND_ORIGIN` trong backend
-environment phải là frontend origin đã deploy vì CORS policy hiện có so sánh
-incoming origin với giá trị này.
-
-### CI workflow
-
-`.github/workflows/browser-e2e.yml` nay có tên `CI` và chạy cho event `push` và
-`pull_request` nhắm đúng `docker-cicd`. Workflow dùng Node 22, bật PostgreSQL và
-Redis service container của GitHub Actions, sau đó:
-
-1. copy `backend/.env.test.example` thành `backend/.env.test`;
-2. chạy `npm ci` trong `backend`, `client`, `browser-e2e`;
-3. chạy `npm --prefix backend test -- --runInBand`;
-4. chạy `npm --prefix backend run build`;
-5. chạy `npm --prefix client run lint`;
-6. chạy `npm --prefix client run build:staging`;
-7. cài Chromium và chạy `npm --prefix browser-e2e run test`.
-
-Browser E2E setup hiện có tự khởi động MinIO Compose stack. CI không có SSH,
-deploy step, AWS credential hoặc backend lint. Backend lint được chủ động loại
-khỏi CI vì baseline repository hiện có lint errors.
-
-### CD workflow
-
-`.github/workflows/deploy-staging.yml` là workflow riêng có tên
-`Deploy Staging`.
-
-- `workflow_run` chỉ nhận CI `push` thành công có head branch là `docker-cicd`.
-- `workflow_dispatch` nhận input `ref`, nhưng workflow hiện tại chủ động chỉ
-  cho phép `docker-cicd`.
-- Workflow resolve đúng CI SHA, kiểm tra branch vẫn ở SHA đó, và tuần tự hóa
-  deploy bằng concurrency group `dentflow-staging-deploy`.
-- Workflow chỉ dùng GitHub Secrets `SSH_PRIVATE_KEY`, `EC2_HOST`, `EC2_USER`.
-  Application secret ở `/etc/dentflow/staging.env`, ngoài GitHub và Docker image.
-- Trên EC2, workflow yêu cầu `/opt/dentflow` sạch, fetch `docker-cicd`, kiểm tra
-  `origin/docker-cicd` đúng SHA đã CI, sau đó checkout SHA đó ở detached HEAD.
-- Workflow build image, chỉ start PostgreSQL/Redis, chạy compiled TypeORM
-  migration, rồi mới `docker compose up -d --wait`.
-- Workflow không seed, reset database, xóa volume hoặc prune Docker data.
-
-Lệnh migration chính xác trong CD là:
+`DENTFLOW_IMAGE_TAG` là bắt buộc và không có fallback `latest`. Biến này do CD
+export tại thời điểm deploy; không ghi nó vào `/etc/dentflow/staging.env`.
+Mọi lệnh Compose thủ công phải truyền cùng SHA:
 
 ```bash
-docker compose --env-file /etc/dentflow/staging.env -f docker-compose.staging.yml \
+export DENTFLOW_IMAGE_TAG=FULL_40_CHARACTER_SHA
+docker compose --env-file /etc/dentflow/staging.env \
+  -f docker-compose.staging.yml config
+```
+
+Compose project name vẫn là `dentflow-staging`, và tên hai volumes vẫn là
+`dentflow-staging_postgres_data` và `dentflow-staging_redis_data`. Không đổi
+project name, không dùng `down -v`, không xóa hoặc recreate volumes.
+
+## CI
+
+`.github/workflows/browser-e2e.yml` vẫn là workflow CI riêng và không được sửa
+trong thay đổi này. Workflow chạy khi push hoặc có pull request nhắm
+`docker-cicd`, dùng PostgreSQL/Redis service containers và thực hiện:
+
+1. cài dependencies bằng `npm ci`;
+2. backend unit tests;
+3. backend build;
+4. frontend lint;
+5. frontend staging build;
+6. Chromium Browser E2E và upload Playwright report.
+
+CD chỉ chấp nhận CI có event `push`. CI thành công của pull request không được
+dùng để deploy.
+
+## CD và kiểm soát commit SHA
+
+`Deploy Staging` là workflow riêng với concurrency group
+`dentflow-staging-deploy`; deployment không bị cancel giữa chừng.
+
+### Resolve
+
+- `workflow_run` chỉ nhận branch `docker-cicd` và chỉ tiếp tục khi conclusion là
+  `success`, event là `push`, head repository đúng repository hiện tại.
+- Workflow ID được lấy từ path cố định `.github/workflows/browser-e2e.yml` và
+  đối chiếu lại với Actions run. Việc này tránh tin vào display name `CI` đơn
+  thuần; trigger chấp nhận cả tên hiện tại và tên cũ đang đăng ký trên `master`.
+- `head_sha` phải là full 40-character SHA và phải vẫn là tip hiện tại của
+  `docker-cicd`. Nếu branch tiến thêm commit, run cũ bị từ chối và CD chờ CI mới.
+- Manual `workflow_dispatch` phải chạy từ workflow definition trên `master`, chỉ
+  nhận `ref=docker-cicd`, resolve branch tip và tìm đúng successful push CI run
+  của workflow ID và SHA đó.
+
+### Build và publish
+
+Job build checkout đúng resolved SHA, sau đó dùng `backend/Dockerfile` và
+`client/Dockerfile` để build trên GitHub-hosted runner. Hai image được push lên
+GHCR bằng full SHA tag và có OCI labels. Checkout không persist GitHub credential
+trong working tree; các reusable Actions trong privileged CD cũng được pin bằng
+full commit SHA:
+
+- `org.opencontainers.image.source=https://github.com/Hau21022003/dentflow`
+- `org.opencontainers.image.revision=<resolved-sha>`
+
+Không publish hoặc deploy tag `latest`.
+
+### Deploy trên EC2
+
+CD yêu cầu `/opt/dentflow` sạch, fetch `docker-cicd`, xác minh
+`origin/docker-cicd` vẫn đúng resolved SHA và checkout detached SHA đó. Sau đó:
+
+1. validate Compose với `DENTFLOW_IMAGE_TAG=<resolved-sha>`;
+2. pull backend/frontend images;
+3. start và chờ PostgreSQL/Redis healthy;
+4. chạy compiled TypeORM migrations bằng backend image đã pull;
+5. `up -d --wait` toàn bộ stack;
+6. kiểm tra OCI revision của container backend/frontend đúng resolved SHA;
+7. in Compose status và deployed SHA.
+
+CD không có `docker compose build`, seed, database reset, volume deletion hoặc
+Docker prune.
+
+## Permissions và secrets
+
+Workflow đặt mặc định `permissions: {}` rồi cấp tối thiểu theo job:
+
+| Job | Permission |
+| --- | --- |
+| `resolve` | `actions: read`, `contents: read` |
+| `build-and-push` | `contents: read`, `packages: write` |
+| `deploy` | `contents: read`, `packages: read` |
+
+GitHub cần đúng ba Actions Secrets:
+
+- `SSH_PRIVATE_KEY`
+- `EC2_HOST`
+- `EC2_USER`
+
+Không cần lưu PAT GHCR dài hạn. Job build và deploy dùng `GITHUB_TOKEN` riêng với
+permission tương ứng. Token pull được pipe qua SSH vào
+`docker login --password-stdin`, không xuất hiện trong command line, repository,
+Docker image hoặc `/etc/dentflow/staging.env`. Workflow cố gắng `docker logout`
+khi thành công hoặc thất bại; token cũng hết hiệu lực sau GitHub Actions job.
+
+Nếu GHCR package đã tồn tại nhưng không kế thừa repository permissions, vào
+package settings và cấp repository `Hau21022003/dentflow` Actions access. Chỉ khi
+repository policy không cho dùng `GITHUB_TOKEN` mới xem xét PAT classic có
+`read:packages` như phương án riêng được duyệt.
+
+SSH host key hiện vẫn được thu thập bằng `ssh-keyscan` lúc chạy. Đây là cách đơn
+giản cho staging nhưng không xác minh fingerprint out-of-band; có thể chuyển sang
+pinned known-host secret trong một hardening change riêng.
+
+## Bootstrap CD lên `master`
+
+`workflow_run` và nút `workflow_dispatch` chỉ hoạt động khi
+`.github/workflows/deploy-staging.yml` tồn tại trên default branch. Không cần
+merge application hoặc Compose vào `master`; chỉ bootstrap cùng bản workflow CD
+đã review.
+
+Thứ tự đề xuất:
+
+1. Khôi phục EC2 và xác nhận Instance Status Checks đạt `2/2`.
+2. Kiểm tra SSH, `free -h`, `swapon --show`, `df -h`, `docker version`,
+   `docker compose version`, `docker ps -a`; không chạy Docker build.
+3. Xác nhận `/opt/dentflow` sạch, deploy user dùng Docker không cần mật khẩu tương
+   tác và `/etc/dentflow/staging.env` còn owner/permissions hạn chế.
+4. Thêm ba GitHub Secrets ở trên.
+5. Qua pull request/review riêng, đưa đúng bản `deploy-staging.yml` này lên
+   `master`. Không đưa application changes vào PR bootstrap.
+6. Commit/push ba file implementation đã duyệt lên `docker-cicd` theo workflow
+   review hiện có.
+7. Chờ CI push của commit mới pass. SHA cũ không thay thế CI cho commit mới.
+8. Chạy `Deploy Staging` từ workflow trên `master`, input
+   `ref=docker-cicd`; hoặc để lần push CI thành công tiếp theo tự kích hoạt.
+9. Xác nhận hai GHCR packages/tags được tạo, rồi kiểm tra deployment logs và
+   post-deploy checklist.
+
+Workflow file chạy trên `master`, nhưng source, Dockerfiles, Compose và image đều
+được lấy từ verified SHA trên `docker-cicd`.
+
+## Migration và seed
+
+CD dùng đúng lệnh migration sau khi database dependencies healthy:
+
+```bash
+docker compose --env-file /etc/dentflow/staging.env \
+  -f docker-compose.staging.yml \
   run --rm --no-deps backend \
-  node ./node_modules/typeorm/cli.js migration:run -d dist/database/data-source.js
+  node ./node_modules/typeorm/cli.js migration:run \
+  -d dist/database/data-source.js
 ```
 
-`workflow_run` và nút manual dispatch chỉ hoạt động khi CD workflow đã tồn tại
-trên default branch (`master`). Bước bootstrap riêng này vẫn do người dùng kiểm
-soát; không tự merge, rebase, reset hoặc đổi branch state.
+Nếu migration fail, workflow không chạy bước `up` application mới. Không tự động
+revert vì độ an toàn phụ thuộc migration cụ thể. Với migration có thay đổi dữ
+liệu/schema đáng kể, tạo backup/snapshot trước deploy và chỉ dùng
+`migration:revert` khi `down` đã được review và kiểm thử. Migration tương lai cần
+giữ backward compatibility với backend cũ đang chạy trong thời gian migration.
 
-## Checklist triển khai staging lần đầu
+Development seed là synthetic nhưng không nằm trong regular CD. Chỉ chạy một lần
+trên database staging mới, bằng image SHA đã duyệt:
 
-Hoàn thành các bước theo thứ tự dưới đây. Mọi mục `[ ]` chưa được thực hiện.
+```bash
+export DENTFLOW_IMAGE_TAG=FULL_40_CHARACTER_SHA
+docker compose --env-file /etc/dentflow/staging.env \
+  -f docker-compose.staging.yml \
+  run --rm --no-deps -e NODE_ENV=development backend \
+  node dist/database/seed-runner.js
+```
 
-### 1. EC2 Ubuntu và deploy checkout
+Không chạy lại seed trên database staging đã có dữ liệu.
 
-- [ ] Tạo hoặc chọn một Ubuntu EC2 staging instance duy nhất.
-- [ ] Security Group mở inbound TCP 80 và 443. SSH TCP 22 có thể giữ theo lựa
-  chọn staging hiện tại, nhưng chỉ dùng SSH key; tắt password authentication
-  sau khi đã xác nhận deploy key hoạt động.
-- [ ] Cài Docker Engine và Docker Compose plugin tương ứng với Ubuntu release
-  đang dùng. Repository này yêu cầu đúng lệnh `docker compose`; kiểm tra:
+## Rollback đơn giản
 
-  ```bash
-  docker --version
-  docker compose version
-  ```
+Ghi lại current SHA và previous successful SHA sau mỗi deploy. Để rollback
+application về image đã pass CI trước đó, trước hết xác nhận hai image vẫn còn
+trong local cache của EC2. CD không prune nên image của lần deploy trước phải còn
+trừ khi operator đã dọn thủ công:
 
-- [ ] Bảo đảm deploy user hiện có chạy được `docker compose` mà không cần nhập
-  mật khẩu tương tác.
-- [ ] Clone approved repository remote vào `/opt/dentflow`, checkout
-  `docker-cicd`, và để deploy user sở hữu working tree. CD giả định
-  `/opt/dentflow` đã tồn tại, có `origin` remote hoạt động và luôn sạch giữa các
-  lần deploy.
-- [ ] Bật IMDSv2 trên instance và đặt metadata response hop limit bằng `2`, để
-  backend container nhận được credential từ EC2 IAM role.
+```bash
+export DENTFLOW_IMAGE_TAG=PREVIOUS_SUCCESSFUL_40_CHARACTER_SHA
+docker image inspect \
+  ghcr.io/hau21022003/dentflow-backend:$DENTFLOW_IMAGE_TAG \
+  ghcr.io/hau21022003/dentflow-frontend:$DENTFLOW_IMAGE_TAG
+docker compose --env-file /etc/dentflow/staging.env \
+  -f docker-compose.staging.yml up -d --wait --wait-timeout 120
+```
 
-### 2. IAM role và S3 bucket staging private
+Nếu image cũ không còn local, cần login GHCR tạm thời bằng credential read-only
+được cấp qua quy trình đã duyệt rồi mới `pull`; không ghi PAT vào shell history,
+repository hoặc `staging.env`. Manual CD hiện cố ý chỉ deploy branch tip đã pass
+CI, không nhận historic SHA.
 
-- [ ] Gắn EC2 instance role thay vì AWS static credential.
-- [ ] Giữ staging bucket private, bật Block Public Access và encryption at rest.
-- [ ] Chỉ cấp cho instance role object permissions mà upload implementation hiện
-  có cần: `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` trên `temp/*`,
-  `avatars/*`, `clinical/*`. Bộ quyền này phục vụ presigned upload, Head/Get,
-  Copy và cleanup; không cấp public read hoặc broad list access.
-- [ ] Cấu hình bucket CORS chỉ cho staging frontend origin và browser presigned
-  `POST` upload flow. Chỉ cho methods/headers thực sự cần.
-- [ ] Tạo lifecycle rule hết hạn object dưới `temp/` sau một ngày.
+Rollback application không đồng nghĩa rollback database. Chỉ revert migration
+khi đã xác nhận application cũ tương thích và migration `down` an toàn. Không
+xóa volumes để rollback.
 
-### 3. DNS
+## RAM, disk và database risk trên `t3.micro`
 
-- [ ] Tạo DNS A record cho staging domain trỏ đến EC2 public IPv4.
-- [ ] Xác nhận DNS resolve trước khi yêu cầu certificate:
+### RAM
 
-  ```bash
-  getent hosts STAGING_DOMAIN
-  ```
+1 GB RAM chỉ phù hợp staging tải nhẹ. Bỏ build khỏi EC2 loại bỏ nguồn áp lực lớn
+nhất, nhưng Ubuntu, Docker daemon, host Nginx, PostgreSQL, Redis, NestJS và
+frontend Nginx vẫn có thể gây OOM, nhất là trong migration hoặc traffic burst.
 
-Thay `STAGING_DOMAIN` trong command và Nginx configuration bằng domain thực tế;
-không ghi domain vào tài liệu này nếu nó được xem là nhạy cảm trong deployment
-context.
+- Xác nhận có 1-2 GB swap làm vùng đệm; swap không thay thế RAM.
+- Theo dõi `free -h`, `docker stats --no-stream` và kernel OOM logs sau deploy.
+- Chưa thêm hard memory limits cho PostgreSQL/Redis vì limit thấp có thể giết
+  stateful service. Nếu đo thực tế cho thấy backend/frontend là nguồn spike, có
+  thể review riêng giới hạn khoảng backend `384m`, frontend `64m`.
+- `t3.small` 2 GB vẫn là lựa chọn an toàn hơn nếu staging có nhiều người dùng,
+  background jobs hoặc migration nặng.
 
-### 4. Runtime environment file
+### Disk
 
-- [ ] Tạo `/etc/dentflow` với quyền hạn chế, sau đó tạo
-  `/etc/dentflow/staging.env` với owner/permissions hạn chế. Giữ file ngoài
-  `/opt/dentflow` và ngoài Git.
-- [ ] Dùng `backend/.env.example` làm danh sách field, không dùng giá trị
-  placeholder trong file đó làm staging credential.
-- [ ] Đặt các runtime value không bí mật mà validator hiện tại yêu cầu:
-  `NODE_ENV=staging`, `APP_URL`, `FRONTEND_ORIGIN` đã deploy, `APP_NAME`,
-  `APP_SHORT_NAME`, database name/user/password, Redis TTL, token expiry,
-  login limits, upload size limit và billing provider/currency đã chọn.
-- [ ] Tạo giá trị riêng biệt cho JWT access/refresh, audit IP HMAC, idempotency
-  HMAC và tenant invitation token secret. Đặt default password variable bắt buộc
-  nhưng không ghi giá trị vào source control hoặc tài liệu này.
-- [ ] Cấu hình đúng một mail provider được hỗ trợ. SMTP cần `MAIL_HOST`,
-  `MAIL_PORT`, và phải có cả `MAIL_USER`/`MAIL_PASS` nếu dùng một trong hai.
-  SES cần `AWS_SES_REGION`; credential pair của SES phải hoặc có đủ cả hai, hoặc
-  cùng bỏ trống. Staging bắt buộc `MAIL_REDIRECT_TO`.
-- [ ] Cho S3 staging, đặt `S3_ENABLED=true`, `AWS_BUCKET`,
-  `AWS_DEFAULT_REGION`, `AWS_USE_PATH_STYLE_ENDPOINT=false`, `S3_ENDPOINT`
-  rỗng và `S3_PRESIGNED_POST_TTL` phù hợp. Khi dùng EC2 IAM role, để trống S3
-  access-key pair; validator chấp nhận pair cùng trống và AWS SDK dùng default
-  credential chain.
-- [ ] Cấu hình SaaS billing provider được chọn bằng staging credential cần thiết:
-  Stripe cần secret key và webhook secret; PayPal cần client ID, client secret
-  và webhook ID. Dùng Stripe test hoặc PayPal sandbox.
+- Mỗi SHA tạo image version mới; EC2 giữ image cũ để rollback và GHCR tiếp tục
+  tích lũy package versions.
+- PostgreSQL volume, Redis AOF và Docker JSON logs tiếp tục tăng.
+- Theo dõi `df -h` và `docker system df`; root disk 8 GB có rủi ro cao, nên cân
+  nhắc tối thiểu khoảng 16-20 GB.
+- Không tự động prune trong CD. Chỉ dọn unused images thủ công sau rollback
+  window và không bao giờ prune volumes.
 
-Compose cung cấp `DB_HOST=postgres`, `DB_PORT=5432`, `REDIS_HOST=redis`,
-`REDIS_PORT=6379`, `DB_SYNCHRONIZE=false`, `NODE_ENV=staging` và
-`RUNTIME_ENV_ONLY=true` cho backend container. Giữ database credentials trong
-`staging.env`, vì Compose dùng chúng để khởi tạo PostgreSQL.
+### Database
 
-### 5. Khởi động PostgreSQL/Redis lần đầu, migration và seed
+Named volume giữ dữ liệu qua container recreate nhưng không phải backup. EC2 và
+EBS vẫn là single point of failure. Cần có backup/snapshot trước migration rủi ro
+và một chính sách backup riêng trước khi coi staging là bền vững.
 
-- [ ] Từ `/opt/dentflow`, kiểm tra Compose configuration đã resolve đầy đủ:
+## Checklist sau triển khai
 
-  ```bash
-  docker compose --env-file /etc/dentflow/staging.env -f docker-compose.staging.yml config
-  ```
+- [ ] EC2 đạt `2/2` status checks, SSH ổn định và không còn build process cũ.
+- [ ] `free`, swap và disk còn đủ headroom; kernel không có OOM mới.
+- [ ] Workflow CD đã được review và tồn tại trên `master`.
+- [ ] Ba GitHub Secrets tồn tại và GHCR package Actions access đúng repository.
+- [ ] CI push thành công cho đúng tip SHA của `docker-cicd`.
+- [ ] CD resolve đúng workflow ID/path, event `push`, branch và full SHA.
+- [ ] Hai GHCR image tags và OCI revision cùng bằng resolved SHA.
+- [ ] EC2 logs không có `docker build`; chỉ có pull/migrate/up.
+- [ ] Migration hoàn tất trước application recreate.
+- [ ] `docker compose ps` báo PostgreSQL, Redis, backend và frontend healthy.
+- [ ] Containers backend/frontend chạy đúng image revision đã deploy.
+- [ ] PostgreSQL và Redis named volumes giữ nguyên dữ liệu.
+- [ ] HTTPS frontend, `/api/`, login/refresh cookie path hoạt động.
+- [ ] S3 presigned upload và IAM Role qua IMDSv2 hoạt động từ backend container.
+- [ ] Ghi lại current SHA và previous successful SHA để rollback.
+- [ ] Theo dõi RAM, disk, Docker logs và EC2 status checks sau deploy.
 
-- [ ] Build image và chỉ start hai dependency:
+## Chuyển staging sang `master` sau này
 
-  ```bash
-  docker compose --env-file /etc/dentflow/staging.env -f docker-compose.staging.yml build
-  docker compose --env-file /etc/dentflow/staging.env -f docker-compose.staging.yml up -d postgres redis
-  ```
-
-- [ ] Chạy compiled migration command đúng một lần cho database rỗng ban đầu.
-  Đây cũng chính là lệnh CD sử dụng:
-
-  ```bash
-  docker compose --env-file /etc/dentflow/staging.env -f docker-compose.staging.yml \
-    run --rm --no-deps backend \
-    node ./node_modules/typeorm/cli.js migration:run -d dist/database/data-source.js
-  ```
-
-- [ ] Seed synthetic development fixtures đúng một lần, chỉ sau migration và
-  chỉ với database staging vừa khởi tạo:
-
-  ```bash
-  docker compose --env-file /etc/dentflow/staging.env -f docker-compose.staging.yml \
-    run --rm --no-deps -e NODE_ENV=development backend \
-    node dist/database/seed-runner.js
-  ```
-
-  Compiled seed runner map `NODE_ENV=development` sang data
-  `dist/database/seeds/dev` đã có trong image. Seed cố ý không nằm trong CD.
-  Không chạy lệnh này trên database đã có staging data.
-
-- [ ] Start ứng dụng và chờ Compose health check:
-
-  ```bash
-  docker compose --env-file /etc/dentflow/staging.env -f docker-compose.staging.yml \
-    up -d --wait --wait-timeout 120
-  docker compose --env-file /etc/dentflow/staging.env -f docker-compose.staging.yml ps
-  ```
-
-### 6. Host Nginx và Certbot
-
-- [ ] Cài Nginx và Certbot Nginx plugin trên EC2.
-- [ ] Copy `deploy/nginx/dentflow-staging.conf` từ repository đã checkout vào
-  vị trí Nginx site configuration của Ubuntu. Chỉ thay placeholder
-  `STAGING_DOMAIN`, enable site theo Nginx layout của host, và giữ nguyên proxy
-  directives.
-- [ ] Validate và reload trước khi yêu cầu certificate:
-
-  ```bash
-  sudo nginx -t
-  sudo systemctl reload nginx
-  ```
-
-- [ ] Lấy certificate và bật HTTP-to-HTTPS redirect bằng Nginx plugin:
-
-  ```bash
-  sudo certbot --nginx -d STAGING_DOMAIN --redirect
-  ```
-
-- [ ] Bật Certbot timer, thêm deploy hook reload Nginx sau renewal, rồi kiểm tra
-  toàn bộ renewal path:
-
-  ```bash
-  sudo systemctl enable --now certbot.timer
-  sudo install -d -m 755 /etc/letsencrypt/renewal-hooks/deploy
-  printf '%s\n' '#!/bin/sh' 'systemctl reload nginx' | \
-    sudo tee /etc/letsencrypt/renewal-hooks/deploy/reload-nginx >/dev/null
-  sudo chmod 755 /etc/letsencrypt/renewal-hooks/deploy/reload-nginx
-  sudo certbot renew --dry-run --run-deploy-hooks
-  ```
-
-- [ ] Xác minh external routing sau khi cấu hình HTTPS:
-
-  ```bash
-  curl -I http://STAGING_DOMAIN
-  curl -I https://STAGING_DOMAIN
-  curl -i https://STAGING_DOMAIN/api/
-  ```
-
-  Dùng authenticated refresh flow để kiểm tra refresh cookie trả về có
-  `Path=/api/auth`, không phải backend-internal `/auth` path.
-
-### 7. GitHub Secrets và bootstrap CD
-
-- [ ] Thêm đúng GitHub Actions Secrets: `SSH_PRIVATE_KEY`, `EC2_HOST`,
-  `EC2_USER`. SSH key phải tương ứng với EC2 deploy user.
-- [ ] Giữ application/AWS settings trong `/etc/dentflow/staging.env` và EC2 IAM
-  role. Không thêm chúng thành GitHub Secrets hoặc Docker build arguments.
-- [ ] Sau khi review, đưa riêng `deploy-staging.yml` lên default branch
-  (`master`) qua branch process đã được duyệt. Đây là điều kiện cần cho
-  `workflow_run` trigger và manual dispatch button. Không merge toàn bộ
-  `docker-cicd` trong bootstrap này nếu chưa được duyệt riêng.
-- [ ] Xác nhận bản CD file trên `master` vẫn lắng nghe workflow tên `CI` và
-  branch `docker-cicd` trước khi trigger deployment.
-
-### 8. Xác minh push → CI → CD → staging
-
-- [ ] Commit và push các staging file đã review lên `docker-cicd`.
-- [ ] Xác nhận `CI` chạy đầy đủ unit/build/lint/E2E và không dùng deployment
-  credential hoặc AWS credential.
-- [ ] Giải quyết Browser E2E failure bên dưới trước khi kỳ vọng CI thành công
-  để trigger CD.
-- [ ] Sau CI push run thành công, xác nhận `Deploy Staging` nhận đúng run,
-  resolve cùng `head_sha` và chờ thay vì chạy chồng một staging deployment khác.
-- [ ] Trong EC2 deployment log, xác nhận checkout SHA và dòng cuối
-  `Deployed <sha>` khớp với CI SHA.
-- [ ] Xác nhận migration xong trước backend recreate, `docker compose ps` khỏe,
-  PostgreSQL volume giữ nguyên data, và public HTTPS frontend/API check pass.
-- [ ] Test manual `workflow_dispatch` với `ref=docker-cicd`. Workflow chỉ được
-  deploy branch tip hiện tại khi chính SHA đó có push CI run thành công.
-
-## Vấn đề còn tồn tại và lưu ý vận hành
-
-### Browser E2E hiện chặn CI xanh
-
-- [x] Lần chạy local hoàn thành 57/58 Browser E2E tests.
-- [ ] Suite chưa xanh: `browser-e2e/tests/visits.spec.ts`, test
-  `Dentist starts, saves, completes, and adds to a Visit`, fail vì exact-text
-  locator cho `Female` resolve thành hai phần tử. Các staging file không sửa UI
-  hoặc test này.
-- [ ] Vì CD chỉ nhận CI thành công, lỗi này phải được giải quyết hoặc đánh giá
-  trong một thay đổi ứng dụng/test được duyệt riêng trước khi automatic CD chạy
-  thành công.
-
-### Rủi ro synthetic seed
-
-- [ ] Development seed là synthetic nhưng tạo test account dùng default password
-  dùng chung đã biết, bao gồm Platform Admin account. Không ghi password vào đây
-  hoặc chia sẻ nó ngoài staging team được cấp quyền.
-- [ ] Khi staging domain public, bất cứ ai biết fixture credential có thể truy
-  cập synthetic staging data. Hạn chế access phù hợp và quyết định riêng việc
-  có cần đổi fixture credential trước khi chia sẻ rộng rãi hay không.
-- [ ] Không bao giờ chạy seed command trong regular CD hoặc với database staging
-  đã tồn tại. Seed cố ý không có trong `deploy-staging.yml`.
-
-### Các implementation fact khác
-
-- [ ] CD workflow lấy EC2 host key bằng `ssh-keyscan` lúc deploy vì bộ secret đã
-  thống nhất không có pinned known-hosts value. Cách này đơn giản cho staging,
-  nhưng không có cơ chế xác minh host fingerprint out-of-band.
-- [x] Docker image tag/base-image version đúng như Dockerfile/Compose hiện có:
-  `node:22-bookworm-slim`, `nginx:1.27-alpine`, `postgres:16-alpine`,
-  `redis:7-alpine`.
-- [x] Implementation chủ động không có production infrastructure, CloudFront,
-  Route 53 automation, Terraform, ECR, ECS, Kubernetes, database reset/prune,
-  automatic seeding, backup hoặc monitoring system.
-
-## Workflow branch hiện tại và chuyển sang `master` sau này
-
-### Giai đoạn hiện tại: `docker-cicd`
-
-- [x] CI trigger cho push và pull request nhắm `docker-cicd`.
-- [x] CD được viết để chỉ deploy `docker-cicd` sau CI push run thành công.
-- [ ] CD chưa trigger được cho đến khi workflow file của nó tồn tại riêng trên
-  default branch `master`.
-- [ ] Không xóa `docker-cicd` khi nó vẫn là staging CI/CD target.
-
-### Giai đoạn sau: chuyển staging automation sang `master`
-
-Chỉ thực hiện sau khi staging ổn định và việc merge vào `master` đã được duyệt.
-
-- [ ] Merge application changes qua approved process.
-- [ ] Đổi CI `push` và `pull_request` branch filters từ `docker-cicd` sang
-  `master`.
-- [ ] Đổi CD `workflow_run.branches` filter, dispatch default và cả hai
-  branch-equality guard từ `docker-cicd` sang `master`.
-- [ ] Push workflow changes qua approved process và xác minh một `master` CI run
-  thành công trigger CD đúng cùng SHA.
-- [ ] Chỉ sau bước xác minh này mới quyết định riêng việc giữ hoặc xóa
-  `docker-cicd`.
-
-## Resume trong Codex session mới
-
-Dùng prompt ngắn sau trong session mới:
-
-> Đọc kỹ `deploy/STAGING_DEPLOYMENT.md`. Chúng ta đang tiếp tục triển khai
-> DentFlow staging từ branch `docker-cicd`. Trước hết kiểm tra Git status hiện
-> tại và đối chiếu mười staging file được ghi trong tài liệu với working tree.
-> Không sửa application, Docker, Compose, Nginx, CI/CD hoặc branch state nếu tôi
-> chưa duyệt checklist item tiếp theo. Báo cáo bước an toàn tiếp theo và mọi
-> điểm không khớp giữa tài liệu với code.
-
+Không thực hiện trong giai đoạn này. Chỉ sau khi staging ổn định và application
+merge vào `master` được duyệt mới đổi CI/CD branch filters và guards từ
+`docker-cicd` sang `master`.

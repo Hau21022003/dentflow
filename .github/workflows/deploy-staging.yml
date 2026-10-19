@@ -2,7 +2,10 @@ name: Deploy Staging
 
 on:
   workflow_run:
-    workflows: [CI]
+    # The default branch still registers the existing workflow under its old
+    # name, while docker-cicd runs the reviewed definition named CI. The
+    # resolve job verifies the immutable workflow ID and path before deploying.
+    workflows: [CI, Browser E2E Tests]
     types: [completed]
     branches: [docker-cicd]
   workflow_dispatch:
@@ -13,9 +16,12 @@ on:
         default: docker-cicd
         type: string
 
-permissions:
-  actions: read
-  contents: read
+permissions: {}
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/hau21022003/dentflow-backend
+  FRONTEND_IMAGE: ghcr.io/hau21022003/dentflow-frontend
 
 concurrency:
   group: dentflow-staging-deploy
@@ -29,6 +35,9 @@ jobs:
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_branch == 'docker-cicd')
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     outputs:
       sha: ${{ steps.commit.outputs.sha }}
       ref: ${{ steps.commit.outputs.ref }}
@@ -36,19 +45,48 @@ jobs:
       - name: Resolve a successful CI commit at the branch tip
         id: commit
         env:
+          AUTO_RUN_ID: ${{ github.event.workflow_run.id }}
+          AUTO_WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
           AUTO_SHA: ${{ github.event.workflow_run.head_sha }}
           AUTO_REF: ${{ github.event.workflow_run.head_branch }}
+          AUTO_REPOSITORY: ${{ github.event.workflow_run.head_repository.full_name }}
+          AUTO_EVENT: ${{ github.event.workflow_run.event }}
+          AUTO_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           DISPATCH_REF: ${{ inputs.ref }}
           GITHUB_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
+          WORKFLOW_REF: ${{ github.ref }}
         shell: bash
         run: |
           set -euo pipefail
 
+          ci_workflow_id="$(gh api \
+            "repos/$REPOSITORY/actions/workflows/browser-e2e.yml" \
+            --jq '.id')"
+
           if [[ "$GITHUB_EVENT_NAME" == "workflow_run" ]]; then
+            [[ "$AUTO_CONCLUSION" == "success" ]]
+            [[ "$AUTO_EVENT" == "push" ]]
+            [[ "$AUTO_REPOSITORY" == "$REPOSITORY" ]]
+            [[ "$AUTO_WORKFLOW_ID" == "$ci_workflow_id" ]]
+
+            ci_run="$(gh api "repos/$REPOSITORY/actions/runs/$AUTO_RUN_ID")"
+            [[ "$(jq -r '.workflow_id' <<< "$ci_run")" == "$ci_workflow_id" ]]
+            [[ "$(jq -r '.path' <<< "$ci_run")" == ".github/workflows/browser-e2e.yml" ]]
+            [[ "$(jq -r '.event' <<< "$ci_run")" == "push" ]]
+            [[ "$(jq -r '.conclusion' <<< "$ci_run")" == "success" ]]
+            [[ "$(jq -r '.head_repository.full_name' <<< "$ci_run")" == "$REPOSITORY" ]]
+            [[ "$(jq -r '.head_branch' <<< "$ci_run")" == "$AUTO_REF" ]]
+            [[ "$(jq -r '.head_sha' <<< "$ci_run")" == "$AUTO_SHA" ]]
+
             ref="$AUTO_REF"
             sha="$AUTO_SHA"
           else
+            if [[ "$WORKFLOW_REF" != "refs/heads/master" ]]; then
+              echo "Manual staging deployment must run from the master workflow definition." >&2
+              exit 1
+            fi
+
             ref="$DISPATCH_REF"
             if [[ "$ref" != "docker-cicd" ]]; then
               echo "Only docker-cicd is permitted for staging deployment." >&2
@@ -57,8 +95,8 @@ jobs:
 
             sha="$(gh api "repos/$REPOSITORY/commits/$ref" --jq .sha)"
             ci_run_id="$(gh api --paginate \
-              "repos/$REPOSITORY/actions/runs?branch=$ref&event=push&status=completed&per_page=100" \
-              --jq ".workflow_runs[] | select(.name == \"CI\" and .head_sha == \"$sha\" and .conclusion == \"success\") | .id" \
+              "repos/$REPOSITORY/actions/workflows/$ci_workflow_id/runs?branch=$ref&event=push&status=completed&per_page=100" \
+              --jq ".workflow_runs[] | select(.head_sha == \"$sha\" and .conclusion == \"success\" and .head_repository.full_name == \"$REPOSITORY\") | .id" \
               | head -n 1 || true)"
 
             if [[ -z "$ci_run_id" ]]; then
@@ -79,9 +117,58 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
 
-  deploy:
+  build-and-push:
+    name: Build and push immutable images
     needs: resolve
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out the verified commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ env.BACKEND_IMAGE }}:${{ needs.resolve.outputs.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.resolve.outputs.sha }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: client/Dockerfile
+          push: true
+          tags: ${{ env.FRONTEND_IMAGE }}:${{ needs.resolve.outputs.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.resolve.outputs.sha }}
+
+  deploy:
+    needs: [resolve, build-and-push]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
     steps:
       - name: Configure SSH
         env:
@@ -90,6 +177,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          : "${SSH_PRIVATE_KEY:?SSH_PRIVATE_KEY secret is required}"
+          : "${EC2_HOST:?EC2_HOST secret is required}"
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
@@ -101,10 +190,28 @@ jobs:
           DEPLOY_REF: ${{ needs.resolve.outputs.ref }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/id_deploy "$EC2_USER@$EC2_HOST" bash -s -- "$DEPLOY_SHA" "$DEPLOY_REF" <<'REMOTE'
+          : "${EC2_USER:?EC2_USER secret is required}"
+          : "${GHCR_TOKEN:?GitHub token is required}"
+
+          ssh_target="$EC2_USER@$EC2_HOST"
+          ssh_options=(-i ~/.ssh/id_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes)
+
+          logout_ghcr() {
+            ssh "${ssh_options[@]}" "$ssh_target" \
+              docker logout ghcr.io >/dev/null 2>&1 || true
+          }
+          trap logout_ghcr EXIT
+
+          printf '%s' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$ssh_target" \
+            docker login ghcr.io --username "$GHCR_USERNAME" --password-stdin
+
+          ssh "${ssh_options[@]}" "$ssh_target" \
+            bash -s -- "$DEPLOY_SHA" "$DEPLOY_REF" <<'REMOTE'
           set -euo pipefail
 
           deploy_sha="$1"
@@ -124,13 +231,30 @@ jobs:
           [[ "$(git rev-parse "origin/$deploy_ref")" == "$deploy_sha" ]]
           git checkout --detach "$deploy_sha"
 
+          export DENTFLOW_IMAGE_TAG="$deploy_sha"
           compose=(docker compose --env-file /etc/dentflow/staging.env -f docker-compose.staging.yml)
-          "${compose[@]}" build
-          "${compose[@]}" up -d postgres redis
+          "${compose[@]}" config --quiet
+          "${compose[@]}" pull backend frontend
+          "${compose[@]}" up -d --wait --wait-timeout 120 postgres redis
           "${compose[@]}" run --rm --no-deps backend \
             node ./node_modules/typeorm/cli.js migration:run -d dist/database/data-source.js
           "${compose[@]}" up -d --wait --wait-timeout 120
 
           [[ "$(git rev-parse HEAD)" == "$deploy_sha" ]]
+          for service in backend frontend; do
+            container_id="$("${compose[@]}" ps -q "$service")"
+            [[ -n "$container_id" ]]
+            image_id="$(docker inspect --format '{{.Image}}' "$container_id")"
+            revision="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image_id")"
+            if [[ "$revision" != "$deploy_sha" ]]; then
+              echo "$service image revision $revision does not match $deploy_sha." >&2
+              exit 1
+            fi
+          done
+
+          "${compose[@]}" ps
           echo "Deployed $(git rev-parse HEAD)"
           REMOTE
+
+          logout_ghcr
+          trap - EXIT
