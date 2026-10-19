@@ -1,0 +1,136 @@
+name: Deploy Staging
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [docker-cicd]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch to deploy after verifying its latest successful CI push run
+        required: true
+        default: docker-cicd
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: dentflow-staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'docker-cicd')
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+      ref: ${{ steps.commit.outputs.ref }}
+    steps:
+      - name: Resolve a successful CI commit at the branch tip
+        id: commit
+        env:
+          AUTO_SHA: ${{ github.event.workflow_run.head_sha }}
+          AUTO_REF: ${{ github.event.workflow_run.head_branch }}
+          DISPATCH_REF: ${{ inputs.ref }}
+          GITHUB_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_run" ]]; then
+            ref="$AUTO_REF"
+            sha="$AUTO_SHA"
+          else
+            ref="$DISPATCH_REF"
+            if [[ "$ref" != "docker-cicd" ]]; then
+              echo "Only docker-cicd is permitted for staging deployment." >&2
+              exit 1
+            fi
+
+            sha="$(gh api "repos/$REPOSITORY/commits/$ref" --jq .sha)"
+            ci_run_id="$(gh api --paginate \
+              "repos/$REPOSITORY/actions/runs?branch=$ref&event=push&status=completed&per_page=100" \
+              --jq ".workflow_runs[] | select(.name == \"CI\" and .head_sha == \"$sha\" and .conclusion == \"success\") | .id" \
+              | head -n 1 || true)"
+
+            if [[ -z "$ci_run_id" ]]; then
+              echo "The latest $ref commit does not have a successful CI push run." >&2
+              exit 1
+            fi
+          fi
+
+          [[ "$ref" == "docker-cicd" ]]
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+
+          current_sha="$(gh api "repos/$REPOSITORY/commits/$ref" --jq .sha)"
+          if [[ "$current_sha" != "$sha" ]]; then
+            echo "Branch advanced after CI; waiting for CI on its newer commit." >&2
+            exit 1
+          fi
+
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: resolve
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy the verified commit
+        env:
+          DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
+          DEPLOY_REF: ${{ needs.resolve.outputs.ref }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_deploy "$EC2_USER@$EC2_HOST" bash -s -- "$DEPLOY_SHA" "$DEPLOY_REF" <<'REMOTE'
+          set -euo pipefail
+
+          deploy_sha="$1"
+          deploy_ref="$2"
+          app_dir=/opt/dentflow
+
+          [[ "$deploy_ref" == "docker-cicd" ]]
+          [[ "$deploy_sha" =~ ^[0-9a-f]{40}$ ]]
+
+          cd "$app_dir"
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "Refusing to deploy over a dirty working tree." >&2
+            exit 1
+          fi
+
+          git fetch --prune origin "$deploy_ref"
+          [[ "$(git rev-parse "origin/$deploy_ref")" == "$deploy_sha" ]]
+          git checkout --detach "$deploy_sha"
+
+          compose=(docker compose --env-file /etc/dentflow/staging.env -f docker-compose.staging.yml)
+          "${compose[@]}" build
+          "${compose[@]}" up -d postgres redis
+          "${compose[@]}" run --rm --no-deps backend \
+            node ./node_modules/typeorm/cli.js migration:run -d dist/database/data-source.js
+          "${compose[@]}" up -d --wait --wait-timeout 120
+
+          [[ "$(git rev-parse HEAD)" == "$deploy_sha" ]]
+          echo "Deployed $(git rev-parse HEAD)"
+          REMOTE
