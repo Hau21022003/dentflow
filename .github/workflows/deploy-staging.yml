@@ -236,8 +236,9 @@ jobs:
           "${compose[@]}" config --quiet
           "${compose[@]}" pull backend frontend
           "${compose[@]}" up -d --wait --wait-timeout 120 postgres redis
-          "${compose[@]}" run --rm --no-deps backend \
-            node ./node_modules/typeorm/cli.js migration:run -d dist/database/data-source.js
+          "${compose[@]}" run --rm --no-deps --interactive=false -T backend \
+            node ./node_modules/typeorm/cli.js migration:run \
+            -d dist/database/data-source.js </dev/null
           "${compose[@]}" up -d --wait --wait-timeout 120
 
           [[ "$(git rev-parse HEAD)" == "$deploy_sha" ]]
