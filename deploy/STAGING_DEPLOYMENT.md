@@ -41,15 +41,18 @@
   vào `master` qua PR #8 và `docker-cicd` qua PR #9.
 - Current successful SHA là `c8bb78d59ec9555b7f62e7efacf5838655642475`;
   previous successful SHA là `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`.
-- EC2 đã có swapfile 1 GiB, permission `0600`, persist qua `/etc/fstab` và
-  `vm.swappiness=10`; tại lần kiểm tra sau deploy swap dùng `0 B`. Root disk 19 GB
-  còn khoảng 13 GB và `MemAvailable` khoảng 350 MiB; không ghi nhận container
-  restart hoặc kernel OOM mới.
-- Phase 2 đã hoàn tất. Phase 3 đang dừng tại smoke test HTTPS: DNS staging trỏ đúng
-  EC2 và frontend/backend trả `200` qua loopback, nhưng host chưa cài Nginx hoặc
-  Certbot và chưa có listener trên port `80`/`443`; kết nối từ Internet thất bại.
-  HTTPS/API/auth và S3 browser smoke test chưa thực hiện. Database backup chưa
-  được thiết lập. CloudWatch alarms đang tạm hoãn và không cài CloudWatch Agent.
+- Edge-only CD run `39398441286` đã hoàn tất Phase 1 với config SHA
+  `4c3596ff2c882dd5eab85893e6a91eb757394575`; application SHA vẫn là
+  `c8bb78d59ec9555b7f62e7efacf5838655642475`. Nginx/Certbot, certificate
+  Let's Encrypt, HTTP redirect, HTTPS frontend và `/api/` đều hoạt động.
+- EC2 có swapfile 1 GiB, permission `0600`, persist qua `/etc/fstab` và
+  `vm.swappiness=10`. Postflight Phase 2 ghi nhận swap dùng khoảng 185 MiB,
+  root disk 19 GB còn khoảng 13 GB và `MemAvailable` khoảng 387 MiB; sáu
+  container healthy, restart count `0`, `OOMKilled=false` và không có kernel OOM.
+- Phase 2 đã hoàn tất ngày 2026-10-20: dùng đúng dev seed synthetic hiện có trên
+  database staging trống, rồi xác nhận HTTPS/API, login, refresh, cookie flags,
+  logout và postflight container/volume/resource. Phase 3 chưa được triển khai và
+  đang chờ duyệt; S3 browser smoke và database backup/restore drill vẫn chưa làm.
 
 ## Phạm vi implementation GHCR
 
@@ -92,11 +95,11 @@ Docker Compose
   `-- frontend           -> immutable GHCR SHA tag
 ```
 
-Khối Internet -> Nginx ở trên là kiến trúc mục tiêu. Tại lần kiểm tra
-2026-10-20, DNS đã trỏ đúng EC2 nhưng host chưa cài Nginx/Certbot, chưa có
-listener `80`/`443` và external `/api` routing chưa hoạt động. IAM Role và cấu
-hình S3 hiện có chưa được thay đổi. PostgreSQL/Redis không public host ports;
-backend/frontend vẫn chỉ bind vào `127.0.0.1` và đều trả `200` qua loopback.
+Khối Internet -> Nginx ở trên đã hoạt động từ Phase 1. Tại postflight Phase 2
+ngày 2026-10-20, HTTP redirect đúng sang HTTPS, frontend, `/api/` và
+`/nginx-health` đều trả `200` với TLS hợp lệ. IAM Role và cấu hình S3 hiện có
+không thay đổi. PostgreSQL/Redis không public host ports; backend/frontend vẫn
+chỉ bind vào `127.0.0.1`.
 
 ## Docker Compose sau thay đổi
 
@@ -346,9 +349,8 @@ frontend Nginx vẫn có thể gây OOM, nhất là trong migration hoặc traff
 Named volume giữ dữ liệu qua container recreate nhưng không phải backup. EC2 và
 EBS vẫn là single point of failure. Cần có backup/snapshot trước migration rủi ro
 và một chính sách backup riêng trước khi coi staging là bền vững. Database backup
-và restore drill hiện chưa được triển khai; đây là hạng mục ưu tiên sau khi xử lý
-blocker HTTPS/smoke test, không được reset database hoặc restore vào staging để
-thử nghiệm.
+và restore drill hiện chưa được triển khai; đây là hạng mục vận hành sau Phase 2,
+không được reset database hoặc restore vào staging để thử nghiệm.
 
 ## Checklist sau triển khai
 
@@ -356,9 +358,9 @@ thử nghiệm.
   định và quy trình mới không chạy Docker build trên EC2. Tài khoản AWS dùng khi
   kiểm tra chưa có quyền `DescribeInstances`, nên chưa xác nhận độc lập được mục
   `2/2` từ Console/API.
-- [x] Đã đo lại tài nguyên khi đủ bốn container chạy: root disk 19 GB còn khoảng
-  13 GB, swapfile 1 GiB đang active và dùng `0 B`, `MemAvailable` khoảng 350 MiB;
-  restart count `0`, không có OOM mới.
+- [x] Đã đo lại tài nguyên khi đủ sáu container chạy: root disk 19 GB còn khoảng
+  13 GB, swapfile 1 GiB đang active và dùng khoảng 185 MiB, `MemAvailable` khoảng
+  387 MiB; restart count `0`, `OOMKilled=false` và không có kernel OOM mới.
 - [x] Workflow CD đã được review và tồn tại trên `master`.
 - [x] Ba GitHub Secrets tồn tại và `GITHUB_TOKEN` đã build/push/pull GHCR thành
   công.
@@ -376,9 +378,9 @@ thử nghiệm.
 - [x] `docker compose ps` báo PostgreSQL, Redis, backend và frontend healthy.
 - [x] Containers backend/frontend chạy đúng image revision đã deploy.
 - [x] PostgreSQL và Redis named volumes không bị xóa hoặc recreate trong deploy.
-- [ ] HTTPS frontend, `/api/`, login/refresh cookie path hoạt động. Hiện DNS đúng
-  nhưng host chưa có Nginx/Certbot hoặc listener `80`/`443`; loopback frontend và
-  backend đều trả `200`.
+- [x] HTTPS frontend, `/api/`, login/refresh/logout và cookie flags hoạt động.
+  Refresh cookie có `Path=/api/auth`; cả access/refresh cookie đều có `Secure`,
+  `HttpOnly`, `SameSite=Lax`, và bị clear đúng path khi logout.
 - [ ] S3 presigned upload và IAM Role qua IMDSv2 hoạt động từ backend/browser;
   thực hiện sau khi HTTPS/auth smoke test pass.
 - [x] Current successful SHA là
@@ -552,15 +554,10 @@ Workflow kiểm tra cả từ EC2 và từ GitHub-hosted runner:
 - postflight resource gate pass, không có kernel OOM mới từ thời điểm phase bắt đầu;
 - log ghi riêng `application_sha` và `config_sha`, không in env hoặc secret.
 
-Sau khi deploy thực tế, dùng synthetic account để login/refresh và kiểm tra
-`Set-Cookie` có `Path=/api/auth`, `Secure`, `HttpOnly` và `SameSite` đúng cấu hình.
-Không ghi cookie/token vào log. Smoke có credential này là bước xác nhận thủ công
-bắt buộc trước Phase 2 vì repository/workflow không lưu staging login secret.
-
-Acceptance cuối Phase 1 chỉ đạt khi AWS `2/2`, DNS/80/443, bootstrap, renewal,
-external smoke, auth/cookie smoke và postflight resource/container/volume checks
-đều pass. Nếu bất kỳ mục nào fail, dừng Phase 1 và không chạy S3 smoke, backup hoặc
-bất kỳ phase sau.
+Phase 1 kết thúc ở acceptance hạ tầng edge: AWS/DNS/80/443, bootstrap, renewal,
+external HTTPS smoke và invariants của edge-only deployment. Auth/cookie và
+postflight application/resource được xác nhận ở Phase 2 bằng tài khoản synthetic;
+repository/workflow không lưu staging login secret hoặc cookie/token.
 
 ### Rollback edge-only
 
@@ -585,3 +582,79 @@ Nếu workflow bị hủy hoặc mất kết nối đúng khoảng giữa remote
 finalize/rollback, file pending còn lại làm lần edge deployment sau fail closed.
 Operator phải review trạng thái thực tế và chạy rollback theo đúng previous SHA;
 không xóa file pending chỉ để bỏ qua gate.
+
+## Phase 2: synthetic seed và application acceptance
+
+Phase 2 hoàn tất ngày 2026-10-20 trên application SHA
+`c8bb78d59ec9555b7f62e7efacf5838655642475` và config SHA
+`4c3596ff2c882dd5eab85893e6a91eb757394575`.
+
+### Seed được sử dụng
+
+Preflight xác nhận 15 file SQL trong `dist/database/seeds/dev`, seed runner và
+application image cùng thuộc application SHA ở trên. `seed-runner.js` chỉ chạy
+các file theo thứ tự trong một transaction; không gọi reset, `TRUNCATE`, migration,
+build hoặc deploy. Trước khi chạy, toàn bộ bảng đích có `0` row và chỉ bảng
+`migrations` có 29 row, nên không có dữ liệu hiện hữu bị ghi đè hoặc trùng lặp.
+
+Seed được chạy đúng một lần bằng cơ chế hiện có:
+
+```bash
+docker compose --env-file /etc/dentflow/staging.env \
+  -f docker-compose.staging.yml \
+  run --rm --no-deps --interactive=false -T \
+  -e NODE_ENV=development backend node dist/database/seed-runner.js
+```
+
+Không dùng `reset:dev`, `refresh:dev`, migration hoặc seed tự viết. Một one-off
+container dùng đúng backend image đã deploy và được xóa bởi `--rm`; sáu container
+dịch vụ không bị recreate. Kết quả commit đủ 15 file seed:
+
+| Dữ liệu synthetic | Số lượng |
+| --- | ---: |
+| Email-template revision | 4 |
+| Tenant / Branch / User | 3 / 5 / 11 |
+| Tenant membership / Platform role / Tenant-branch role | 10 / 1 / 14 |
+| SaaS plan / Subscription / Tenant owner | 6 / 3 / 3 |
+| Service group / Service / Operatory | 18 / 117 / 20 |
+| Patient / Appointment / Status transition / Visit | 22 / 80 / 178 / 18 |
+| Treatment plan / Item / Event | 30 / 56 / 39 |
+| Patient alert / Tenant display counter | 5 / 3 |
+
+11 tài khoản đều là fixture synthetic `@dentflow.local` đã mô tả trong
+`docs/08-demo-and-testing.md`; tài liệu triển khai không ghi password hay giá trị
+credential. Treatment Plan có đúng 5 row cho mỗi trạng thái `DRAFT`, `PROPOSED`,
+`ACCEPTED`, `PARTIALLY_COMPLETED`, `COMPLETED`, `CANCELLED`.
+
+### Auth/cookie và postflight
+
+Smoke chạy qua public HTTPS, không in token hoặc giá trị cookie:
+
+- login `200`; `GET /api/auth/me` sau login `200` và trả đúng synthetic user;
+- refresh `200`, rồi `GET /api/auth/me` tiếp tục `200`;
+- login và refresh đều set đúng hai cookie: access cookie `Path=/`, refresh cookie
+  `Path=/api/auth`; cả hai có `Secure`, `HttpOnly`, `SameSite=Lax`;
+- logout `204`, clear cả hai cookie theo đúng path; `me` và refresh sau logout đều
+  trả `401`;
+- một session synthetic từ lần thu thập metadata bị dừng sớm do client parser đã
+  được revoke ngay; postflight có `0` auth session active.
+
+Postflight pass:
+
+- HTTP `/` trả `308` tới đúng HTTPS URL; HTTPS `/`, `/api/` và `/nginx-health`
+  trả `200` với TLS verification thành công; unauthenticated `/api/auth/me` trả
+  `401`;
+- PostgreSQL, Redis, backend, frontend, Nginx và Certbot đều healthy, restart
+  count `0`, `OOMKilled=false`; application SHA/config SHA và container identity
+  không đổi;
+- hai data volume `dentflow-staging_postgres_data` và
+  `dentflow-staging_redis_data` giữ nguyên identity/mountpoint; không có volume bị
+  xóa hoặc recreate;
+- resource gate pass với `MemAvailable` khoảng 387 MiB, swap total 1023 MiB dùng
+  khoảng 185 MiB, root disk dùng 35% và còn khoảng 12.1 GiB; không có kernel OOM
+  mới trong Phase 2.
+
+Acceptance Phase 2: **PASS**. AWS IAM identity dùng cho kiểm tra vẫn không có
+`ec2:DescribeInstances`, nên checklist vận hành `2/2 status checks` phải được xác
+nhận định kỳ trên AWS Console. Phase 3, S3 browser smoke và database
+backup/restore drill chưa được thực hiện; cần phê duyệt riêng trước khi tiếp tục.
