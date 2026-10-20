@@ -8,7 +8,7 @@
 ## Trạng thái hiện tại
 
 - Docker và Docker Compose đã được cài trên EC2 Ubuntu 24.04 `t3.micro` 1 GB RAM;
-  SSH và Docker hiện hoạt động lại sau sự cố tài nguyên.
+  SSH và Docker hiện hoạt động ổn định sau sự cố tài nguyên.
 - Repository đã được clone tại `/opt/dentflow`; staging target vẫn là branch
   `docker-cicd`, không phải `master`.
 - IAM Role, IMDSv2, S3 CORS/lifecycle và `/etc/dentflow/staging.env` đã được cấu
@@ -23,16 +23,33 @@
   `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`: build/push GHCR, pull trên EC2,
   migration, recreate application, healthcheck và OCI revision verification đều
   hoàn tất. Log kết thúc bằng `Deployed <full-sha>`.
-- PostgreSQL, Redis, backend và frontend hiện chạy healthy; PostgreSQL/Redis
-  volumes không bị xóa hoặc recreate trong quá trình sửa lỗi.
+- CI push run `39297680549`, attempt 2, đã thành công tại full SHA
+  `c8bb78d59ec9555b7f62e7efacf5838655642475`. Test discovery có **58 Browser
+  E2E tests trong 19 files** và attempt 2 pass đủ **58/58**. Con số 13 chỉ là số
+  test đã pass ở attempt 1 trước khi run bị `@Hau21022003` hủy thủ công, không
+  phải tổng số test của suite.
+- Automatic CD run `39304553130` đã được kích hoạt bằng event `workflow_run` từ
+  CI push thành công ở trên, không dùng `workflow_dispatch`. Cả ba job `resolve`,
+  `build-and-push` và `deploy` đều thành công; hai GHCR images, OCI revisions,
+  checkout trên EC2 và application containers đều dùng cùng full SHA
+  `c8bb78d59ec9555b7f62e7efacf5838655642475`. Log kết thúc bằng
+  `Deployed c8bb78d59ec9555b7f62e7efacf5838655642475`.
+- PostgreSQL, Redis, backend và frontend hiện chạy healthy; backend/frontend có
+  restart count `0` và `OOMKilled=false`. Hai named volumes PostgreSQL/Redis giữ
+  nguyên identity, không bị xóa hoặc recreate trong deploy.
 - Hotfix ngăn migration container tiêu thụ phần còn lại của SSH heredoc đã merge
   vào `master` qua PR #8 và `docker-cicd` qua PR #9.
-- Merge commit PR #9 trên `docker-cicd` là
-  `5363cbd8d9a34c3304489cf46db671baa82d7b9b`. CI push đầu tiên của commit này bị
-  hủy thủ công, nên automatic `workflow_run` CD vẫn cần được xác nhận bằng một
-  push CI thành công sau đó.
-- Root disk 19 GB còn khoảng 14 GB tại lần kiểm tra gần nhất. EC2 chưa có swap;
-  RAM cần được đo lại khi đủ bốn container đang chạy.
+- Current successful SHA là `c8bb78d59ec9555b7f62e7efacf5838655642475`;
+  previous successful SHA là `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`.
+- EC2 đã có swapfile 1 GiB, permission `0600`, persist qua `/etc/fstab` và
+  `vm.swappiness=10`; tại lần kiểm tra sau deploy swap dùng `0 B`. Root disk 19 GB
+  còn khoảng 13 GB và `MemAvailable` khoảng 350 MiB; không ghi nhận container
+  restart hoặc kernel OOM mới.
+- Phase 2 đã hoàn tất. Phase 3 đang dừng tại smoke test HTTPS: DNS staging trỏ đúng
+  EC2 và frontend/backend trả `200` qua loopback, nhưng host chưa cài Nginx hoặc
+  Certbot và chưa có listener trên port `80`/`443`; kết nối từ Internet thất bại.
+  HTTPS/API/auth và S3 browser smoke test chưa thực hiện. Database backup chưa
+  được thiết lập. CloudWatch alarms đang tạm hoãn và không cài CloudWatch Agent.
 
 ## Phạm vi implementation GHCR
 
@@ -44,9 +61,10 @@ Ba file được thay đổi:
 | `.github/workflows/deploy-staging.yml` | Xác minh CI SHA, build/push hai image trên GitHub runner, rồi SSH để pull/migrate/up. |
 | `deploy/STAGING_DEPLOYMENT.md` | Cập nhật kiến trúc, bootstrap, migration, rollback và rủi ro vận hành. |
 
-Không sửa Dockerfile, CI, Nginx, application logic, API, schema, migration, auth
-hoặc business logic. Không seed/reset database, xóa volume, prune Docker data,
-SSH vào EC2 hoặc thao tác AWS trong implementation này.
+Không sửa Dockerfile, CI, application logic, API, schema, migration, auth hoặc
+business logic trong implementation GHCR. Không seed/reset database, xóa volume
+hoặc prune Docker data. Các bước xác minh vận hành sau đó chỉ pull/deploy image,
+kiểm tra trạng thái và cấu hình swap; không build trên EC2.
 
 ## Kiến trúc staging
 
@@ -74,9 +92,11 @@ Docker Compose
   `-- frontend           -> immutable GHCR SHA tag
 ```
 
-Host Nginx, Certbot, IAM Role, S3 và external `/api` routing không thay đổi.
-PostgreSQL/Redis không public host ports. Backend/frontend vẫn chỉ bind vào
-`127.0.0.1`.
+Khối Internet -> Nginx ở trên là kiến trúc mục tiêu. Tại lần kiểm tra
+2026-10-20, DNS đã trỏ đúng EC2 nhưng host chưa cài Nginx/Certbot, chưa có
+listener `80`/`443` và external `/api` routing chưa hoạt động. IAM Role và cấu
+hình S3 hiện có chưa được thay đổi. PostgreSQL/Redis không public host ports;
+backend/frontend vẫn chỉ bind vào `127.0.0.1` và đều trả `200` qua loopback.
 
 ## Docker Compose sau thay đổi
 
@@ -224,9 +244,11 @@ Thứ tự đề xuất:
 Workflow file chạy trên `master`, nhưng source, Dockerfiles, Compose và image đều
 được lấy từ verified SHA trên `docker-cicd`.
 
-Bootstrap workflow và ba repository secrets đã hoàn tất. Manual CD đã xác nhận
-đường build/push/pull/deploy. Automatic path vẫn cần một CI push thành công trên
-tip mới của `docker-cicd`; không chạy manual CD song song với lần kiểm tra này.
+Bootstrap workflow và ba repository secrets đã hoàn tất. Manual CD run
+`39293268686` đã xác nhận đường build/push/pull/deploy ban đầu. Automatic path
+cũng đã được xác nhận bằng CI push run `39297680549` attempt 2 và `workflow_run`
+CD run `39304553130`, cùng deploy full SHA
+`c8bb78d59ec9555b7f62e7efacf5838655642475`.
 
 ## Migration và seed
 
@@ -297,8 +319,11 @@ xóa volumes để rollback.
 nhất, nhưng Ubuntu, Docker daemon, host Nginx, PostgreSQL, Redis, NestJS và
 frontend Nginx vẫn có thể gây OOM, nhất là trong migration hoặc traffic burst.
 
-- Xác nhận có 1-2 GB swap làm vùng đệm; swap không thay thế RAM.
+- Swapfile 1 GiB đã active và persist, `vm.swappiness=10`; sau deploy swap dùng
+  `0 B`. Swap chỉ là vùng đệm, không thay thế RAM.
 - Theo dõi `free -h`, `docker stats --no-stream` và kernel OOM logs sau deploy.
+- Baseline sau deploy: `MemAvailable` khoảng 350 MiB, cả bốn container healthy,
+  restart count `0` và không có dấu hiệu OOM mới.
 - Chưa thêm hard memory limits cho PostgreSQL/Redis vì limit thấp có thể giết
   stateful service. Nếu đo thực tế cho thấy backend/frontend là nguồn spike, có
   thể review riêng giới hạn khoảng backend `384m`, frontend `64m`.
@@ -310,8 +335,9 @@ frontend Nginx vẫn có thể gây OOM, nhất là trong migration hoặc traff
 - Mỗi SHA tạo image version mới; EC2 giữ image cũ để rollback và GHCR tiếp tục
   tích lũy package versions.
 - PostgreSQL volume, Redis AOF và Docker JSON logs tiếp tục tăng.
-- Theo dõi `df -h` và `docker system df`; root disk 8 GB có rủi ro cao, nên cân
-  nhắc tối thiểu khoảng 16-20 GB.
+- Theo dõi `df -h` và `docker system df`; root disk hiện là 19 GB và còn khoảng
+  13 GB sau khi tạo swapfile. Root disk 8 GB có rủi ro cao, nên giữ tối thiểu
+  khoảng 16-20 GB.
 - Không tự động prune trong CD. Chỉ dọn unused images thủ công sau rollback
   window và không bao giờ prune volumes.
 
@@ -319,38 +345,243 @@ frontend Nginx vẫn có thể gây OOM, nhất là trong migration hoặc traff
 
 Named volume giữ dữ liệu qua container recreate nhưng không phải backup. EC2 và
 EBS vẫn là single point of failure. Cần có backup/snapshot trước migration rủi ro
-và một chính sách backup riêng trước khi coi staging là bền vững.
+và một chính sách backup riêng trước khi coi staging là bền vững. Database backup
+và restore drill hiện chưa được triển khai; đây là hạng mục ưu tiên sau khi xử lý
+blocker HTTPS/smoke test, không được reset database hoặc restore vào staging để
+thử nghiệm.
 
 ## Checklist sau triển khai
 
 - [ ] Xác nhận lại EC2 đạt `2/2` status checks trên AWS Console; SSH hiện ổn
-  định và quy trình mới không chạy Docker build trên EC2.
-- [ ] Đo lại `free -h`, `docker stats --no-stream`, swap, disk và kernel OOM khi
-  đủ bốn container đang chạy. Disk hiện còn khoảng 14 GB; swap hiện là `0 B`.
+  định và quy trình mới không chạy Docker build trên EC2. Tài khoản AWS dùng khi
+  kiểm tra chưa có quyền `DescribeInstances`, nên chưa xác nhận độc lập được mục
+  `2/2` từ Console/API.
+- [x] Đã đo lại tài nguyên khi đủ bốn container chạy: root disk 19 GB còn khoảng
+  13 GB, swapfile 1 GiB đang active và dùng `0 B`, `MemAvailable` khoảng 350 MiB;
+  restart count `0`, không có OOM mới.
 - [x] Workflow CD đã được review và tồn tại trên `master`.
 - [x] Ba GitHub Secrets tồn tại và `GITHUB_TOKEN` đã build/push/pull GHCR thành
   công.
-- [ ] CI push thành công cho một tip mới của `docker-cicd`; run đầu tiên của
-  merge commit `5363cbd8d9a34c3304489cf46db671baa82d7b9b` đã bị hủy thủ công.
-- [ ] Automatic CD resolve đúng workflow ID/path, event `push`, branch và full
-  SHA. Manual resolve/deploy đã được xác nhận riêng.
-- [x] Hai GHCR image tags và OCI revision của manual deployment cùng bằng
-  `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`.
+- [x] CI push run `39297680549` attempt 2 thành công tại tip `docker-cicd`
+  `c8bb78d59ec9555b7f62e7efacf5838655642475`; backend pass 70 tests và Browser
+  E2E pass đủ 58/58. Attempt 1 bị hủy thủ công sau khi mới pass 13/58.
+- [x] Automatic CD run `39304553130` resolve đúng workflow ID/path, event `push`,
+  repository, branch và full SHA; run được tạo bằng `workflow_run`, không phải
+  manual dispatch.
+- [x] Hai GHCR image tags, OCI revisions, EC2 checkout và application containers
+  cùng bằng `c8bb78d59ec9555b7f62e7efacf5838655642475`.
 - [x] EC2 deployment logs không có `docker build`; chỉ có pull/migrate/up.
 - [x] Migration hoàn tất trước application recreate; lần chạy xác nhận báo
   `No migrations are pending`.
 - [x] `docker compose ps` báo PostgreSQL, Redis, backend và frontend healthy.
 - [x] Containers backend/frontend chạy đúng image revision đã deploy.
 - [x] PostgreSQL và Redis named volumes không bị xóa hoặc recreate trong deploy.
-- [ ] HTTPS frontend, `/api/`, login/refresh cookie path hoạt động.
-- [ ] S3 presigned upload và IAM Role qua IMDSv2 hoạt động từ backend container.
-- [ ] Baseline manual successful SHA là
-  `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`; ghi lại current và previous
-  successful SHA từ CD logs sau lần automatic deployment thành công tiếp theo.
-- [ ] Theo dõi RAM, disk, Docker logs và EC2 status checks sau deploy.
+- [ ] HTTPS frontend, `/api/`, login/refresh cookie path hoạt động. Hiện DNS đúng
+  nhưng host chưa có Nginx/Certbot hoặc listener `80`/`443`; loopback frontend và
+  backend đều trả `200`.
+- [ ] S3 presigned upload và IAM Role qua IMDSv2 hoạt động từ backend/browser;
+  thực hiện sau khi HTTPS/auth smoke test pass.
+- [x] Current successful SHA là
+  `c8bb78d59ec9555b7f62e7efacf5838655642475`; previous successful SHA là
+  `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`.
+- [ ] Thiết lập database backup, checksum, retention và restore drill tách biệt;
+  không restore thử vào staging và không thay đổi named volumes.
+- [x] Đã thu baseline RAM, swap, disk, Docker restart/OOM sau deploy. Tiếp tục
+  checklist thủ công; CloudWatch alarms tạm hoãn và không cài CloudWatch Agent.
 
 ## Chuyển staging sang `master` sau này
 
 Không thực hiện trong giai đoạn này. Chỉ sau khi staging ổn định và application
 merge vào `master` được duyệt mới đổi CI/CD branch filters và guards từ
 `docker-cicd` sang `master`.
+
+## Phase 1: edge-only Nginx + Certbot trong Docker Compose
+
+Phần này là runbook triển khai đã được code hoá nhưng **chưa chạy**. Edge dùng file
+`docker-compose.edge.yml` bổ sung vào project Compose hiện hữu
+`dentflow-staging`. Nginx và Certbot là hai service mới; PostgreSQL, Redis,
+backend và frontend vẫn do `docker-compose.staging.yml` quản lý. Hai certificate
+volumes mới là `dentflow-staging_letsencrypt_conf` và
+`dentflow-staging_letsencrypt_webroot`; chúng không liên quan tới
+`dentflow-staging_postgres_data` hoặc `dentflow-staging_redis_data`.
+
+Nginx publish duy nhất `80:80` và `443:443`. Backend/frontend vẫn chỉ publish
+loopback `127.0.0.1:3000` và `127.0.0.1:8080`; PostgreSQL/Redis không có host
+port. Trong Docker network, Nginx resolve động `frontend:80` và `backend:3000`,
+không ghi IP container. `/api/` bỏ prefix khi proxy tới backend và giữ rule
+`proxy_cookie_path /auth /api/auth`.
+
+### Tách phần cần đưa lên `master` và `docker-cicd`
+
+- `.github/workflows/deploy-staging.yml` phải được review và cập nhật riêng trên
+  `master` trước, vì GitHub chỉ dùng workflow `workflow_run` từ default branch.
+  Commit bootstrap workflow này không phải edge commit và không được ghép vào
+  commit edge trên `docker-cicd`.
+- `docker-compose.edge.yml`, `deploy/nginx/*`, hai script edge và phần runbook này
+  mới thuộc commit edge trên `docker-cicd`. Không đưa thay đổi application vào
+  commit đó.
+- Nếu `.github/workflows/deploy-staging.yml` xuất hiện cùng edge files trong commit
+  `docker-cicd`, bộ phân loại coi đó là mixed edge/application và fail closed. Vì
+  vậy phải tách hai thay đổi trên thành hai PR/commit được review độc lập sau khi
+  kết thúc review local.
+
+Workflow có ba lựa chọn manual: `auto`, `full`, `edge-only`. Hai giá trị cụ thể là
+assertion, không phải override; khác kết quả phân loại sẽ fail. Automatic deployment
+dùng `auto`. Commit trộn edge path và non-edge path cũng fail để buộc tách deploy.
+GitHub runner phân loại file của commit; EC2 kiểm tra lại toàn bộ diff từ
+`config_sha` đang checkout đến target SHA. Edge-only chỉ chấp nhận:
+
+```text
+docker-compose.edge.yml
+deploy/nginx/*
+deploy/scripts/bootstrap-staging-tls.sh
+deploy/scripts/check-staging-edge.sh
+deploy/STAGING_DEPLOYMENT.md
+```
+
+Chỉ `full` chạy Buildx, push/pull application image và migration; full giữ nguyên
+pipeline application cũ và không recreate Nginx/Certbot. Edge-only không đăng nhập
+GHCR, không build/push, không migration và chỉ gọi:
+
+```bash
+docker compose \
+  --env-file /etc/dentflow/staging.env \
+  -f docker-compose.staging.yml \
+  -f docker-compose.edge.yml \
+  up -d --no-deps --force-recreate --wait --wait-timeout 120 nginx certbot
+```
+
+Danh sách service ở cuối lệnh cùng `--no-deps` là invariant bắt buộc. Workflow
+snapshot ID, image, restart count, OOM state và health của bốn application
+containers, đồng thời snapshot identity/mountpoint của hai data volumes trước và
+sau lệnh; khác biệt bất kỳ làm deployment fail và kích hoạt rollback edge.
+
+Sau khi cả remote checks và external smoke pass, trạng thái không chứa secret được
+ghi atomically vào `/opt/dentflow/.git/dentflow-staging-state`:
+
+```text
+application_sha=<OCI revision hiện vẫn chạy cho backend/frontend>
+config_sha=<Git SHA chứa edge config đã triển khai>
+```
+
+Với edge-only, `application_sha` phải giữ nguyên còn `config_sha` tiến tới target
+SHA. Ngay trước khi mutate edge, workflow ghi file `dentflow-edge-pending` chứa các
+SHA và checksum snapshot; file này chỉ bị finalize sau external smoke hoặc bị xóa
+sau rollback đã xác minh. Các file nằm trong `.git`, nên không làm working tree
+bẩn.
+
+### Preflight bắt buộc và resource gate
+
+Thực hiện theo thứ tự dưới đây. Nếu một mục không pass thì dừng, không chạy
+workflow:
+
+1. Trên AWS Console xác nhận EC2 `2/2 status checks`, public/Elastic IPv4 đúng với
+   A record `staging.lephuchau.online`, và Security Group inbound cho TCP `80` và
+   `443` từ Internet. Giữ SSH giới hạn theo IP quản trị; không mở port PostgreSQL
+   hoặc Redis. Đây là gate thủ công vì workflow không có AWS permission.
+2. Xác nhận DNS public trả đúng IP bằng ít nhất hai resolver. Port `80` phải tới
+   được từ Internet để ACME HTTP-01 hoạt động; port `443` phải mở trước smoke test.
+3. Thêm hai key vào `/etc/dentflow/staging.env`, không commit giá trị và giữ
+   permission hiện tại của file:
+
+   ```dotenv
+   STAGING_DOMAIN=staging.lephuchau.online
+   CERTBOT_EMAIL=<email vận hành nhận cảnh báo hết hạn>
+   ```
+
+4. Xác nhận repository EC2 sạch, current application OCI revision của backend và
+   frontend giống nhau, PostgreSQL/Redis/backend/frontend đều healthy, không có
+   `OOMKilled=true`, và port `80`/`443` không bị listener ngoài Compose chiếm.
+5. Script `check-staging-edge.sh resource-gate` yêu cầu `MemAvailable >= 200 MiB`,
+   swap active xấp xỉ `1 GiB` (`SwapTotal >= 1040000 KiB`), root free ít nhất
+   `5 GiB`, root usage không quá `80%`, bốn application containers healthy, và
+   không có kernel OOM trong 24 giờ
+   trước đó. Deploy user phải có passwordless sudo để đọc kernel journal. Gate
+   fail thì không checkout target và không thay đổi container.
+
+Trên `t3.micro` 1 GiB, Nginx Alpine và Certbot idle dự kiến nhỏ hơn đáng kể so với
+backend/PostgreSQL, nhưng lúc pull image, cấp cert và dry-run renewal sẽ tạo spike
+RAM/disk tạm thời. Hai image pinned theo digest tăng disk lần đầu; certificate và
+ACME state thường chỉ chiếm vài MiB. Không thêm memory limit cho database/Redis và
+không prune. Nếu `MemAvailable` dưới gate hoặc swap/disk không đạt, dừng và xử lý
+tài nguyên trước thay vì ép deploy.
+
+### Bootstrap certificate lần đầu
+
+Nginx khởi động bằng template HTTP bootstrap. Chỉ `/nginx-health` và
+`/.well-known/acme-challenge/` được phục vụ; mọi application path HTTP trả `503`,
+do đó application không bị lộ plaintext trước khi có certificate.
+
+`bootstrap-staging-tls.sh` thực hiện các bước sau:
+
+1. validate merged Compose và xác nhận domain trong env khớp chính xác
+   `staging.lephuchau.online`;
+2. tạo một challenge file ngẫu nhiên trong persistent webroot, rồi đọc lại qua
+   URL HTTP public;
+3. nếu chưa có certificate persistent, gọi đúng **một** lần `certbot certonly`
+   bằng webroot; lỗi sẽ dừng để tránh rate limit;
+4. ghi reload marker; Nginx watcher render HTTPS config, chạy `nginx -t` rồi reload;
+5. xác minh certificate thật qua HTTPS và chạy `certbot renew --dry-run` một lần.
+
+Nếu certificate đã tồn tại, script không request lại mà chỉ validate Nginx/HTTPS.
+Certbot service sau đó chạy `renew` mỗi 12 giờ. Deploy hook cập nhật marker trong
+persistent webroot; watcher chỉ reload sau `nginx -t`. Không mount Docker socket và
+không chia sẻ PID namespace.
+
+Acceptance criteria bootstrap:
+
+- ACME HTTP-01 pass, certificate chain hợp lệ cho đúng domain và HTTPS health trả
+  success;
+- `docker compose ... ps nginx certbot` cho thấy Nginx và Certbot đều healthy;
+- renewal dry-run pass và reload marker hoạt động;
+- chỉ hai TLS volumes mới được tạo; identity của PostgreSQL/Redis volumes không đổi.
+
+Điểm dừng: DNS/SG/port sai, email Certbot thiếu, challenge không đọc được, Let's
+Encrypt rate-limit/error, certificate không hợp lệ, Nginx config test fail hoặc
+resource gate fail. Không retry issuance tự động và không chuyển sang Phase 2.
+
+### Smoke test và acceptance criteria Phase 1
+
+Workflow kiểm tra cả từ EC2 và từ GitHub-hosted runner:
+
+- HTTP `/` trả `308` tới đúng HTTPS URL; HTTP `/nginx-health` vẫn phục vụ ACME
+  bootstrap/diagnostic;
+- HTTPS `/nginx-health`, frontend `/` và backend `/api/` trả success;
+- Nginx và Certbot healthy, không OOM;
+- application snapshot và data-volume snapshot trước/sau giống hoàn toàn;
+- postflight resource gate pass, không có kernel OOM mới từ thời điểm phase bắt đầu;
+- log ghi riêng `application_sha` và `config_sha`, không in env hoặc secret.
+
+Sau khi deploy thực tế, dùng synthetic account để login/refresh và kiểm tra
+`Set-Cookie` có `Path=/api/auth`, `Secure`, `HttpOnly` và `SameSite` đúng cấu hình.
+Không ghi cookie/token vào log. Smoke có credential này là bước xác nhận thủ công
+bắt buộc trước Phase 2 vì repository/workflow không lưu staging login secret.
+
+Acceptance cuối Phase 1 chỉ đạt khi AWS `2/2`, DNS/80/443, bootstrap, renewal,
+external smoke, auth/cookie smoke và postflight resource/container/volume checks
+đều pass. Nếu bất kỳ mục nào fail, dừng Phase 1 và không chạy S3 smoke, backup hoặc
+bất kỳ phase sau.
+
+### Rollback edge-only
+
+Rollback có hai lớp. Trap trong phiên SSH được arm sau khi preflight và snapshot
+pass để bắt lỗi apply/bootstrap/remote smoke. Một bước `if: failure()` riêng xử lý
+lỗi external smoke hoặc finalize dựa trên `dentflow-edge-pending`. Workflow:
+
+1. stop/remove chỉ container `nginx` và `certbot` của target config;
+2. checkout lại previous `config_sha`;
+3. nếu previous SHA đã có edge Compose, recreate đúng hai edge services bằng
+   `--no-deps --force-recreate`; lần bootstrap đầu chưa có previous edge thì giữ
+   application như cũ và để port 80/443 đóng;
+4. so sánh lại application/container và PostgreSQL/Redis volume snapshots.
+
+Rollback không chạy `docker compose down`, không xóa hai TLS volumes, không pull
+hoặc đổi application image, không migration, không chạm database/Redis và không
+xóa/recreate data volumes. Nếu rollback edge cũng fail, dừng thủ công; không thử
+khởi động lại toàn stack. Certificate volumes được giữ để lần triển khai sau có thể
+tái sử dụng an toàn.
+
+Nếu workflow bị hủy hoặc mất kết nối đúng khoảng giữa remote apply và bước
+finalize/rollback, file pending còn lại làm lần edge deployment sau fail closed.
+Operator phải review trạng thái thực tế và chạy rollback theo đúng previous SHA;
+không xóa file pending chỉ để bỏ qua gate.
