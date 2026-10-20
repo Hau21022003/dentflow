@@ -15,6 +15,15 @@ on:
         required: true
         default: docker-cicd
         type: string
+      deployment_mode:
+        description: Auto-detect or assert the expected fail-closed deployment mode
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - full
+          - edge-only
 
 permissions: {}
 
@@ -22,6 +31,7 @@ env:
   REGISTRY: ghcr.io
   BACKEND_IMAGE: ghcr.io/hau21022003/dentflow-backend
   FRONTEND_IMAGE: ghcr.io/hau21022003/dentflow-frontend
+  STAGING_DOMAIN: staging.lephuchau.online
 
 concurrency:
   group: dentflow-staging-deploy
@@ -41,6 +51,7 @@ jobs:
     outputs:
       sha: ${{ steps.commit.outputs.sha }}
       ref: ${{ steps.commit.outputs.ref }}
+      mode: ${{ steps.commit.outputs.mode }}
     steps:
       - name: Resolve a successful CI commit at the branch tip
         id: commit
@@ -53,6 +64,7 @@ jobs:
           AUTO_EVENT: ${{ github.event.workflow_run.event }}
           AUTO_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           DISPATCH_REF: ${{ inputs.ref }}
+          DISPATCH_MODE: ${{ inputs.deployment_mode }}
           GITHUB_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           WORKFLOW_REF: ${{ github.ref }}
@@ -81,6 +93,7 @@ jobs:
 
             ref="$AUTO_REF"
             sha="$AUTO_SHA"
+            requested_mode=auto
           else
             if [[ "$WORKFLOW_REF" != "refs/heads/master" ]]; then
               echo "Manual staging deployment must run from the master workflow definition." >&2
@@ -88,10 +101,18 @@ jobs:
             fi
 
             ref="$DISPATCH_REF"
+            requested_mode="${DISPATCH_MODE:-auto}"
             if [[ "$ref" != "docker-cicd" ]]; then
               echo "Only docker-cicd is permitted for staging deployment." >&2
               exit 1
             fi
+            case "$requested_mode" in
+              auto|full|edge-only) ;;
+              *)
+                echo "Unsupported deployment mode: $requested_mode" >&2
+                exit 1
+                ;;
+            esac
 
             sha="$(gh api "repos/$REPOSITORY/commits/$ref" --jq .sha)"
             ci_run_id="$(gh api --paginate \
@@ -114,12 +135,77 @@ jobs:
             exit 1
           fi
 
+          mapfile -t changed_file_records < <(gh api --paginate \
+            "repos/$REPOSITORY/commits/$sha?per_page=100" \
+            --jq '.files[]? | [.status, .filename, (.previous_filename // "")] | @tsv')
+          if [[ "${#changed_file_records[@]}" -eq 0 ]]; then
+            echo "Cannot classify an empty or unavailable commit file list." >&2
+            exit 1
+          fi
+
+          is_edge_path() {
+            case "$1" in
+              docker-compose.edge.yml|deploy/nginx/*|deploy/scripts/bootstrap-staging-tls.sh|deploy/scripts/check-staging-edge.sh|deploy/STAGING_DEPLOYMENT.md)
+                return 0
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
+          has_edge_path=false
+          has_non_edge_path=false
+          changed_paths=()
+          for record in "${changed_file_records[@]}"; do
+            IFS=$'\t' read -r status path previous_path <<< "$record"
+            [[ -n "$status" && -n "$path" ]]
+            changed_paths+=("$path")
+            if is_edge_path "$path"; then
+              has_edge_path=true
+            else
+              has_non_edge_path=true
+            fi
+            if [[ "$status" == renamed ]]; then
+              [[ -n "$previous_path" ]] || {
+                echo "A renamed file is missing previous_filename metadata." >&2
+                exit 1
+              }
+              changed_paths+=("$previous_path")
+              if is_edge_path "$previous_path"; then
+                has_edge_path=true
+              else
+                has_non_edge_path=true
+              fi
+            fi
+          done
+
+          if [[ "$has_edge_path" == true && "$has_non_edge_path" == true ]]; then
+            echo "Mixed edge/application commits are not deployable; split the changes." >&2
+            printf '  %s\n' "${changed_paths[@]}" >&2
+            exit 1
+          fi
+          if [[ "$has_edge_path" == true ]]; then
+            detected_mode=edge-only
+          else
+            detected_mode=full
+          fi
+          if [[ "$requested_mode" != auto && "$requested_mode" != "$detected_mode" ]]; then
+            echo "Requested mode $requested_mode does not match detected mode $detected_mode." >&2
+            exit 1
+          fi
+          mode="$detected_mode"
+
+          echo "Deployment classification: $mode (${#changed_file_records[@]} changed files)."
+          printf '  %s\n' "${changed_paths[@]}"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
 
   build-and-push:
     name: Build and push immutable images
     needs: resolve
+    if: needs.resolve.outputs.mode == 'full'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -165,6 +251,11 @@ jobs:
 
   deploy:
     needs: [resolve, build-and-push]
+    if: >-
+      always() &&
+      needs.resolve.result == 'success' &&
+      (needs.resolve.outputs.mode == 'edge-only' ||
+      needs.build-and-push.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -184,10 +275,9 @@ jobs:
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
 
-      - name: Deploy the verified commit
+      - name: Log in to GHCR on EC2
+        if: needs.resolve.outputs.mode == 'full'
         env:
-          DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
-          DEPLOY_REF: ${{ needs.resolve.outputs.ref }}
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
           GHCR_USERNAME: ${{ github.actor }}
@@ -197,29 +287,36 @@ jobs:
           set -euo pipefail
           : "${EC2_USER:?EC2_USER secret is required}"
           : "${GHCR_TOKEN:?GitHub token is required}"
-
-          ssh_target="$EC2_USER@$EC2_HOST"
-          ssh_options=(-i ~/.ssh/id_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes)
-
-          logout_ghcr() {
-            ssh "${ssh_options[@]}" "$ssh_target" \
-              docker logout ghcr.io >/dev/null 2>&1 || true
-          }
-          trap logout_ghcr EXIT
-
-          printf '%s' "$GHCR_TOKEN" | ssh "${ssh_options[@]}" "$ssh_target" \
+          printf '%s' "$GHCR_TOKEN" | ssh \
+            -i ~/.ssh/id_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
             docker login ghcr.io --username "$GHCR_USERNAME" --password-stdin
 
-          ssh "${ssh_options[@]}" "$ssh_target" \
-            bash -s -- "$DEPLOY_SHA" "$DEPLOY_REF" <<'REMOTE'
+      - name: Full application deployment
+        if: needs.resolve.outputs.mode == 'full'
+        env:
+          DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
+          DEPLOY_REF: ${{ needs.resolve.outputs.ref }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${EC2_USER:?EC2_USER secret is required}"
+
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            bash -s -- "$DEPLOY_SHA" "$DEPLOY_REF" "$STAGING_DOMAIN" <<'REMOTE'
           set -euo pipefail
 
           deploy_sha="$1"
           deploy_ref="$2"
+          staging_domain="$3"
           app_dir=/opt/dentflow
 
           [[ "$deploy_ref" == "docker-cicd" ]]
           [[ "$deploy_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$staging_domain" == "staging.lephuchau.online" ]]
 
           cd "$app_dir"
           if [[ -n "$(git status --porcelain)" ]]; then
@@ -254,8 +351,324 @@ jobs:
           done
 
           "${compose[@]}" ps
-          echo "Deployed $(git rev-parse HEAD)"
+          echo "application_sha=$deploy_sha"
+          echo "config_sha=$(git rev-parse HEAD)"
+          state_file=.git/dentflow-staging-state
+          printf 'application_sha=%s\nconfig_sha=%s\n' \
+            "$deploy_sha" "$(git rev-parse HEAD)" > "${state_file}.tmp"
+          mv "${state_file}.tmp" "$state_file"
           REMOTE
 
-          logout_ghcr
-          trap - EXIT
+      - name: Edge-only deployment
+        if: needs.resolve.outputs.mode == 'edge-only'
+        env:
+          DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
+          DEPLOY_REF: ${{ needs.resolve.outputs.ref }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${EC2_USER:?EC2_USER secret is required}"
+
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            bash -s -- "$DEPLOY_SHA" "$DEPLOY_REF" "$STAGING_DOMAIN" <<'REMOTE'
+          set -euo pipefail
+
+          deploy_sha="$1"
+          deploy_ref="$2"
+          staging_domain="$3"
+          app_dir=/opt/dentflow
+          env_file=/etc/dentflow/staging.env
+
+          [[ "$deploy_ref" == "docker-cicd" ]]
+          [[ "$deploy_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$staging_domain" == "staging.lephuchau.online" ]]
+
+          cd "$app_dir"
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "Refusing to deploy over a dirty working tree." >&2
+            exit 1
+          fi
+          if [[ -e .git/dentflow-edge-pending || -e .git/dentflow-edge-pending.tmp ]]; then
+            echo "An unresolved edge deployment is pending rollback/finalization." >&2
+            exit 1
+          fi
+          previous_config_sha="$(git rev-parse HEAD)"
+          [[ "$previous_config_sha" =~ ^[0-9a-f]{40}$ ]]
+
+          git fetch --prune origin "$deploy_ref"
+          [[ "$(git rev-parse "origin/$deploy_ref")" == "$deploy_sha" ]]
+          git cat-file -e "$deploy_sha:docker-compose.edge.yml"
+          git cat-file -e "$deploy_sha:deploy/scripts/check-staging-edge.sh"
+          git cat-file -e "$deploy_sha:deploy/scripts/bootstrap-staging-tls.sh"
+
+          if [[ "$previous_config_sha" != "$deploy_sha" ]]; then
+            mapfile -t changed_files < <(git diff --name-only --no-renames "$previous_config_sha" "$deploy_sha")
+            if [[ "${#changed_files[@]}" -eq 0 ]]; then
+              echo "EC2 fail-closed classification found no changed files." >&2
+              exit 1
+            fi
+            for path in "${changed_files[@]}"; do
+              case "$path" in
+                docker-compose.edge.yml|deploy/nginx/*|deploy/scripts/bootstrap-staging-tls.sh|deploy/scripts/check-staging-edge.sh|deploy/STAGING_DEPLOYMENT.md)
+                  ;;
+                *)
+                  echo "EC2 rejected non-edge path in edge-only deployment: $path" >&2
+                  exit 1
+                  ;;
+              esac
+            done
+          fi
+
+          check_script="$(git show "$deploy_sha:deploy/scripts/check-staging-edge.sh")"
+          phase_start="$(date -u +'%Y-%m-%d %H:%M:%S')"
+          printf '%s\n' "$check_script" | bash -s -- resource-gate "24 hours ago"
+          before_application="$(printf '%s\n' "$check_script" | bash -s -- application-snapshot)"
+          before_volumes="$(printf '%s\n' "$check_script" | bash -s -- volume-snapshot)"
+
+          application_sha=""
+          for service in backend frontend; do
+            container_id="$(docker ps -q \
+              --filter 'label=com.docker.compose.project=dentflow-staging' \
+              --filter "label=com.docker.compose.service=$service")"
+            [[ -n "$container_id" ]]
+            image_id="$(docker inspect --format '{{.Image}}' "$container_id")"
+            revision="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image_id")"
+            [[ "$revision" =~ ^[0-9a-f]{40}$ ]]
+            if [[ -z "$application_sha" ]]; then
+              application_sha="$revision"
+            elif [[ "$revision" != "$application_sha" ]]; then
+              echo "Frontend and backend OCI revisions do not match." >&2
+              exit 1
+            fi
+          done
+
+          existing_edge="$(docker ps -aq \
+            --filter 'label=com.docker.compose.project=dentflow-staging' \
+            --filter 'label=com.docker.compose.service=nginx')"
+          if [[ -z "$existing_edge" ]] && \
+             [[ -n "$(sudo -n ss -H -ltn '( sport = :80 or sport = :443 )')" ]]; then
+            echo "Ports 80/443 are already occupied by an unmanaged listener." >&2
+            exit 1
+          fi
+
+          application_snapshot_sha="$(printf '%s' "$before_application" | sha256sum | awk '{print $1}')"
+          volume_snapshot_sha="$(printf '%s' "$before_volumes" | sha256sum | awk '{print $1}')"
+          pending_file=.git/dentflow-edge-pending
+          printf 'previous_config_sha=%s\ntarget_config_sha=%s\napplication_sha=%s\napplication_snapshot_sha=%s\nvolume_snapshot_sha=%s\n' \
+            "$previous_config_sha" "$deploy_sha" "$application_sha" \
+            "$application_snapshot_sha" "$volume_snapshot_sha" \
+            > "${pending_file}.tmp"
+          mv "${pending_file}.tmp" "$pending_file"
+
+          rollback_armed=false
+          rollback_edge() {
+            status="$?"
+            trap - ERR
+            if [[ "$rollback_armed" == true ]]; then
+              set +e
+              echo "Edge deployment failed; restoring config_sha=$previous_config_sha." >&2
+              export DENTFLOW_IMAGE_TAG="$application_sha"
+              for edge_service in nginx certbot; do
+                mapfile -t edge_containers < <(docker ps -aq \
+                  --filter 'label=com.docker.compose.project=dentflow-staging' \
+                  --filter "label=com.docker.compose.service=$edge_service")
+                if [[ "${#edge_containers[@]}" -gt 0 ]]; then
+                  docker stop "${edge_containers[@]}"
+                  docker rm "${edge_containers[@]}"
+                fi
+              done
+              git checkout --detach "$previous_config_sha"
+              if git cat-file -e "$previous_config_sha:docker-compose.edge.yml" 2>/dev/null; then
+                previous_compose=(
+                  docker compose --env-file "$env_file"
+                  -f docker-compose.staging.yml -f docker-compose.edge.yml
+                )
+                "${previous_compose[@]}" config --quiet
+                "${previous_compose[@]}" up -d --no-deps --force-recreate \
+                  --wait --wait-timeout 120 nginx certbot
+              fi
+              after_application="$(printf '%s\n' "$check_script" | bash -s -- application-snapshot 2>/dev/null)"
+              after_volumes="$(printf '%s\n' "$check_script" | bash -s -- volume-snapshot 2>/dev/null)"
+              [[ "$after_application" == "$before_application" ]] || \
+                echo "WARNING: application snapshot changed during failed edge deployment." >&2
+              [[ "$after_volumes" == "$before_volumes" ]] || \
+                echo "WARNING: database volume snapshot changed during failed edge deployment." >&2
+            fi
+            exit "$status"
+          }
+          trap rollback_edge ERR
+
+          rollback_armed=true
+          git checkout --detach "$deploy_sha"
+          export DENTFLOW_IMAGE_TAG="$application_sha"
+          edge_compose=(
+            docker compose --env-file "$env_file"
+            -f docker-compose.staging.yml -f docker-compose.edge.yml
+          )
+          "${edge_compose[@]}" config --quiet
+          "${edge_compose[@]}" pull nginx certbot
+          "${edge_compose[@]}" up -d --no-deps --force-recreate \
+            --wait --wait-timeout 120 nginx certbot
+          bash deploy/scripts/bootstrap-staging-tls.sh "$staging_domain"
+          bash deploy/scripts/check-staging-edge.sh smoke "$staging_domain"
+
+          after_application="$(bash deploy/scripts/check-staging-edge.sh application-snapshot)"
+          after_volumes="$(bash deploy/scripts/check-staging-edge.sh volume-snapshot)"
+          [[ "$after_application" == "$before_application" ]] || {
+            echo "Application containers changed during edge-only deployment." >&2
+            false
+          }
+          [[ "$after_volumes" == "$before_volumes" ]] || {
+            echo "PostgreSQL/Redis volume identity changed during edge-only deployment." >&2
+            false
+          }
+          bash deploy/scripts/check-staging-edge.sh resource-gate "$phase_start"
+
+          [[ "$(git rev-parse HEAD)" == "$deploy_sha" ]]
+          echo "application_sha=$application_sha"
+          echo "config_sha=$deploy_sha"
+          rollback_armed=false
+          trap - ERR
+          REMOTE
+
+      - name: External HTTPS smoke test
+        env:
+          DOMAIN: ${{ env.STAGING_DOMAIN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          redirect="$(curl --silent --show-error --max-time 10 \
+            --output /dev/null --write-out '%{http_code}|%{redirect_url}' \
+            "http://$DOMAIN/")"
+          [[ "$redirect" == "308|https://$DOMAIN/" ]]
+          curl --fail --silent --show-error --max-time 10 \
+            "https://$DOMAIN/nginx-health" >/dev/null
+          curl --fail --silent --show-error --max-time 10 \
+            "https://$DOMAIN/" >/dev/null
+          curl --fail --silent --show-error --max-time 10 \
+            "https://$DOMAIN/api/" >/dev/null
+
+      - name: Finalize edge deployment state
+        if: needs.resolve.outputs.mode == 'edge-only'
+        env:
+          DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" bash -s -- "$DEPLOY_SHA" <<'REMOTE'
+          set -euo pipefail
+          deploy_sha="$1"
+          cd /opt/dentflow
+          pending_file=.git/dentflow-edge-pending
+          [[ -f "$pending_file" ]]
+
+          read_pending() {
+            awk -F= -v key="$1" '$1 == key {print substr($0, length(key) + 2)}' "$pending_file"
+          }
+          target_config_sha="$(read_pending target_config_sha)"
+          application_sha="$(read_pending application_sha)"
+          expected_application_snapshot_sha="$(read_pending application_snapshot_sha)"
+          expected_volume_snapshot_sha="$(read_pending volume_snapshot_sha)"
+          [[ "$target_config_sha" == "$deploy_sha" ]]
+          [[ "$application_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$expected_application_snapshot_sha" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$expected_volume_snapshot_sha" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$(git rev-parse HEAD)" == "$deploy_sha" ]]
+
+          application_snapshot="$(bash deploy/scripts/check-staging-edge.sh application-snapshot)"
+          volume_snapshot="$(bash deploy/scripts/check-staging-edge.sh volume-snapshot)"
+          application_snapshot_sha="$(printf '%s' "$application_snapshot" | sha256sum | awk '{print $1}')"
+          volume_snapshot_sha="$(printf '%s' "$volume_snapshot" | sha256sum | awk '{print $1}')"
+          [[ "$application_snapshot_sha" == "$expected_application_snapshot_sha" ]]
+          [[ "$volume_snapshot_sha" == "$expected_volume_snapshot_sha" ]]
+
+          state_file=.git/dentflow-staging-state
+          printf 'application_sha=%s\nconfig_sha=%s\n' \
+            "$application_sha" "$deploy_sha" > "${state_file}.tmp"
+          mv "${state_file}.tmp" "$state_file"
+          rm -f "$pending_file"
+          echo "Finalized application_sha=$application_sha config_sha=$deploy_sha"
+          REMOTE
+
+      - name: Roll back edge after failed external acceptance
+        if: failure() && needs.resolve.outputs.mode == 'edge-only'
+        env:
+          DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" bash -s -- "$DEPLOY_SHA" <<'REMOTE'
+          set -euo pipefail
+          deploy_sha="$1"
+          cd /opt/dentflow
+          pending_file=.git/dentflow-edge-pending
+          if [[ ! -f "$pending_file" ]]; then
+            echo "No pending edge deployment requires an external-smoke rollback."
+            exit 0
+          fi
+
+          read_pending() {
+            awk -F= -v key="$1" '$1 == key {print substr($0, length(key) + 2)}' "$pending_file"
+          }
+          previous_config_sha="$(read_pending previous_config_sha)"
+          target_config_sha="$(read_pending target_config_sha)"
+          application_sha="$(read_pending application_sha)"
+          expected_application_snapshot_sha="$(read_pending application_snapshot_sha)"
+          expected_volume_snapshot_sha="$(read_pending volume_snapshot_sha)"
+          [[ "$previous_config_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$target_config_sha" == "$deploy_sha" ]]
+          [[ "$application_sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$expected_application_snapshot_sha" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$expected_volume_snapshot_sha" =~ ^[0-9a-f]{64}$ ]]
+
+          export DENTFLOW_IMAGE_TAG="$application_sha"
+          failed_check_script="$(git show "$target_config_sha:deploy/scripts/check-staging-edge.sh")"
+          for edge_service in nginx certbot; do
+            mapfile -t edge_containers < <(docker ps -aq \
+              --filter 'label=com.docker.compose.project=dentflow-staging' \
+              --filter "label=com.docker.compose.service=$edge_service")
+            if [[ "${#edge_containers[@]}" -gt 0 ]]; then
+              docker stop "${edge_containers[@]}"
+              docker rm "${edge_containers[@]}"
+            fi
+          done
+          git checkout --detach "$previous_config_sha"
+
+          if git cat-file -e "$previous_config_sha:docker-compose.edge.yml" 2>/dev/null; then
+            previous_compose=(
+              docker compose --env-file /etc/dentflow/staging.env
+              -f docker-compose.staging.yml -f docker-compose.edge.yml
+            )
+            "${previous_compose[@]}" config --quiet
+            "${previous_compose[@]}" up -d --no-deps --force-recreate \
+              --wait --wait-timeout 120 nginx certbot
+          fi
+
+          application_snapshot="$(printf '%s\n' "$failed_check_script" | bash -s -- application-snapshot)"
+          volume_snapshot="$(printf '%s\n' "$failed_check_script" | bash -s -- volume-snapshot)"
+          application_snapshot_sha="$(printf '%s' "$application_snapshot" | sha256sum | awk '{print $1}')"
+          volume_snapshot_sha="$(printf '%s' "$volume_snapshot" | sha256sum | awk '{print $1}')"
+          [[ "$application_snapshot_sha" == "$expected_application_snapshot_sha" ]]
+          [[ "$volume_snapshot_sha" == "$expected_volume_snapshot_sha" ]]
+          rm -f "$pending_file" .git/dentflow-edge-pending.tmp
+          echo "Rolled edge back to config_sha=$previous_config_sha; application_sha=$application_sha unchanged."
+          REMOTE
+
+      - name: Log out from GHCR on EC2
+        if: always() && needs.resolve.outputs.mode == 'full'
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" docker logout ghcr.io >/dev/null 2>&1 || true
