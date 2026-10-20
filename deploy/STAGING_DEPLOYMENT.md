@@ -1,7 +1,7 @@
 # Bàn giao triển khai DentFlow staging
 
-> Tài liệu này ghi nhận trạng thái staging trên branch `docker-cicd` tại ngày
-> 2026-10-20. Không ghi credentials, private key hoặc giá trị secret vào đây.
+> Tài liệu này ghi nhận trạng thái staging trên branch `docker-cicd` đến ngày
+> 2026-10-21. Không ghi credentials, private key hoặc giá trị secret vào đây.
 > Staging vẫn deploy từ `docker-cicd`; chỉ chuyển cả CI và CD sang `master` sau
 > khi application, Dockerfiles và Compose đã được merge vào `master` qua review.
 
@@ -11,9 +11,13 @@
   SSH và Docker hiện hoạt động ổn định sau sự cố tài nguyên.
 - Repository đã được clone tại `/opt/dentflow`; staging target vẫn là branch
   `docker-cicd`, không phải `master`.
-- IAM Role, IMDSv2, S3 CORS/lifecycle và `/etc/dentflow/staging.env` đã được cấu
-  hình. `MAIL_REDIRECT_TO` staging đã được sửa về một email hợp lệ và Compose
-  config validation thành công.
+- S3 hiện dùng một IAM user qua cặp static AWS credentials trong
+  `/etc/dentflow/staging.env`; backend container nhận cùng credentials qua runtime
+  environment. File env có mode `0640`, thư mục cha có mode `0750`, và giá trị
+  credential không được ghi vào log/runbook. Chuyển sang EC2 IAM Role/IMDSv2 là
+  cải tiến hardening tùy chọn trong tương lai, không phải blocker của staging hiện
+  tại. S3 CORS/lifecycle đã được cấu hình; `MAIL_REDIRECT_TO` staging đã được sửa
+  về một email hợp lệ và Compose config validation thành công.
 - Docker build trực tiếp trên EC2 đã chạy hơn hai giờ, sau đó EC2 mất SSH và
   Instance Status Check failed. Build trên EC2 đã được loại khỏi quy trình;
   trạng thái `2/2` trên AWS Console vẫn cần được kiểm tra định kỳ riêng.
@@ -51,8 +55,12 @@
   container healthy, restart count `0`, `OOMKilled=false` và không có kernel OOM.
 - Phase 2 đã hoàn tất ngày 2026-10-20: dùng đúng dev seed synthetic hiện có trên
   database staging trống, rồi xác nhận HTTPS/API, login, refresh, cookie flags,
-  logout và postflight container/volume/resource. Phase 3 chưa được triển khai và
-  đang chờ duyệt; S3 browser smoke và database backup/restore drill vẫn chưa làm.
+  logout và postflight container/volume/resource. Phase 3A resource/health
+  preflight và Phase 3B browser upload/download smoke đã chạy ngày 2026-10-21.
+  Browser S3 flow pass; quyền `s3:ListBucket` không cần thiết được operator chấp
+  nhận như một deviation và không chặn Phase 3. Phase 3C đã cấu hình backup
+  PostgreSQL hằng ngày lên S3 và manual backup đầu tiên đã pass; restore drill
+  cô lập của Phase 3D chưa thực hiện.
 
 ## Phạm vi implementation GHCR
 
@@ -346,11 +354,11 @@ frontend Nginx vẫn có thể gây OOM, nhất là trong migration hoặc traff
 
 ### Database
 
-Named volume giữ dữ liệu qua container recreate nhưng không phải backup. EC2 và
-EBS vẫn là single point of failure. Cần có backup/snapshot trước migration rủi ro
-và một chính sách backup riêng trước khi coi staging là bền vững. Database backup
-và restore drill hiện chưa được triển khai; đây là hạng mục vận hành sau Phase 2,
-không được reset database hoặc restore vào staging để thử nghiệm.
+Named volume giữ dữ liệu qua container recreate nhưng không phải backup. Phase 3C
+đã tách backup PostgreSQL sang private S3 bucket cùng region, dùng SSE-S3 và
+lifecycle 30 ngày. Restore drill vẫn phải hoàn tất trong môi trường Docker local
+cô lập ở Phase 3D; không được reset database hoặc restore vào staging để thử
+nghiệm.
 
 ## Checklist sau triển khai
 
@@ -381,13 +389,17 @@ không được reset database hoặc restore vào staging để thử nghiệm.
 - [x] HTTPS frontend, `/api/`, login/refresh/logout và cookie flags hoạt động.
   Refresh cookie có `Path=/api/auth`; cả access/refresh cookie đều có `Secure`,
   `HttpOnly`, `SameSite=Lax`, và bị clear đúng path khi logout.
-- [ ] S3 presigned upload và IAM Role qua IMDSv2 hoạt động từ backend/browser;
-  thực hiện sau khi HTTPS/auth smoke test pass.
+- [x] S3 presigned POST, browser upload/CORS, avatar copy, presigned GET/download,
+  unsigned access denial và avatar cleanup hoạt động với IAM user/static
+  credentials hiện tại. IAM Role/IMDSv2 là hardening tùy chọn trong tương lai.
+- [x] IAM user còn quyền `s3:ListBucket` dù application không cần; operator chấp
+  nhận đây là deviation của staging. Không thay đổi IAM policy trong Phase 3B.
 - [x] Current successful SHA là
   `c8bb78d59ec9555b7f62e7efacf5838655642475`; previous successful SHA là
   `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`.
-- [ ] Thiết lập database backup, checksum, retention và restore drill tách biệt;
-  không restore thử vào staging và không thay đổi named volumes.
+- [x] Thiết lập database backup S3, SSE-S3, SHA-256, lịch hằng ngày và retention
+  30 ngày; manual backup/readability check đã pass mà không thay đổi named volume.
+- [ ] Restore drill từ S3 trong Docker local cô lập; không restore vào staging.
 - [x] Đã thu baseline RAM, swap, disk, Docker restart/OOM sau deploy. Tiếp tục
   checklist thủ công; CloudWatch alarms tạm hoãn và không cài CloudWatch Agent.
 
@@ -656,5 +668,169 @@ Postflight pass:
 
 Acceptance Phase 2: **PASS**. AWS IAM identity dùng cho kiểm tra vẫn không có
 `ec2:DescribeInstances`, nên checklist vận hành `2/2 status checks` phải được xác
-nhận định kỳ trên AWS Console. Phase 3, S3 browser smoke và database
-backup/restore drill chưa được thực hiện; cần phê duyệt riêng trước khi tiếp tục.
+nhận định kỳ trên AWS Console. Trạng thái Phase 3 hiện tại được ghi ở phần tiếp
+theo; backup Phase 3C đã pass, còn restore drill Phase 3D chưa được thực hiện.
+
+## Phase 3: S3 smoke và database recovery drill
+
+Phase 3 dùng lại application SHA
+`c8bb78d59ec9555b7f62e7efacf5838655642475` và config SHA
+`4c3596ff2c882dd5eab85893e6a91eb757394575`. Không build, migration, seed,
+reset, deploy, recreate container hoặc thay đổi named volume.
+
+### Phase 3A: read-only preflight
+
+Phase 3A hoàn tất ngày 2026-10-21:
+
+- đủ sáu container healthy, restart count `0`, `OOMKilled=false`; application và
+  volume identity khớp baseline Phase 2;
+- HTTPS frontend, `/api/` và `/nginx-health` trả `200`; HTTP redirect và TLS
+  verification pass từ EC2 và operator machine;
+- không có kernel OOM trong 24 giờ; `MemAvailable` khoảng 395 MiB, swap total
+  1023 MiB dùng khoảng 186 MiB, root disk dùng 35% và còn khoảng 12.3 GiB;
+- S3 runtime config đã enable; bucket, region và presigned TTL đều có giá trị,
+  custom endpoint không được cấu hình;
+- backend dùng static credentials của IAM user, không dùng instance role. Cấu
+  hình này đã được operator chấp nhận cho staging; IAM Role/IMDSv2 chỉ là cải
+  tiến hardening tùy chọn trong tương lai.
+
+Acceptance Phase 3A: **PASS**.
+
+### Phase 3B: S3 browser smoke và IAM least privilege
+
+Smoke chỉ dùng fixture ảnh synthetic 512x512 dưới 2 MiB và các dev account
+synthetic hiện có. Không chạy Browser E2E suite hiện tại vì suite có hook reset
+database. Script chẩn đoán một lần chỉ dùng UI/API production path, không được
+commit vào repository và không ghi login, cookie, object key, presigned URL hoặc
+presigned fields.
+
+Browser/API checks đã pass:
+
+- unauthenticated upload intent trả `401`; branch-scoped user được phép ở branch
+  đã gán, branch khác cùng tenant và cross-tenant đều trả `403`; tenant admin được
+  phép ở branch khác cùng tenant;
+- MIME không hỗ trợ trả `422`, generic image vượt 2 MiB trả `413`;
+- browser lấy upload intent `201` rồi POST trực tiếp tới S3 `204`; URL dùng HTTPS,
+  CORS trả đúng staging origin, server-generated key đúng tenant/branch prefix và
+  intent có TTL ngắn;
+- thay `Content-Type` hoặc object key trong signed POST đều bị S3 từ chối `403`;
+  raw unsigned object URL trả `403`;
+- avatar flow upload temp, `HeadObject`/copy, update profile và presigned GET đều
+  pass; frontend render được ảnh, download trả `200`, đúng MIME và SHA-256 bytes
+  khớp fixture; URL bỏ signature trả `403`;
+- xóa avatar qua UI trả profile về `avatarUrl=null`; signed URL cũ trả `404`, xác
+  nhận permanent avatar object đã bị xóa. Generic temp object của diagnostic
+  upload được để lại cho lifecycle; IAM user hiện không có quyền đọc lifecycle
+  configuration để xác minh độc lập từ CLI/API.
+
+Credential và IAM checks, chỉ xuất trạng thái `allowed/denied`:
+
+- STS xác nhận principal là IAM user; không ghi ARN, account ID hoặc access key;
+- application-required Put/Head/Get/Copy/Delete path đã pass qua browser/avatar
+  flow;
+- `ListBuckets`, bucket policy/public-access/encryption/CORS/lifecycle reads và
+  IAM self-inspection đều bị từ chối;
+- `ListObjectsV2` trên application bucket lại được phép. Application không dùng
+  quyền này, vì vậy IAM policy chưa đạt least privilege. Operator chấp nhận đây
+  là staging deviation và không coi là blocker của Phase 3;
+- không thể xác nhận access-key age/last-used hoặc policy document bằng principal
+  hiện tại vì các IAM read calls bị từ chối. Các mục này cần operator kiểm tra qua
+  AWS Console hoặc một audit principal read-only;
+- `/etc/dentflow/staging.env` có mode `0640`, thư mục cha `0750`. Static key vẫn
+  hiện diện trong container runtime environment, nên mọi principal có Docker
+  access trên EC2 có thể đọc được; giới hạn SSH/Docker access và rotation định kỳ
+  là bắt buộc khi còn dùng static credentials.
+
+Một browser run chẩn đoán đầu tiên dừng trước upload do locator không duy nhất và
+đóng context trước logout. Sau khi được duyệt, transaction có guard xác nhận đúng
+một active session của synthetic tenant-admin rồi revoke đúng row đó; active
+session của user này giảm từ `1` xuống `0`, tổng active session giảm từ `2` xuống
+`1`. Session còn lại thuộc synthetic user khác và không bị thay đổi. Run tiếp theo
+logout thành công. Không có credential/token/cookie được ghi lại.
+
+Postflight vẫn pass: sáu container healthy, restart count `0`, `OOMKilled=false`,
+container/data-volume identity không đổi, HTTPS/API pass, `MemAvailable` khoảng
+395 MiB, root disk dùng 35% và không có kernel OOM mới.
+
+Acceptance browser upload/download/authorization: **PASS**. Acceptance IAM least
+privilege: **ACCEPTED DEVIATION** cho quyền `s3:ListBucket`. Acceptance Phase 3B
+tổng thể: **PASS**. IAM policy, static credentials và S3 infrastructure giữ
+nguyên. Generic temp object được để lifecycle xử lý.
+
+### Phase 3C: automated PostgreSQL backup lên S3
+
+Phase 3C hoàn tất ngày 2026-10-21 bằng phương án S3 thay cho ổ D operator:
+
+- bucket riêng `dentflow-staging-pg-backups` ở `ap-southeast-1`, private, dùng
+  SSE-S3 (`AES256`) và lifecycle 30 ngày. Backup IAM user không có quyền đọc
+  bucket configuration; lifecycle/default-encryption/public-access settings được
+  operator xác nhận trên AWS Console, còn SSE-S3 được xác minh trực tiếp bằng
+  `HeadObject` và policy thực tế từ chối upload thiếu encryption header;
+- IAM user riêng `dentflow-staging-backup` chỉ list được prefix
+  `postgresql/staging/`, có quyền ghi/đọc object và hoàn tất/abort multipart cần
+  cho backup. Principal không list được bucket root hoặc toàn account, không đọc
+  IAM và không có `s3:DeleteObject`;
+- static backup credential nằm riêng tại `/etc/dentflow/backup.env`, owner
+  `root:root`, mode `0600`; không dùng lại `/etc/dentflow/staging.env`, không đưa
+  credential vào application container, command line, journal hoặc runbook;
+- script `/usr/local/sbin/dentflow-postgres-backup` có owner `root:root`, mode
+  `0750`. Service và timer nằm tại `/etc/systemd/system/` với mode `0644`; service
+  chạy root, `Nice=10`, best-effort I/O priority, có lock chống chạy trùng và
+  resource gate yêu cầu tối thiểu 300,000 KiB `MemAvailable`;
+- timer chạy lúc `02:30 Asia/Ho_Chi_Minh` mỗi ngày, `Persistent=true`. Chỉ sau khi
+  manual backup và toàn bộ postflight pass, timer mới được bật; trạng thái hiện là
+  `enabled` và `active`.
+
+Script dùng đúng `pg_dump 16.15`, custom format, Zstandard level 3, một process,
+`--no-owner`, `--no-privileges` và lock wait timeout 10 giây. Dump được stream qua
+FIFO đồng thời tính SHA-256 và upload trực tiếp bằng HTTPS với SSE-S3; không có
+plaintext dump file trên EC2. Sau upload, script kiểm tra object size/encryption,
+stream object từ S3 về để tính lại SHA-256 và chạy `pg_restore --list` bằng
+`postgres:16-alpine` one-off container có `--network none`, read-only filesystem,
+không mount volume. File `.sha256` chỉ được upload sau khi cả checksum và
+readability check pass. Nếu verification fail, không có success sidecar; object
+chưa hoàn chỉnh được lifecycle xử lý vì backup principal cố ý không có quyền xóa.
+
+Manual backup đầu tiên pass:
+
+- source database size 11,451,415 bytes; archive 175,091 bytes;
+- `pg_dump`, upload, `HeadObject`, SSE-S3, tải lại, SHA-256 byte-for-byte và
+  `pg_restore --list` đều pass; independent verification sau service cũng pass;
+- không còn thư mục temp trong `/run`; không ghi plaintext dump xuống EC2 hoặc
+  operator machine;
+- sáu staging container vẫn healthy, restart count `0`, `OOMKilled=false`;
+  PostgreSQL container và named volume `dentflow-staging_postgres_data` giữ nguyên
+  identity; HTTPS frontend và API đều trả `200`;
+- postflight ghi nhận `MemAvailable` khoảng 387 MiB, swap dùng khoảng 169 MiB,
+  root disk dùng 35% và không có kernel OOM mới.
+
+Kiểm tra vận hành mà không in credential:
+
+```bash
+sudo systemctl status dentflow-postgres-backup.timer --no-pager
+sudo systemctl list-timers dentflow-postgres-backup.timer --no-pager
+sudo systemctl status dentflow-postgres-backup.service --no-pager
+sudo journalctl -u dentflow-postgres-backup.service --since '2 days ago' --no-pager
+```
+
+Một run thành công phải có `status=PASS`, service `Result=success`, object `.dump`
+và sidecar `.sha256` cùng SSE-S3. Khi fail, xem `stage`/`reason` trong journal;
+không tự chạy migration, reset, restore hoặc xóa object để xử lý lỗi. Credential
+rotation phải thay atomic file `backup.env` bằng quyền `0600`, xác minh STS đúng
+backup user rồi chạy manual service trước khi giữ timer active.
+
+Nguồn tái lập cho EC2 mới nằm tại `deploy/postgres-backup/`, gồm backup script,
+systemd service/timer, environment example, AWS policy/lifecycle templates,
+installer và acceptance verifier. Các file này không chứa credential. Installer
+chỉ cài file sau khi kiểm tra IAM boundary và luôn giữ timer disabled; verifier
+chỉ bật timer với option `--enable-timer` sau khi manual backup cùng toàn bộ
+resource, HTTPS/API, container và volume gates pass. Xem
+`deploy/postgres-backup/README.md` để cài mới, rotate key và kiểm tra drift.
+
+Việc thêm nguồn tái lập không tự reconcile hoặc deploy lại EC2 hiện tại. Khi cần
+đưa instance đang chạy về đúng bản trong repository, phải dùng maintenance window,
+disable timer, review diff/checksum, chạy installer và lặp lại manual acceptance;
+không copy credential hoặc file runtime ngược vào repository.
+
+Acceptance Phase 3C: **PASS**. Phase 3D sẽ tải backup này từ S3 để restore trong
+Docker local cô lập; tuyệt đối không restore trên EC2 staging.

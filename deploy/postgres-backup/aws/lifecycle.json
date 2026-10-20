@@ -1,0 +1,17 @@
+{
+  "Rules": [
+    {
+      "ID": "ExpireStagingPostgresBackups",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "postgresql/staging/"
+      },
+      "Expiration": {
+        "Days": 30
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    }
+  ]
+}
