@@ -31,7 +31,7 @@ compose=(
 
 # Fail if the public domain requested by the operator differs from the value
 # injected into the edge services. No environment-file value is printed.
-"${compose[@]}" run --rm --no-deps --entrypoint /bin/sh certbot \
+"${compose[@]}" run --rm --no-deps --interactive=false --entrypoint /bin/sh certbot \
   -c 'test "$STAGING_DOMAIN" = "$1"' sh "$domain"
 
 "${compose[@]}" up -d --no-deps --wait --wait-timeout 120 nginx certbot
@@ -47,13 +47,13 @@ else
   content="dentflow-acme-$token"
 
   cleanup_challenge() {
-    "${compose[@]}" run --rm --no-deps --entrypoint /bin/sh certbot \
+    "${compose[@]}" run --rm --no-deps --interactive=false --entrypoint /bin/sh certbot \
       -c 'rm -f "/var/www/certbot/.well-known/acme-challenge/$1"' sh "$token" \
       >/dev/null 2>&1 || true
   }
   trap cleanup_challenge EXIT
 
-  "${compose[@]}" run --rm --no-deps --entrypoint /bin/sh certbot \
+  "${compose[@]}" run --rm --no-deps --interactive=false --entrypoint /bin/sh certbot \
     -c 'set -eu; mkdir -p /var/www/certbot/.well-known/acme-challenge; umask 022; printf "%s" "$2" > "/var/www/certbot/.well-known/acme-challenge/$1"' \
     sh "$token" "$content"
 
@@ -67,10 +67,10 @@ else
 
   # One explicit attempt only. A failure stops the deployment instead of
   # repeatedly hitting Let's Encrypt issuance limits.
-  "${compose[@]}" run --rm --no-deps --entrypoint /bin/sh certbot \
+  "${compose[@]}" run --rm --no-deps --interactive=false --entrypoint /bin/sh certbot \
     -c 'exec certbot certonly --webroot --webroot-path /var/www/certbot --cert-name "$STAGING_DOMAIN" --domain "$STAGING_DOMAIN" --email "$CERTBOT_EMAIL" --agree-tos --no-eff-email --non-interactive --keep-until-expiring --deploy-hook "date -u +%s > /var/www/certbot/.nginx-reload"' sh
 
-  "${compose[@]}" run --rm --no-deps --entrypoint /bin/sh certbot \
+  "${compose[@]}" run --rm --no-deps --interactive=false --entrypoint /bin/sh certbot \
     -c 'date -u +%s > /var/www/certbot/.nginx-reload'
   issued_certificate=true
   cleanup_challenge
@@ -88,7 +88,7 @@ done
 if [[ "$issued_certificate" == true ]]; then
   # Validate the renewal path once after first issuance. Normal renewal is
   # handled by the long-running certbot service every twelve hours.
-  "${compose[@]}" run --rm --no-deps --entrypoint /bin/sh certbot \
+  "${compose[@]}" run --rm --no-deps --interactive=false --entrypoint /bin/sh certbot \
     -c 'exec certbot renew --cert-name "$STAGING_DOMAIN" --webroot --webroot-path /var/www/certbot --dry-run' sh
 fi
 
