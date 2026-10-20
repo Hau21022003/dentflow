@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# This script is invoked from an SSH heredoc. Detach its stdin so Docker
+# Compose helpers cannot consume commands that the parent shell has not read.
+exec </dev/null
+
 domain="${1:-staging.lephuchau.online}"
 app_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 env_file="${STAGING_ENV_FILE:-/etc/dentflow/staging.env}"
