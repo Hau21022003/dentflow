@@ -73,7 +73,8 @@
     "required": "Hãy chọn một tệp.",
     "type": "Chỉ hỗ trợ JPG, PNG, WebP hoặc PDF.",
     "size": "Tệp phải có dung lượng từ 1 byte đến 10 MB.",
-    "dateRequired": "Hãy chọn ngày chụp hoặc ngày tạo."
+    "dateRequired": "Hãy chọn ngày chụp hoặc ngày tạo.",
+    "dateFuture": "Ngày chụp hoặc ngày tạo không được sau ngày hiện tại."
   },
   "states": {
     "emptyTitle": "Chưa có tệp nào",

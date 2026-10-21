@@ -73,7 +73,8 @@
     "required": "Choose a file.",
     "type": "Only JPG, PNG, WebP, or PDF files are supported.",
     "size": "The file must be between 1 byte and 10 MB.",
-    "dateRequired": "Choose the captured or created date."
+    "dateRequired": "Choose the captured or created date.",
+    "dateFuture": "The captured or created date cannot be in the future."
   },
   "states": {
     "emptyTitle": "No files yet",

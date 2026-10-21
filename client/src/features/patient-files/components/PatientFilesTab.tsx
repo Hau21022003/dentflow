@@ -1,3 +1,11 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  FormDialog,
+  RHFSelect,
+  type RHFSelectOption,
+  RHFTextField,
+  RHFTextarea,
+} from "@/components/form";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +24,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
@@ -35,8 +41,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
-import { Textarea } from "@/components/ui/textarea";
 import {
   addDaysInTimeZone,
   todayInTimeZone,
@@ -59,7 +63,7 @@ import {
   type PatientFileCategory,
   type PatientFileListQuery,
 } from "@/features/patient-files/patient-files.types";
-import { getErrorMessage } from "@/shared/lib/error";
+import { getErrorMessage, handleApiError } from "@/shared/lib/error";
 import { idempotencyKeyForIntent } from "@/shared/lib/idempotency";
 import { localeForLanguage } from "@/shared/lib/money";
 import {
@@ -89,9 +93,11 @@ import {
   useRef,
   useState,
 } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { z } from "zod";
 
 const ALL = "__all__";
 const PAGE_SIZE = 24;
@@ -147,6 +153,13 @@ function sortForPreset(
   };
 }
 
+type PatientFileFormValues = {
+  category: PatientFileCategory;
+  fileDate: string;
+  note: string;
+  uploadFile: File | null;
+};
+
 function PatientFileFormDialog({
   file,
   open,
@@ -161,35 +174,118 @@ function PatientFileFormDialog({
   timeZone: string;
 }) {
   const { t } = useTranslation("patientFiles");
+  const { t: tValidation } = useTranslation("validation");
   const inputRef = useRef<HTMLInputElement>(null);
   const createMutation = useCreatePatientFileMutation();
   const updateMutation = useUpdatePatientFileMutation();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [category, setCategory] = useState<PatientFileCategory>(
-    file?.category ?? "CLINICAL_PHOTO",
+  const maxFileDate = todayInTimeZone(timeZone);
+  const defaultValues = useMemo<PatientFileFormValues>(
+    () => ({
+      category: file?.category ?? "CLINICAL_PHOTO",
+      fileDate: file?.fileDate ?? maxFileDate,
+      note: file?.note ?? "",
+      uploadFile: null,
+    }),
+    [file, maxFileDate],
   );
-  const [note, setNote] = useState(file?.note ?? "");
-  const [fileDate, setFileDate] = useState(
-    file?.fileDate ?? todayInTimeZone(timeZone),
+  const categoryOptions = useMemo(
+    () =>
+      PATIENT_FILE_CATEGORIES.map((value) => ({
+        label: t(`categories.${value}`),
+        value,
+      })) satisfies RHFSelectOption[],
+    [t],
   );
-  const [error, setError] = useState("");
+  const schema = useMemo(
+    () =>
+      z
+        .object({
+          category: z.enum(PATIENT_FILE_CATEGORIES),
+          fileDate: z
+            .string()
+            .min(1, t("validation.dateRequired"))
+            .refine(
+              (value) => value === "" || value <= maxFileDate,
+              t("validation.dateFuture"),
+            ),
+          note: z
+            .string()
+            .max(
+              500,
+              tValidation("maxLength", {
+                field: t("fields.note"),
+                max: 500,
+              }),
+            ),
+          uploadFile: z.custom<File | null>(
+            (value) => value === null || value instanceof File,
+          ),
+        })
+        .superRefine((values, context) => {
+          if (!file && !values.uploadFile) {
+            context.addIssue({
+              code: "custom",
+              message: t("validation.required"),
+              path: ["uploadFile"],
+            });
+            return;
+          }
+
+          if (!values.uploadFile) return;
+          if (
+            !PATIENT_FILE_CONTENT_TYPES.includes(
+              values.uploadFile
+                .type as (typeof PATIENT_FILE_CONTENT_TYPES)[number],
+            )
+          ) {
+            context.addIssue({
+              code: "custom",
+              message: t("validation.type"),
+              path: ["uploadFile"],
+            });
+          }
+          if (
+            values.uploadFile.size < 1 ||
+            values.uploadFile.size > PATIENT_FILE_MAX_BYTES
+          ) {
+            context.addIssue({
+              code: "custom",
+              message: t("validation.size"),
+              path: ["uploadFile"],
+            });
+          }
+        }),
+    [file, maxFileDate, t, tValidation],
+  );
+  const {
+    clearErrors,
+    control,
+    formState: { errors, isDirty },
+    handleSubmit,
+    reset,
+    setError,
+    setValue,
+  } = useForm<PatientFileFormValues>({
+    defaultValues,
+    resolver: zodResolver(schema),
+  });
+  const selectedFile = useWatch({ control, name: "uploadFile" });
+  const note = useWatch({ control, name: "note" });
+
+  useEffect(() => {
+    if (!open) return;
+    reset(defaultValues);
+    if (inputRef.current) inputRef.current.value = "";
+  }, [defaultValues, open, reset]);
 
   function chooseFile(candidate: File | null) {
-    setError("");
-    if (!candidate) return setSelectedFile(null);
-    if (
-      !PATIENT_FILE_CONTENT_TYPES.includes(
-        candidate.type as (typeof PATIENT_FILE_CONTENT_TYPES)[number],
-      )
-    ) {
-      setError(t("validation.type"));
-      return;
-    }
-    if (candidate.size < 1 || candidate.size > PATIENT_FILE_MAX_BYTES) {
-      setError(t("validation.size"));
-      return;
-    }
-    setSelectedFile(candidate);
+    if (!candidate) return;
+    clearErrors("root.server");
+    setValue("uploadFile", candidate, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
   }
 
   function onDrop(event: DragEvent<HTMLDivElement>) {
@@ -197,39 +293,49 @@ function PatientFileFormDialog({
     chooseFile(event.dataTransfer.files?.[0] ?? null);
   }
 
-  async function submit() {
-    setError("");
-    if (!file && !selectedFile) return setError(t("validation.required"));
-    if (!fileDate) return setError(t("validation.dateRequired"));
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      reset(defaultValues);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+    onOpenChange(nextOpen);
+  }
+
+  async function submit(values: PatientFileFormValues) {
+    const note = values.note.trim() || null;
     try {
       if (file) {
         const intent = idempotencyKeyForIntent(null, {
           operation: "clinical.patient-file.update",
           ...scope,
           fileId: file.id,
-          category,
+          category: values.category,
           note,
-          fileDate,
+          fileDate: values.fileDate,
         });
         await updateMutation.mutateAsync({
           ...scope,
           fileId: file.id,
           idempotencyKey: intent.key,
-          input: { category, note: note.trim() || null, fileDate },
+          input: {
+            category: values.category,
+            note,
+            fileDate: values.fileDate,
+          },
         });
         toast.success(t("feedback.updated"));
       } else {
         const uploaded = await uploadTemporaryPatientFile({
           tenantSlug: scope.tenantSlug,
           branchSlug: scope.branchSlug,
-          file: selectedFile!,
+          file: values.uploadFile!,
         });
         const input = {
           objectKey: uploaded.objectKey,
-          originalFileName: selectedFile!.name,
-          category,
-          note: note.trim() || null,
-          fileDate,
+          originalFileName: values.uploadFile!.name,
+          category: values.category,
+          note,
+          fileDate: values.fileDate,
         };
         const intent = idempotencyKeyForIntent(null, {
           operation: "clinical.patient-file.create",
@@ -245,37 +351,50 @@ function PatientFileFormDialog({
       }
       onOpenChange(false);
     } catch (caught) {
-      setError(getErrorMessage(caught));
+      handleApiError<PatientFileFormValues>({ error: caught, setError });
     }
   }
 
   const pending = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>
-            {file ? t("edit.title") : t("upload.title")}
-          </DialogTitle>
-          <DialogDescription>
-            {file ? t("edit.description") : t("upload.description")}
-          </DialogDescription>
-        </DialogHeader>
+    <FormDialog
+      cancelText={t("actions.cancel")}
+      contentClassName="sm:max-w-xl"
+      description={file ? t("edit.description") : t("upload.description")}
+      isDirty={isDirty}
+      isSubmitting={pending}
+      noValidate
+      onOpenChange={handleOpenChange}
+      onSubmit={handleSubmit(submit)}
+      open={open}
+      submitText={file ? t("actions.save") : t("actions.upload")}
+      title={file ? t("edit.title") : t("upload.title")}
+    >
+      <div className="space-y-5">
+        {errors.root?.server?.message && (
+          <Alert variant="destructive">{errors.root.server.message}</Alert>
+        )}
 
-        <div className="space-y-5">
-          {!file && (
+        {!file && (
+          <div>
             <div
-              className="grid min-h-40 place-items-center rounded-xl border border-dashed border-primary/40 bg-primary/[0.03] p-5 text-center"
+              aria-describedby={
+                errors.uploadFile?.message
+                  ? "patient-file-upload-error"
+                  : undefined
+              }
+              aria-invalid={Boolean(errors.uploadFile)}
+              className="grid min-h-40 place-items-center rounded-xl border border-dashed border-primary/40 bg-primary/[0.03] p-5 text-center aria-invalid:border-destructive"
               onDragOver={(event) => event.preventDefault()}
               onDrop={onDrop}
             >
-              <div className="space-y-3">
+              <div className="min-w-0 space-y-3">
                 <span className="mx-auto grid size-10 place-items-center rounded-full bg-primary/10 text-primary">
                   <Upload aria-hidden="true" className="size-5" />
                 </span>
                 {selectedFile ? (
-                  <div>
+                  <div className="min-w-0">
                     <p className="max-w-sm truncate font-medium">
                       {selectedFile.name}
                     </p>
@@ -301,7 +420,11 @@ function PatientFileFormDialog({
                   type="file"
                 />
                 <Button
-                  onClick={() => inputRef.current?.click()}
+                  onClick={() => {
+                    if (!inputRef.current) return;
+                    inputRef.current.value = "";
+                    inputRef.current.click();
+                  }}
                   type="button"
                   variant="outline"
                 >
@@ -309,86 +432,52 @@ function PatientFileFormDialog({
                 </Button>
               </div>
             </div>
-          )}
-
-          <div className="space-y-2">
-            <label
-              className="text-sm font-medium"
-              htmlFor="patient-file-category"
-            >
-              {t("fields.category")} <span className="text-destructive">*</span>
-            </label>
-            <Select
-              onValueChange={(value) =>
-                setCategory(value as PatientFileCategory)
-              }
-              value={category}
-            >
-              <SelectTrigger id="patient-file-category">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PATIENT_FILE_CATEGORIES.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(`categories.${value}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {errors.uploadFile?.message && (
+              <p
+                className="mt-2 text-xs text-destructive"
+                id="patient-file-upload-error"
+              >
+                {errors.uploadFile.message}
+              </p>
+            )}
           </div>
+        )}
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="patient-file-note">
-              {t("fields.note")}
-            </label>
-            <Textarea
-              id="patient-file-note"
-              maxLength={500}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder={t("fields.notePlaceholder")}
-              value={note}
-            />
-            <p className="text-right text-xs text-muted-foreground">
-              {note.length}/500
-            </p>
-          </div>
+        <RHFSelect
+          control={control}
+          fullWidth
+          label={t("fields.category")}
+          name="category"
+          options={categoryOptions}
+          required
+        />
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="patient-file-date">
-              {t("fields.fileDate")} <span className="text-destructive">*</span>
-            </label>
-            <Input
-              id="patient-file-date"
-              max={todayInTimeZone(timeZone)}
-              onChange={(event) => setFileDate(event.target.value)}
-              type="date"
-              value={fileDate}
-            />
-          </div>
-
-          {error && <Alert variant="destructive">{error}</Alert>}
+        <div>
+          <RHFTextarea
+            className="min-h-28"
+            control={control}
+            fullWidth
+            label={t("fields.note")}
+            maxLength={500}
+            name="note"
+            placeholder={t("fields.notePlaceholder")}
+          />
+          <p className="mt-1 text-right text-xs text-muted-foreground">
+            {note.length}/500
+          </p>
         </div>
 
-        <DialogFooter>
-          <Button
-            disabled={pending}
-            onClick={() => onOpenChange(false)}
-            type="button"
-            variant="outline"
-          >
-            {t("actions.cancel")}
-          </Button>
-          <Button
-            disabled={pending}
-            onClick={() => void submit()}
-            type="button"
-          >
-            {pending && <Spinner aria-label={t("actions.saving")} />}
-            {file ? t("actions.save") : t("actions.upload")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <RHFTextField
+          control={control}
+          fullWidth
+          label={t("fields.fileDate")}
+          max={maxFileDate}
+          name="fileDate"
+          required
+          type="date"
+        />
+      </div>
+    </FormDialog>
   );
 }
 
