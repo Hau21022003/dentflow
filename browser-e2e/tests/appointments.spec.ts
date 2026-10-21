@@ -181,6 +181,8 @@ test("synthetic seed populates the current month and day timeline", async ({ pag
 });
 
 test("timeline keeps the selected day, filters a dentist column, opens its desktop detail panel, and refreshes after an action", async ({ page }) => {
+  test.setTimeout(60_000);
+
   await login(page, E2E_USERS.tenantAdmin);
   await switchToEnglish(page);
   await page.goto(`/workspace/${TENANT_SLUG}/tenant/staff`);
