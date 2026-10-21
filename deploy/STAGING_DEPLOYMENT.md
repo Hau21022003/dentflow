@@ -1,16 +1,17 @@
 # Bàn giao triển khai DentFlow staging
 
-> Tài liệu này ghi nhận trạng thái staging trên branch `docker-cicd` đến ngày
-> 2026-10-21. Không ghi credentials, private key hoặc giá trị secret vào đây.
-> Staging vẫn deploy từ `docker-cicd`; chỉ chuyển cả CI và CD sang `master` sau
-> khi application, Dockerfiles và Compose đã được merge vào `master` qua review.
+> Tài liệu này ghi nhận trạng thái staging đến ngày 2026-10-21. Không ghi
+> credentials, private key hoặc giá trị secret vào đây. Sau cutover, `master` là
+> nguồn duy nhất cho CI, image build và deployment staging; các SHA/run cũ bên
+> dưới được giữ lại làm bằng chứng vận hành trước cutover.
 
 ## Trạng thái hiện tại
 
 - Docker và Docker Compose đã được cài trên EC2 Ubuntu 24.04 `t3.micro` 1 GB RAM;
   SSH và Docker hiện hoạt động ổn định sau sự cố tài nguyên.
-- Repository đã được clone tại `/opt/dentflow`; staging target vẫn là branch
-  `docker-cicd`, không phải `master`.
+- Repository đã được clone tại `/opt/dentflow`; cấu hình cutover đổi staging target
+  sang branch `master`. Thay đổi có hiệu lực sau khi PR cutover được merge và CI
+  push của merge commit thành công.
 - S3 hiện dùng một IAM user qua cặp static AWS credentials trong
   `/etc/dentflow/staging.env`; backend container nhận cùng credentials qua runtime
   environment. File env có mode `0640`, thư mục cha có mode `0750`, và giá trị
@@ -21,8 +22,8 @@
 - Docker build trực tiếp trên EC2 đã chạy hơn hai giờ, sau đó EC2 mất SSH và
   Instance Status Check failed. Build trên EC2 đã được loại khỏi quy trình;
   trạng thái `2/2` trên AWS Console vẫn cần được kiểm tra định kỳ riêng.
-- Ba GitHub Actions secrets đã được cấu hình. Workflow CD đã được bootstrap lên
-  `master`, còn Compose và application staging vẫn ở `docker-cicd`.
+- Ba GitHub Actions secrets đã được cấu hình. Workflow CI/CD, Compose và
+  application staging hiện cùng được quản lý từ `master` sau cutover.
 - Manual CD run `39293268686` đã thành công cho commit
   `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`: build/push GHCR, pull trên EC2,
   migration, recreate application, healthcheck và OCI revision verification đều
@@ -42,7 +43,7 @@
   restart count `0` và `OOMKilled=false`. Hai named volumes PostgreSQL/Redis giữ
   nguyên identity, không bị xóa hoặc recreate trong deploy.
 - Hotfix ngăn migration container tiêu thụ phần còn lại của SSH heredoc đã merge
-  vào `master` qua PR #8 và `docker-cicd` qua PR #9.
+  vào `master` qua PR #8; bản trên branch triển khai cũ từng được đưa qua PR #9.
 - Current successful SHA là `c8bb78d59ec9555b7f62e7efacf5838655642475`;
   previous successful SHA là `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`.
 - Edge-only CD run `39398441286` đã hoàn tất Phase 1 với config SHA
@@ -81,11 +82,11 @@ kiểm tra trạng thái và cấu hình swap; không build trên EC2.
 ## Kiến trúc staging
 
 ```text
-Pull request vào docker-cicd
+Pull request vào master
   `-> CI: backend unit/build + frontend lint/build + Browser E2E
       `-> không deploy từ pull_request
 
-Push/merge vào docker-cicd
+Push/merge vào master
   `-> CI push thành công
       `-> Deploy Staging trên default branch
           |-> resolve đúng CI workflow, branch tip và head SHA
@@ -135,9 +136,9 @@ project name, không dùng `down -v`, không xóa hoặc recreate volumes.
 
 ## CI
 
-`.github/workflows/browser-e2e.yml` vẫn là workflow CI riêng và không được sửa
-trong thay đổi này. Workflow chạy khi push hoặc có pull request nhắm
-`docker-cicd`, dùng PostgreSQL/Redis service containers và thực hiện:
+`.github/workflows/browser-e2e.yml` là workflow `CI`. Workflow chạy khi push hoặc
+có pull request nhắm `master`, dùng PostgreSQL/Redis service containers và thực
+hiện:
 
 1. cài dependencies bằng `npm ci`;
 2. backend unit tests;
@@ -156,16 +157,16 @@ dùng để deploy.
 
 ### Resolve
 
-- `workflow_run` chỉ nhận branch `docker-cicd` và chỉ tiếp tục khi conclusion là
+- `workflow_run` chỉ nhận branch `master` và chỉ tiếp tục khi conclusion là
   `success`, event là `push`, head repository đúng repository hiện tại.
 - Workflow ID được lấy từ path cố định `.github/workflows/browser-e2e.yml` và
   đối chiếu lại với Actions run. Việc này tránh tin vào display name `CI` đơn
-  thuần; trigger chấp nhận cả tên hiện tại và tên cũ đang đăng ký trên `master`.
+  thuần.
 - `head_sha` phải là full 40-character SHA và phải vẫn là tip hiện tại của
-  `docker-cicd`. Nếu branch tiến thêm commit, run cũ bị từ chối và CD chờ CI mới.
-- Manual `workflow_dispatch` phải chạy từ workflow definition trên `master`, chỉ
-  nhận `ref=docker-cicd`, resolve branch tip và tìm đúng successful push CI run
-  của workflow ID và SHA đó.
+  `master`. Nếu branch tiến thêm commit, run cũ bị từ chối và CD chờ CI mới.
+- Manual `workflow_dispatch` phải chạy từ workflow definition trên `master`.
+  Workflow không nhận input branch; nó luôn resolve tip `master` và yêu cầu đúng
+  successful push CI run của workflow ID và SHA đó.
 
 ### Build và publish
 
@@ -182,8 +183,8 @@ Không publish hoặc deploy tag `latest`.
 
 ### Deploy trên EC2
 
-CD yêu cầu `/opt/dentflow` sạch, fetch `docker-cicd`, xác minh
-`origin/docker-cicd` vẫn đúng resolved SHA và checkout detached SHA đó. Sau đó:
+CD yêu cầu `/opt/dentflow` sạch, fetch `master`, xác minh `origin/master` vẫn đúng
+resolved SHA và checkout detached SHA đó. Sau đó:
 
 1. validate Compose với `DENTFLOW_IMAGE_TAG=<resolved-sha>`;
 2. pull backend/frontend images;
@@ -228,38 +229,30 @@ SSH host key hiện vẫn được thu thập bằng `ssh-keyscan` lúc chạy. 
 giản cho staging nhưng không xác minh fingerprint out-of-band; có thể chuyển sang
 pinned known-host secret trong một hardening change riêng.
 
-## Bootstrap CD lên `master` (đã thực hiện)
+## Cutover CI/CD sang `master`
 
-`workflow_run` và nút `workflow_dispatch` chỉ hoạt động khi
-`.github/workflows/deploy-staging.yml` tồn tại trên default branch. Không cần
-merge application hoặc Compose vào `master`; chỉ bootstrap cùng bản workflow CD
-đã review.
+`workflow_run` và nút `workflow_dispatch` chỉ hoạt động từ workflow definition trên
+default branch. Application, Dockerfiles, Compose và workflow đã được merge vào
+`master`, nên cutover bỏ hoàn toàn dependency vào branch triển khai cũ:
 
-Thứ tự đề xuất:
+1. CI chỉ nhận push và pull request nhắm `master`.
+2. Automatic CD chỉ nhận successful CI `push` run có `head_branch=master`.
+3. Manual CD không cho chọn ref; workflow luôn resolve tip `master` và xác minh tip
+   đó có successful CI push run trước khi deploy.
+4. EC2 fetch `master`, đối chiếu `origin/master` với resolved SHA rồi checkout
+   detached SHA. Image tag, OCI revision, migration và state file vẫn dùng cùng
+   immutable full SHA.
+5. Commit cutover có thay đổi workflow nên được phân loại `full`. Runbook
+   `deploy/STAGING_DEPLOYMENT.md` là path trung tính để không làm commit bị nhận
+   nhầm là mixed edge/application.
 
-1. Khôi phục EC2 và xác nhận Instance Status Checks đạt `2/2`.
-2. Kiểm tra SSH, `free -h`, `swapon --show`, `df -h`, `docker version`,
-   `docker compose version`, `docker ps -a`; không chạy Docker build.
-3. Xác nhận `/opt/dentflow` sạch, deploy user dùng Docker không cần mật khẩu tương
-   tác và `/etc/dentflow/staging.env` còn owner/permissions hạn chế.
-4. Thêm ba GitHub Secrets ở trên.
-5. Qua pull request/review riêng, đưa đúng bản `deploy-staging.yml` này lên
-   `master`. Không đưa application changes vào PR bootstrap.
-6. Commit/push ba file implementation đã duyệt lên `docker-cicd` theo workflow
-   review hiện có.
-7. Chờ CI push của commit mới pass. SHA cũ không thay thế CI cho commit mới.
-8. Chạy `Deploy Staging` từ workflow trên `master`, input
-   `ref=docker-cicd`; hoặc để lần push CI thành công tiếp theo tự kích hoạt.
-9. Xác nhận hai GHCR packages/tags được tạo, rồi kiểm tra deployment logs và
-   post-deploy checklist.
+Sau khi merge PR cutover, chờ CI push trên merge commit pass và xác nhận automatic
+`Deploy Staging` chạy `full`. Chỉ dùng `workflow_dispatch` từ `master` để retry cùng
+tip sau khi nguyên nhân lỗi đã được xử lý; SHA cũ hoặc CI pull request không thay
+thế được CI push cho tip hiện tại.
 
-Workflow file chạy trên `master`, nhưng source, Dockerfiles, Compose và image đều
-được lấy từ verified SHA trên `docker-cicd`.
-
-Bootstrap workflow và ba repository secrets đã hoàn tất. Manual CD run
-`39293268686` đã xác nhận đường build/push/pull/deploy ban đầu. Automatic path
-cũng đã được xác nhận bằng CI push run `39297680549` attempt 2 và `workflow_run`
-CD run `39304553130`, cùng deploy full SHA
+Các run `39293268686`, `39297680549` và `39304553130` là acceptance lịch sử trước
+cutover, cùng xác nhận đường build/push/pull/deploy cho SHA
 `c8bb78d59ec9555b7f62e7efacf5838655642475`.
 
 ## Migration và seed
@@ -372,7 +365,7 @@ pass; không reset database hoặc restore vào staging để thử nghiệm.
 - [x] Workflow CD đã được review và tồn tại trên `master`.
 - [x] Ba GitHub Secrets tồn tại và `GITHUB_TOKEN` đã build/push/pull GHCR thành
   công.
-- [x] CI push run `39297680549` attempt 2 thành công tại tip `docker-cicd`
+- [x] CI push run `39297680549` attempt 2 thành công tại tip branch triển khai cũ
   `c8bb78d59ec9555b7f62e7efacf5838655642475`; backend pass 70 tests và Browser
   E2E pass đủ 58/58. Attempt 1 bị hủy thủ công sau khi mới pass 13/58.
 - [x] Automatic CD run `39304553130` resolve đúng workflow ID/path, event `push`,
@@ -403,16 +396,20 @@ pass; không reset database hoặc restore vào staging để thử nghiệm.
   không restore vào staging và không còn container/file backup local sau drill.
 - [x] Đã thu baseline RAM, swap, disk, Docker restart/OOM sau deploy. Tiếp tục
   checklist thủ công; CloudWatch alarms tạm hoãn và không cài CloudWatch Agent.
+- [ ] Sau khi merge cutover, CI push tại tip `master` pass và automatic
+  `Deploy Staging` được phân loại `full`.
+- [ ] Ghi nhận full SHA mới; xác nhận EC2 checkout, hai OCI revisions, state file,
+  HTTPS/API, container health và volume identity cùng pass sau cutover.
 
-## Chuyển staging sang `master` sau này
+## Trạng thái cutover sang `master`
 
-Không thực hiện trong giai đoạn này. Chỉ sau khi staging ổn định và application
-merge vào `master` được duyệt mới đổi CI/CD branch filters và guards từ
-`docker-cicd` sang `master`.
+Cấu hình repository đã sẵn sàng để `master` trở thành source branch duy nhất.
+Không giữ fallback sang branch triển khai cũ. Cutover chỉ được xem là hoàn tất về
+mặt vận hành sau khi hai mục acceptance chưa đánh dấu ở checklist trên cùng pass.
 
 ## Phase 1: edge-only Nginx + Certbot trong Docker Compose
 
-Phần này là runbook triển khai đã được code hoá nhưng **chưa chạy**. Edge dùng file
+Phần này là runbook triển khai đã được code hoá và đã chạy acceptance. Edge dùng file
 `docker-compose.edge.yml` bổ sung vào project Compose hiện hữu
 `dentflow-staging`. Nginx và Certbot là hai service mới; PostgreSQL, Redis,
 backend và frontend vẫn do `docker-compose.staging.yml` quản lý. Hai certificate
@@ -426,33 +423,34 @@ port. Trong Docker network, Nginx resolve động `frontend:80` và `backend:300
 không ghi IP container. `/api/` bỏ prefix khi proxy tới backend và giữ rule
 `proxy_cookie_path /auth /api/auth`.
 
-### Tách phần cần đưa lên `master` và `docker-cicd`
+### Phân loại edge-only trên `master`
 
-- `.github/workflows/deploy-staging.yml` phải được review và cập nhật riêng trên
-  `master` trước, vì GitHub chỉ dùng workflow `workflow_run` từ default branch.
-  Commit bootstrap workflow này không phải edge commit và không được ghép vào
-  commit edge trên `docker-cicd`.
-- `docker-compose.edge.yml`, `deploy/nginx/*`, hai script edge và phần runbook này
-  mới thuộc commit edge trên `docker-cicd`. Không đưa thay đổi application vào
-  commit đó.
-- Nếu `.github/workflows/deploy-staging.yml` xuất hiện cùng edge files trong commit
-  `docker-cicd`, bộ phân loại coi đó là mixed edge/application và fail closed. Vì
-  vậy phải tách hai thay đổi trên thành hai PR/commit được review độc lập sau khi
-  kết thúc review local.
+- Tất cả thay đổi sau cutover đều đi qua `master`; không còn tách workflow và edge
+  files theo branch.
+- `docker-compose.edge.yml`, `deploy/nginx/*` và hai script edge là các path kích
+  hoạt `edge-only`. Không đưa thay đổi application hoặc workflow vào cùng commit
+  edge.
+- `deploy/STAGING_DEPLOYMENT.md` là path trung tính: được phép đi cùng commit edge
+  nhưng tự nó không làm commit trở thành `edge-only`. Nhờ đó commit cutover chứa
+  workflow + runbook vẫn được phân loại `full` thay vì mixed.
+- Nếu một commit có cả edge path thực thi và non-edge path, bộ phân loại vẫn fail
+  closed; phải tách thành các commit/PR được review độc lập.
 
 Workflow có ba lựa chọn manual: `auto`, `full`, `edge-only`. Hai giá trị cụ thể là
 assertion, không phải override; khác kết quả phân loại sẽ fail. Automatic deployment
 dùng `auto`. Commit trộn edge path và non-edge path cũng fail để buộc tách deploy.
 GitHub runner phân loại file của commit; EC2 kiểm tra lại toàn bộ diff từ
-`config_sha` đang checkout đến target SHA. Edge-only chỉ chấp nhận:
+`config_sha` đang checkout đến target SHA. Các path kích hoạt edge-only là:
 
 ```text
 docker-compose.edge.yml
 deploy/nginx/*
 deploy/scripts/bootstrap-staging-tls.sh
 deploy/scripts/check-staging-edge.sh
-deploy/STAGING_DEPLOYMENT.md
 ```
+
+Runbook `deploy/STAGING_DEPLOYMENT.md` được phép đi kèm như path trung tính; EC2
+vẫn fail nếu diff edge-only chứa bất kỳ path nào ngoài danh sách trên và runbook.
 
 Chỉ `full` chạy Buildx, push/pull application image và migration; full giữ nguyên
 pipeline application cũ và không recreate Nginx/Certbot. Edge-only không đăng nhập

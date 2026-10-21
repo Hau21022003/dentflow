@@ -2,19 +2,11 @@ name: Deploy Staging
 
 on:
   workflow_run:
-    # The default branch still registers the existing workflow under its old
-    # name, while docker-cicd runs the reviewed definition named CI. The
-    # resolve job verifies the immutable workflow ID and path before deploying.
-    workflows: [CI, Browser E2E Tests]
+    workflows: [CI]
     types: [completed]
-    branches: [docker-cicd]
+    branches: [master]
   workflow_dispatch:
     inputs:
-      ref:
-        description: Branch to deploy after verifying its latest successful CI push run
-        required: true
-        default: docker-cicd
-        type: string
       deployment_mode:
         description: Auto-detect or assert the expected fail-closed deployment mode
         required: true
@@ -43,7 +35,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'docker-cicd')
+      github.event.workflow_run.head_branch == 'master')
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -63,7 +55,6 @@ jobs:
           AUTO_REPOSITORY: ${{ github.event.workflow_run.head_repository.full_name }}
           AUTO_EVENT: ${{ github.event.workflow_run.event }}
           AUTO_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
-          DISPATCH_REF: ${{ inputs.ref }}
           DISPATCH_MODE: ${{ inputs.deployment_mode }}
           GITHUB_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
@@ -100,12 +91,8 @@ jobs:
               exit 1
             fi
 
-            ref="$DISPATCH_REF"
+            ref=master
             requested_mode="${DISPATCH_MODE:-auto}"
-            if [[ "$ref" != "docker-cicd" ]]; then
-              echo "Only docker-cicd is permitted for staging deployment." >&2
-              exit 1
-            fi
             case "$requested_mode" in
               auto|full|edge-only) ;;
               *)
@@ -126,7 +113,7 @@ jobs:
             fi
           fi
 
-          [[ "$ref" == "docker-cicd" ]]
+          [[ "$ref" == "master" ]]
           [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
 
           current_sha="$(gh api "repos/$REPOSITORY/commits/$ref" --jq .sha)"
@@ -145,7 +132,18 @@ jobs:
 
           is_edge_path() {
             case "$1" in
-              docker-compose.edge.yml|deploy/nginx/*|deploy/scripts/bootstrap-staging-tls.sh|deploy/scripts/check-staging-edge.sh|deploy/STAGING_DEPLOYMENT.md)
+              docker-compose.edge.yml|deploy/nginx/*|deploy/scripts/bootstrap-staging-tls.sh|deploy/scripts/check-staging-edge.sh)
+                return 0
+                ;;
+              *)
+                return 1
+                ;;
+            esac
+          }
+
+          is_neutral_path() {
+            case "$1" in
+              deploy/STAGING_DEPLOYMENT.md)
                 return 0
                 ;;
               *)
@@ -163,6 +161,8 @@ jobs:
             changed_paths+=("$path")
             if is_edge_path "$path"; then
               has_edge_path=true
+            elif is_neutral_path "$path"; then
+              :
             else
               has_non_edge_path=true
             fi
@@ -174,6 +174,8 @@ jobs:
               changed_paths+=("$previous_path")
               if is_edge_path "$previous_path"; then
                 has_edge_path=true
+              elif is_neutral_path "$previous_path"; then
+                :
               else
                 has_non_edge_path=true
               fi
@@ -314,7 +316,7 @@ jobs:
           staging_domain="$3"
           app_dir=/opt/dentflow
 
-          [[ "$deploy_ref" == "docker-cicd" ]]
+          [[ "$deploy_ref" == "master" ]]
           [[ "$deploy_sha" =~ ^[0-9a-f]{40}$ ]]
           [[ "$staging_domain" == "staging.lephuchau.online" ]]
 
@@ -382,7 +384,7 @@ jobs:
           app_dir=/opt/dentflow
           env_file=/etc/dentflow/staging.env
 
-          [[ "$deploy_ref" == "docker-cicd" ]]
+          [[ "$deploy_ref" == "master" ]]
           [[ "$deploy_sha" =~ ^[0-9a-f]{40}$ ]]
           [[ "$staging_domain" == "staging.lephuchau.online" ]]
 
