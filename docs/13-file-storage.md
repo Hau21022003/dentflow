@@ -4,7 +4,7 @@
 
 Ảnh được upload trực tiếp từ browser tới S3-compatible object storage qua presigned POST. Backend không nhận byte file và không dùng `FileInterceptor`; backend là control plane xác thực actor, tenant/branch scope, loại file, dung lượng và tạo key.
 
-V1 tạo **upload intent** cho ảnh `image/jpeg`, `image/png` và `image/webp`. Upload generic/avatar tối đa 2 MiB; purpose `TREATMENT_PROGRESS` tối đa 5 MiB (`5 * 1024 * 1024`) mỗi ảnh. Không có media entity tổng quát hoặc public URL. Object dưới `temp/` luôn là staging; avatar liên kết qua `users.avatar_object_key`, còn ảnh tiến độ liên kết append-only qua `treatment_item_event_images`.
+V1 tạo **upload intent** cho ảnh `image/jpeg`, `image/png`, `image/webp` và luồng PatientFile hỗ trợ thêm `application/pdf`. Upload generic/avatar tối đa 2 MiB; purpose `TREATMENT_PROGRESS` tối đa 5 MiB, còn `PATIENT_FILE` tối đa 10 MiB (`10 * 1024 * 1024`). Không có public URL. Object dưới `temp/` luôn là staging; avatar liên kết qua `users.avatar_object_key`, ảnh tiến độ liên kết append-only qua `treatment_item_event_images`, còn thư viện bệnh nhân dùng `patient_files` branch-scoped.
 
 ## API và tenant isolation
 
@@ -15,6 +15,8 @@ V1 tạo **upload intent** cho ảnh `image/jpeg`, `image/png` và `image/webp`.
 ```
 
 Backend lấy tenant/branch từ route context đã guard xác minh, không từ body. Không có purpose thì backend tạo key `temp/{tenantId}/{branchId}/{uuid}.{extension}` với giới hạn 2 MiB. Purpose `TREATMENT_PROGRESS` tạo key `temp/{tenantId}/{branchId}/treatment-progress/{actorUserId}/{uuid}.{extension}` với giới hạn 5 MiB; client không gửi path, tenant/branch/Patient/actor ID. Key không có filename, tên bệnh nhân hoặc dữ liệu lâm sàng. Response trả `objectKey`, `expiresAt` và cặp `upload.url`/`upload.fields` để browser tạo `FormData`, append toàn bộ fields rồi append `file` cuối cùng và POST trực tiếp tới object storage.
+
+`POST /tenants/:tenantSlug/branches/:branchSlug/uploads/file-intents` nhận purpose bắt buộc `PATIENT_FILE`, MIME/dung lượng và tạo `temp/{tenantId}/{branchId}/patient-files/{actorUserId}/{uuid}.{extension}`. Route chỉ stage byte; `/appointments/:appointmentId/visit/files` mới kiểm tra Dentist assignment, trạng thái Visit, suy ra Patient, `HeadObject`, copy sang `clinical/{tenantId}/{branchId}/{patientId}/patient-files/{fileId}.{extension}` và ghi metadata/audit. Tên gốc chỉ nằm trong metadata nghiệp vụ, không nằm trong object key hoặc audit/log. Preview/download dùng signed GET sau mỗi lần kiểm tra quyền; API không trả key permanent.
 
 `POST /uploads/image-intents` là route chung chỉ yêu cầu JWT cho ảnh user-owned. Body thêm `folder`; V1 chỉ có enum `AVATAR`, không nhận path/folder tự do, tenant ID hoặc user ID. Policy map trong Uploads module lấy actor từ JWT và sinh key `temp/users/{userId}/avatar/{uuid}.{extension}`. Thêm user-owned purpose sau này bằng enum/policy map, không thêm endpoint.
 
@@ -49,7 +51,7 @@ Compose tạo bucket private và lifecycle rule cho `temp/` expire sau một ng�
 
 ### Trang kiểm tra tạm và Browser E2E
 
-Client route test-only `/workspace/:tenantSlug/branches/:branchSlug/upload-test` không nằm trong navigation. Nó dùng đúng frontend helper và API upload intent hiện có, sau đó POST trực tiếp tới MinIO/S3; không tạo API, attachment hay entity nghiệp vụ. Route yêu cầu `file.upload`, hiển thị object key tạm và phải bị xóa khi UI attachment thực tế được triển khai.
+Client route test-only `/workspace/:tenantSlug/branches/:branchSlug/upload-test` không nằm trong navigation. Nó tiếp tục chỉ kiểm tra image intent generic và không tạo entity nghiệp vụ. UI PatientFile thực tế nằm trong Doctor Visit, dùng file intent riêng và không hiển thị object key.
 
 `browser-e2e` tự chạy `docker compose -f docker-compose.minio.yml up -d` trước khi mở test và chờ health check MinIO. Vì vậy Docker Desktop phải đang chạy khi dùng `npm run test`, `test:headed` hoặc `test:ui`; stack MinIO sẽ được giữ chạy sau test để tạo lần chạy sau nhanh hơn.
 
