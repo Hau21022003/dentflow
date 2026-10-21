@@ -33,7 +33,8 @@
     "label": "Nội dung lần khám",
     "clinical": "Ghi nhận lâm sàng",
     "safety": "Ghi chú an toàn",
-    "treatmentPlans": "Kế hoạch điều trị liên quan"
+    "treatmentPlans": "Kế hoạch điều trị liên quan",
+    "files": "Tệp & hình ảnh"
   },
   "references": {
     "safetyTitle": "Cảnh báo an toàn nổi bật",

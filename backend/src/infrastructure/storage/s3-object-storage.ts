@@ -9,6 +9,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import type {
   CopyObjectInput,
+  CreatePresignedGetOptions,
   CreatePresignedPostInput,
   ObjectStorage,
   PresignedPost,
@@ -39,10 +40,18 @@ export class S3ObjectStorage implements ObjectStorage {
     });
   }
 
-  createPresignedGet(key: string): Promise<string> {
+  createPresignedGet(
+    key: string,
+    options: CreatePresignedGetOptions = {},
+  ): Promise<string> {
     return getSignedUrl(
       this.client,
-      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ResponseContentType: options.responseContentType,
+        ResponseContentDisposition: options.responseContentDisposition,
+      }),
       { expiresIn: this.expiresInSeconds },
     );
   }

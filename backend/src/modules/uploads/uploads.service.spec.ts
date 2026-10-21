@@ -11,7 +11,10 @@ import {
   type PresignedPost,
 } from '../../infrastructure/storage';
 import type { AuthorizationContext } from '../authorization/authorization-context';
-import { BranchImageUploadPurpose } from './upload.constants';
+import {
+  BranchFileUploadPurpose,
+  BranchImageUploadPurpose,
+} from './upload.constants';
 import { UploadsService } from './uploads.service';
 
 describe('UploadsService', () => {
@@ -160,6 +163,46 @@ describe('UploadsService', () => {
         contentType: 'image/webp',
       }),
     );
+  });
+
+  it.each([
+    ['image/jpeg', 'jpg'],
+    ['image/png', 'png'],
+    ['image/webp', 'webp'],
+    ['application/pdf', 'pdf'],
+  ] as const)(
+    'creates an actor-scoped Patient file intent for %s',
+    async (contentType, extension) => {
+      const response = await service.createFileUploadIntent(branchContext(), {
+        purpose: BranchFileUploadPurpose.PATIENT_FILE,
+        contentType,
+        sizeBytes: 10 * 1024 * 1024,
+      });
+
+      expect(response.objectKey).toMatch(
+        new RegExp(
+          `^temp/tenant-uuid/branch-uuid/patient-files/user-uuid/[0-9a-f-]{36}\\.${extension}$`,
+          'i',
+        ),
+      );
+      expect(createPresignedPost).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          key: response.objectKey,
+          contentType,
+          maxBytes: 10 * 1024 * 1024,
+        }),
+      );
+    },
+  );
+
+  it('rejects a Patient file larger than 10 MiB', async () => {
+    await expect(
+      service.createFileUploadIntent(branchContext(), {
+        purpose: BranchFileUploadPurpose.PATIENT_FILE,
+        contentType: 'application/pdf',
+        sizeBytes: 10 * 1024 * 1024 + 1,
+      }),
+    ).rejects.toBeInstanceOf(PayloadTooLargeException);
   });
 });
 

@@ -1,6 +1,7 @@
 import { ObjectStorageUnavailableError } from './object-storage-unavailable.error';
 import type {
   CopyObjectInput,
+  CreatePresignedGetOptions,
   CreatePresignedPostInput,
   ObjectStorage,
   PresignedPost,
@@ -13,8 +14,12 @@ export class DisabledObjectStorage implements ObjectStorage {
     return Promise.reject(new ObjectStorageUnavailableError());
   }
 
-  createPresignedGet(key: string): Promise<string> {
+  createPresignedGet(
+    key: string,
+    options?: CreatePresignedGetOptions,
+  ): Promise<string> {
     void key;
+    void options;
     return Promise.reject(new ObjectStorageUnavailableError());
   }
 

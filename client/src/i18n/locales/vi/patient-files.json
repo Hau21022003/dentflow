@@ -1,0 +1,90 @@
+{
+  "title": "Tệp & hình ảnh",
+  "description": "Lưu trữ và quản lý tất cả tệp, hình ảnh liên quan đến bệnh nhân tại chi nhánh này.",
+  "categories": {
+    "ALL": "Tất cả",
+    "CLINICAL_PHOTO": "Ảnh lâm sàng",
+    "XRAY": "X-quang",
+    "DOCUMENT": "Tài liệu",
+    "FORM": "Biểu mẫu",
+    "OTHER": "Khác"
+  },
+  "actions": {
+    "add": "Thêm tệp",
+    "upload": "Tải lên",
+    "save": "Lưu thay đổi",
+    "saving": "Đang lưu",
+    "cancel": "Hủy",
+    "retry": "Thử lại",
+    "edit": "Chỉnh sửa",
+    "archive": "Lưu trữ",
+    "download": "Tải xuống",
+    "close": "Đóng",
+    "previous": "Trước",
+    "next": "Tiếp",
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "rotate": "Xoay"
+  },
+  "filters": {
+    "search": "Tìm theo tên tệp, ghi chú...",
+    "dates": {
+      "ALL": "Tất cả ngày",
+      "TODAY": "Hôm nay",
+      "LAST_7": "7 ngày gần nhất",
+      "LAST_30": "30 ngày gần nhất"
+    },
+    "sort": {
+      "NEWEST": "Ngày tệp mới nhất",
+      "OLDEST": "Ngày tệp cũ nhất",
+      "UPLOADED": "Mới tải lên"
+    }
+  },
+  "fields": {
+    "category": "Loại tệp",
+    "note": "Ghi chú (tùy chọn)",
+    "notePlaceholder": "Ví dụ: Ảnh trước điều trị răng 46...",
+    "fileDate": "Ngày chụp / ngày tạo"
+  },
+  "upload": {
+    "title": "Thêm tệp cho bệnh nhân",
+    "description": "Tệp được lưu trong hồ sơ của bệnh nhân tại chi nhánh hiện tại.",
+    "drop": "Kéo thả tệp vào đây hoặc",
+    "support": "Hỗ trợ JPG, PNG, WebP, PDF (tối đa 10 MB/tệp)",
+    "choose": "Chọn tệp từ máy tính",
+    "change": "Chọn tệp khác"
+  },
+  "edit": {
+    "title": "Chỉnh sửa thông tin tệp",
+    "description": "Nội dung tệp và tên gốc không thể thay đổi."
+  },
+  "preview": {
+    "description": "Xem trước tệp bệnh nhân",
+    "uploadedBy": "Người tải lên",
+    "uploadedAt": "Thời điểm tải lên",
+    "noNote": "Không có ghi chú",
+    "unavailable": "Không thể tải bản xem trước. Hãy thử lại sau."
+  },
+  "archive": {
+    "title": "Lưu trữ tệp này?",
+    "description": "Tệp sẽ không còn xuất hiện trong thư viện thường. Nội dung vẫn được giữ lại trong hồ sơ và không thể khôi phục từ giao diện v1."
+  },
+  "validation": {
+    "required": "Hãy chọn một tệp.",
+    "type": "Chỉ hỗ trợ JPG, PNG, WebP hoặc PDF.",
+    "size": "Tệp phải có dung lượng từ 1 byte đến 10 MB.",
+    "dateRequired": "Hãy chọn ngày chụp hoặc ngày tạo.",
+    "dateFuture": "Ngày chụp hoặc ngày tạo không được sau ngày hiện tại."
+  },
+  "states": {
+    "emptyTitle": "Chưa có tệp nào",
+    "emptyDescription": "Tải lên ảnh lâm sàng, X-quang, tài liệu hoặc biểu mẫu của bệnh nhân.",
+    "loadError": "Không thể tải thư viện tệp của bệnh nhân."
+  },
+  "feedback": {
+    "uploaded": "Đã tải tệp lên hồ sơ bệnh nhân",
+    "updated": "Đã cập nhật thông tin tệp",
+    "archived": "Đã lưu trữ tệp"
+  },
+  "pagination": "Trang {{page}} / {{total}}"
+}

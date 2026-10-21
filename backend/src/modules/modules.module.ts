@@ -18,6 +18,7 @@ import { AppointmentsModule } from './appointments/appointments.module';
 import { VisitsModule } from './visits/visits.module';
 import { TreatmentPlansModule } from './treatment-plans/treatment-plans.module';
 import { OperatoriesModule } from './operatories/operatories.module';
+import { PatientFilesModule } from './patient-files/patient-files.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { OperatoriesModule } from './operatories/operatories.module';
     VisitsModule,
     TreatmentPlansModule,
     OperatoriesModule,
+    PatientFilesModule,
     ServicesModule,
     IdempotencyModule,
     EmailTemplatesModule,

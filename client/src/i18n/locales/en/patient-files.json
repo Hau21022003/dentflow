@@ -1,0 +1,90 @@
+{
+  "title": "Files & images",
+  "description": "Store and manage patient-related files and images for this branch.",
+  "categories": {
+    "ALL": "All",
+    "CLINICAL_PHOTO": "Clinical photos",
+    "XRAY": "X-rays",
+    "DOCUMENT": "Documents",
+    "FORM": "Forms",
+    "OTHER": "Other"
+  },
+  "actions": {
+    "add": "Add file",
+    "upload": "Upload",
+    "save": "Save changes",
+    "saving": "Saving",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "edit": "Edit",
+    "archive": "Archive",
+    "download": "Download",
+    "close": "Close",
+    "previous": "Previous",
+    "next": "Next",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "rotate": "Rotate"
+  },
+  "filters": {
+    "search": "Search file name or note...",
+    "dates": {
+      "ALL": "All dates",
+      "TODAY": "Today",
+      "LAST_7": "Last 7 days",
+      "LAST_30": "Last 30 days"
+    },
+    "sort": {
+      "NEWEST": "Newest file date",
+      "OLDEST": "Oldest file date",
+      "UPLOADED": "Recently uploaded"
+    }
+  },
+  "fields": {
+    "category": "File type",
+    "note": "Note (optional)",
+    "notePlaceholder": "For example: Pre-treatment image for tooth 46...",
+    "fileDate": "Captured / created date"
+  },
+  "upload": {
+    "title": "Add a patient file",
+    "description": "The file is stored in the patient's record for the current branch.",
+    "drop": "Drag a file here or",
+    "support": "JPG, PNG, WebP, PDF up to 10 MB per file",
+    "choose": "Choose from computer",
+    "change": "Choose another file"
+  },
+  "edit": {
+    "title": "Edit file information",
+    "description": "The file contents and original name cannot be changed."
+  },
+  "preview": {
+    "description": "Patient file preview",
+    "uploadedBy": "Uploaded by",
+    "uploadedAt": "Uploaded at",
+    "noNote": "No note",
+    "unavailable": "The preview is unavailable. Try again later."
+  },
+  "archive": {
+    "title": "Archive this file?",
+    "description": "The file will be hidden from the active library but retained in the clinical record. Restore is not available in v1."
+  },
+  "validation": {
+    "required": "Choose a file.",
+    "type": "Only JPG, PNG, WebP, or PDF files are supported.",
+    "size": "The file must be between 1 byte and 10 MB.",
+    "dateRequired": "Choose the captured or created date.",
+    "dateFuture": "The captured or created date cannot be in the future."
+  },
+  "states": {
+    "emptyTitle": "No files yet",
+    "emptyDescription": "Upload clinical images, X-rays, documents, or patient forms.",
+    "loadError": "The patient file library could not be loaded."
+  },
+  "feedback": {
+    "uploaded": "File added to the patient record",
+    "updated": "File information updated",
+    "archived": "File archived"
+  },
+  "pagination": "Page {{page}} of {{total}}"
+}

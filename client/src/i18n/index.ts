@@ -7,6 +7,7 @@ import enCommon from "./locales/en/common.json";
 import enDataTableDemo from "./locales/en/data-table-demo.json";
 import enEmailTemplates from "./locales/en/email-templates.json";
 import enPatients from "./locales/en/patients.json";
+import enPatientFiles from "./locales/en/patient-files.json";
 import enOperatories from "./locales/en/operatories.json";
 import enPlans from "./locales/en/plans.json";
 import enProfile from "./locales/en/profile.json";
@@ -25,6 +26,7 @@ import viCommon from "./locales/vi/common.json";
 import viDataTableDemo from "./locales/vi/data-table-demo.json";
 import viEmailTemplates from "./locales/vi/email-templates.json";
 import viPatients from "./locales/vi/patients.json";
+import viPatientFiles from "./locales/vi/patient-files.json";
 import viOperatories from "./locales/vi/operatories.json";
 import viPlans from "./locales/vi/plans.json";
 import viProfile from "./locales/vi/profile.json";
@@ -55,6 +57,7 @@ i18n
       "emailTemplates",
       "invitations",
       "patients",
+      "patientFiles",
       "operatories",
       "plans",
       "profile",
@@ -77,6 +80,7 @@ i18n
         emailTemplates: enEmailTemplates,
         invitations: enInvitations,
         patients: enPatients,
+        patientFiles: enPatientFiles,
         operatories: enOperatories,
         plans: enPlans,
         profile: enProfile,
@@ -97,6 +101,7 @@ i18n
         emailTemplates: viEmailTemplates,
         invitations: viInvitations,
         patients: viPatients,
+        patientFiles: viPatientFiles,
         operatories: viOperatories,
         plans: viPlans,
         profile: viProfile,

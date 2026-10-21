@@ -5,11 +5,17 @@ import { E2E_USERS, login } from "./support/login";
 
 const TENANT_SLUG = "test-brightsmile";
 const BRANCH_SLUG = "central";
+const API_URL = "http://127.0.0.1:3001";
 const APPOINTMENTS_WORKSPACE = `/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/reception/appointments`;
 const DOCTOR_WORKSPACE = `/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/doctor`;
 const ACCEPTANCE_WORKSPACE = `/workspace/${TENANT_SLUG}/branches/${BRANCH_SLUG}/reception/treatment-plan-acceptances`;
 const APPOINTMENT_DATE = "2030-01-15";
 const DENTIST_NAME = "Synthetic Test Branch Admin";
+const SYNTHETIC_PDF_FILE = {
+  name: "synthetic-consent.pdf",
+  mimeType: "application/pdf",
+  buffer: Buffer.from("%PDF-1.4\n% synthetic patient file\n%%EOF\n"),
+};
 
 test.beforeEach(async ({ request }) => {
   await resetDatabase(request);
@@ -17,7 +23,9 @@ test.beforeEach(async ({ request }) => {
 
 test("Dentist starts, saves, completes, and adds to a Visit", async ({
   page,
+  request,
 }) => {
+  test.setTimeout(90_000);
   await grantDentistRole(page);
   await loginAsDentistReceptionist(page);
   await createAndCheckInAssignedAppointment(page);
@@ -51,6 +59,9 @@ test("Dentist starts, saves, completes, and adds to a Visit", async ({
       `/doctor/appointments/[0-9a-f-]+/visit\\?date=${APPOINTMENT_DATE}$`,
     ),
   );
+  const appointmentId = new URL(page.url()).pathname
+    .match(/\/appointments\/([0-9a-f-]+)\/visit$/)!
+    .at(1)!;
 
   await expect(
     page.getByRole("heading", { name: "Clinical record" }),
@@ -66,6 +77,390 @@ test("Dentist starts, saves, completes, and adds to a Visit", async ({
   await expect(
     page.getByRole("tab", { name: "Related treatment plans" }),
   ).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Files & images" })).toBeVisible();
+
+  await page.getByRole("tab", { name: "Files & images" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Files & images" }),
+  ).toBeVisible();
+  const filesPanel = page.locator('[data-slot="card"]').filter({
+    has: page.getByRole("heading", { name: "Files & images" }),
+  });
+  await page.getByRole("button", { name: "Add file" }).click();
+  const uploadDialog = page.getByRole("dialog", {
+    name: "Add a patient file",
+  });
+  await uploadDialog
+    .locator('input[type="file"]')
+    .setInputFiles(CAT_AVATAR_JPEG_FILE);
+  await uploadDialog
+    .getByLabel("Note (optional)")
+    .fill("Synthetic clinical photo");
+  const createFileRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      new URL(request.url()).pathname.endsWith("/visit/files"),
+  );
+  await uploadDialog.getByRole("button", { name: "Upload" }).click();
+  expectIdempotencyKey((await createFileRequest).headers()["idempotency-key"]);
+  await expect(uploadDialog).toHaveCount(0);
+  await expect(page.getByText("cat-avatar.jpg", { exact: true })).toBeVisible();
+
+  const unassignedLogin = await request.post(`${API_URL}/auth/login`, {
+    data: E2E_USERS.dentist,
+  });
+  await expect(unassignedLogin).toBeOK();
+  const unassignedList = await request.get(
+    `${API_URL}/tenants/${TENANT_SLUG}/branches/${BRANCH_SLUG}/appointments/${appointmentId}/visit/files`,
+  );
+  expect(unassignedList.status()).toBe(403);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .locator("article")
+    .filter({ hasText: "cat-avatar.jpg" })
+    .getByRole("button")
+    .click();
+  const imagePreview = page.getByRole("dialog", { name: "cat-avatar.jpg" });
+  await expect(imagePreview).toBeVisible();
+  await expect(page).toHaveURL(/tab=files.*fileId=[0-9a-f-]+/);
+  const deepLink = page.url();
+  await page.goBack();
+  await expect(imagePreview).toHaveCount(0);
+  await expect(page).not.toHaveURL(/fileId=/);
+  await page.goForward();
+  await expect(page).toHaveURL(deepLink);
+  await expect(
+    page.getByRole("dialog", { name: "cat-avatar.jpg" }),
+  ).toBeVisible();
+
+  const downloadAccessRequest = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return (
+      request.method() === "GET" &&
+      url.pathname.endsWith("/access") &&
+      url.searchParams.get("disposition") === "attachment"
+    );
+  });
+  await page
+    .getByRole("dialog", { name: "cat-avatar.jpg" })
+    .getByRole("button", { name: "Download" })
+    .click();
+  await downloadAccessRequest;
+
+  await page
+    .getByRole("dialog", { name: "cat-avatar.jpg" })
+    .getByRole("button", { name: "Edit" })
+    .click();
+  const editFileDialog = page.getByRole("dialog", {
+    name: "Edit file information",
+  });
+  await editFileDialog.getByLabel("File type").click();
+  await page.getByRole("option", { name: "X-rays", exact: true }).click();
+  await editFileDialog
+    .getByLabel("Note (optional)")
+    .fill("Synthetic updated X-ray note");
+  const updateFileRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "PATCH" &&
+      /\/visit\/files\/[0-9a-f-]+$/.test(new URL(request.url()).pathname),
+  );
+  await editFileDialog.getByRole("button", { name: "Save changes" }).click();
+  expectIdempotencyKey((await updateFileRequest).headers()["idempotency-key"]);
+  await expect(editFileDialog).toHaveCount(0);
+  await expect(
+    page.locator("article").filter({ hasText: "cat-avatar.jpg" }),
+  ).toContainText("X-rays");
+
+  await page.getByRole("button", { name: "Add file" }).click();
+  const pdfUploadDialog = page.getByRole("dialog", {
+    name: "Add a patient file",
+  });
+  await pdfUploadDialog
+    .locator('input[type="file"]')
+    .setInputFiles(SYNTHETIC_PDF_FILE);
+  await pdfUploadDialog.getByLabel("File type").click();
+  await page.getByRole("option", { name: "Documents", exact: true }).click();
+  await pdfUploadDialog
+    .getByLabel("Captured / created date")
+    .fill("2026-01-01");
+  await pdfUploadDialog.getByRole("button", { name: "Upload" }).click();
+  await expect(pdfUploadDialog).toHaveCount(0);
+  await expect(
+    page.getByText("synthetic-consent.pdf", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    filesPanel.getByRole("button", { name: "All 2", exact: true }),
+  ).toBeVisible();
+  await expect(
+    filesPanel.getByRole("button", { name: "X-rays 1", exact: true }),
+  ).toBeVisible();
+  await filesPanel
+    .getByRole("button", { name: "Documents 1", exact: true })
+    .click();
+  await expect(
+    page.getByText("synthetic-consent.pdf", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("cat-avatar.jpg", { exact: true })).toHaveCount(
+    0,
+  );
+  await filesPanel.getByRole("button", { name: "All 2", exact: true }).click();
+  await expect(page.getByText("cat-avatar.jpg", { exact: true })).toBeVisible();
+
+  const searchFiles = page.getByPlaceholder("Search file name or note...");
+  await searchFiles.fill("updated X-ray");
+  await expect(page.getByText("cat-avatar.jpg", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("synthetic-consent.pdf", { exact: true }),
+  ).toHaveCount(0);
+  await searchFiles.clear();
+  await expect(
+    page.getByText("synthetic-consent.pdf", { exact: true }),
+  ).toBeVisible();
+
+  await filesPanel.getByRole("combobox").first().click();
+  await page.getByRole("option", { name: "Last 7 days" }).click();
+  await expect(
+    page.getByText("synthetic-consent.pdf", { exact: true }),
+  ).toHaveCount(0);
+  await filesPanel.getByRole("combobox").first().click();
+  await page.getByRole("option", { name: "All dates" }).click();
+  await expect(
+    page.getByText("synthetic-consent.pdf", { exact: true }),
+  ).toBeVisible();
+
+  await filesPanel.getByRole("combobox").nth(1).click();
+  await page.getByRole("option", { name: "Oldest file date" }).click();
+  await expect(page.locator("article").first()).toContainText(
+    "synthetic-consent.pdf",
+  );
+
+  await page
+    .locator("article")
+    .filter({ hasText: "synthetic-consent.pdf" })
+    .getByRole("button")
+    .click();
+  const pdfPreview = page.getByRole("dialog", {
+    name: "synthetic-consent.pdf",
+  });
+  await expect(pdfPreview.locator("iframe")).toBeVisible();
+  const mobilePreviewActions = pdfPreview.locator(
+    '[data-slot="patient-file-preview-actions"]',
+  );
+  await expect(
+    mobilePreviewActions.getByRole("button", { name: "Edit" }),
+  ).toBeVisible();
+  await pdfPreview.evaluate(async (element) => {
+    await Promise.all(
+      element
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished.catch(() => undefined)),
+    );
+  });
+  const nextPreview = pdfPreview.getByRole("button", { name: "Next" });
+  const nextPositionBefore = await nextPreview.boundingBox();
+  const stageHeightBefore = await pdfPreview
+    .locator('[data-slot="patient-file-preview-stage"]')
+    .evaluate((element) => element.getBoundingClientRect().height);
+  await nextPreview.click();
+  const imagePreviewOnMobile = page.getByRole("dialog", {
+    name: "cat-avatar.jpg",
+  });
+  await expect(imagePreviewOnMobile).toBeVisible();
+  const nextPositionAfter = await imagePreviewOnMobile
+    .getByRole("button", { name: "Next" })
+    .boundingBox();
+  const stageHeightAfter = await imagePreviewOnMobile
+    .locator('[data-slot="patient-file-preview-stage"]')
+    .evaluate((element) => element.getBoundingClientRect().height);
+  expect(nextPositionBefore).not.toBeNull();
+  expect(nextPositionAfter).not.toBeNull();
+  expect(stageHeightAfter).toBe(stageHeightBefore);
+  expect(
+    Math.abs(nextPositionBefore!.y - nextPositionAfter!.y),
+  ).toBeLessThanOrEqual(1);
+  const mobileDialogBounds = await imagePreviewOnMobile.boundingBox();
+  const mobileActionsBounds = await imagePreviewOnMobile
+    .locator('[data-slot="patient-file-preview-actions"]')
+    .boundingBox();
+  expect(mobileDialogBounds).not.toBeNull();
+  expect(mobileActionsBounds).not.toBeNull();
+  expect(mobileActionsBounds!.y).toBeGreaterThanOrEqual(mobileDialogBounds!.y);
+  expect(mobileActionsBounds!.y + mobileActionsBounds!.height).toBeLessThanOrEqual(
+    mobileDialogBounds!.y + mobileDialogBounds!.height,
+  );
+  await imagePreviewOnMobile.getByRole("button", { name: "Previous" }).click();
+  await expect(pdfPreview.locator("iframe")).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const previewFilmstrip = pdfPreview.locator(
+    '[data-slot="patient-file-preview-filmstrip"]',
+  );
+  await expect(previewFilmstrip).toBeVisible();
+  expect(
+    await previewFilmstrip.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        height: element.getBoundingClientRect().height,
+        overflowX: style.overflowX,
+        overflowY: style.overflowY,
+      };
+    }),
+  ).toEqual({ height: 80, overflowX: "auto", overflowY: "hidden" });
+  await pdfPreview.getByRole("button", { name: "Archive" }).click();
+  const archiveDialog = page.getByRole("alertdialog", {
+    name: "Archive this file?",
+  });
+  const archiveFileRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      /\/visit\/files\/[0-9a-f-]+\/archive$/.test(
+        new URL(request.url()).pathname,
+      ),
+  );
+  await archiveDialog.getByRole("button", { name: "Archive" }).click();
+  expectIdempotencyKey((await archiveFileRequest).headers()["idempotency-key"]);
+  await expect(
+    page.getByText("synthetic-consent.pdf", { exact: true }),
+  ).toHaveCount(0);
+
+  const mobileCard = filesPanel
+    .locator('[data-slot="patient-file-card"]')
+    .filter({ hasText: "cat-avatar.jpg" });
+  for (const width of [320, 390, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect
+      .poll(async () => {
+        const bounds = await page
+          .getByRole("tab", { name: "Files & images" })
+          .boundingBox();
+        return Boolean(bounds && bounds.x >= 0 && bounds.x + bounds.width <= width);
+      })
+      .toBe(true);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      ),
+    ).toBe(false);
+    expect(
+      await mobileCard.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(() =>
+      filesPanel
+        .locator('[data-slot="patient-file-categories"]')
+        .evaluate((element) => getComputedStyle(element).scrollbarWidth),
+    )
+    .toBe("none");
+  const selectedCategory = filesPanel.getByRole("button", {
+    name: "All 1",
+    exact: true,
+  });
+  await expect(selectedCategory).toHaveAttribute("aria-pressed", "true");
+  expect(
+    await selectedCategory.evaluate(
+      (element) => Number.parseFloat(getComputedStyle(element).borderRadius) >= 20,
+    ),
+  ).toBe(true);
+  const selectedCount = selectedCategory.locator(
+    '[data-slot="patient-file-category-count"]',
+  );
+  expect(
+    await selectedCount.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return (
+        element.clientWidth === element.clientHeight &&
+        style.backgroundColor !== "rgba(0, 0, 0, 0)"
+      );
+    }),
+  ).toBe(true);
+  for (const control of [
+    searchFiles,
+    filesPanel.getByRole("combobox").first(),
+    filesPanel.getByRole("combobox").nth(1),
+  ]) {
+    expect(
+      await control.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return (
+          element.getBoundingClientRect().height === 44 &&
+          Number.parseFloat(style.borderRadius) >= 12 &&
+          style.backgroundColor !== "rgba(0, 0, 0, 0)"
+        );
+      }),
+    ).toBe(true);
+  }
+  await page
+    .locator("article")
+    .filter({ hasText: "cat-avatar.jpg" })
+    .getByRole("button")
+    .click();
+  const mobilePreview = page.getByRole("dialog", { name: "cat-avatar.jpg" });
+  await expect(mobilePreview).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
+    ),
+  ).toBe(false);
+  await mobilePreview.getByRole("button", { name: "Close" }).click();
+  await page.setViewportSize({ width: 1280, height: 720 });
+  const inactiveDesktopCategory = filesPanel.getByRole("button", {
+    name: "X-rays 1",
+    exact: true,
+  });
+  const activeDesktopMetrics = await selectedCategory.evaluate((element) => {
+    const icon = element.querySelector<HTMLElement>(
+      '[data-slot="patient-file-category-icon"]',
+    )!;
+    const count = element.querySelector<HTMLElement>(
+      '[data-slot="patient-file-category-count"]',
+    )!;
+    return {
+      background: getComputedStyle(element).backgroundColor,
+      countBackground: getComputedStyle(count).backgroundColor,
+      countRight: count.getBoundingClientRect().right,
+      height: element.getBoundingClientRect().height,
+      iconHeight: icon.getBoundingClientRect().height,
+      iconWidth: icon.getBoundingClientRect().width,
+      radius: Number.parseFloat(getComputedStyle(element).borderRadius),
+    };
+  });
+  const inactiveDesktopMetrics = await inactiveDesktopCategory.evaluate(
+    (element) => {
+      const count = element.querySelector<HTMLElement>(
+        '[data-slot="patient-file-category-count"]',
+      )!;
+      return {
+        background: getComputedStyle(element).backgroundColor,
+        countBackground: getComputedStyle(count).backgroundColor,
+        countRight: count.getBoundingClientRect().right,
+      };
+    },
+  );
+  expect(activeDesktopMetrics.height).toBeLessThanOrEqual(44);
+  expect(activeDesktopMetrics.radius).toBe(12);
+  expect(activeDesktopMetrics.iconWidth).toBe(32);
+  expect(activeDesktopMetrics.iconHeight).toBe(32);
+  expect(activeDesktopMetrics.background).not.toBe(
+    inactiveDesktopMetrics.background,
+  );
+  expect(activeDesktopMetrics.countBackground).not.toBe(
+    "rgba(0, 0, 0, 0)",
+  );
+  expect(inactiveDesktopMetrics.countBackground).not.toBe(
+    "rgba(0, 0, 0, 0)",
+  );
+  expect(
+    Math.abs(
+      activeDesktopMetrics.countRight - inactiveDesktopMetrics.countRight,
+    ),
+  ).toBeLessThanOrEqual(1);
+
+  await page.getByRole("tab", { name: "Clinical record" }).click();
   const completeButton = page.getByRole("button", {
     name: "Complete Visit",
     exact: true,
@@ -115,6 +510,11 @@ test("Dentist starts, saves, completes, and adds to a Visit", async ({
   await expect(
     page.getByRole("tab", { name: "Related treatment plans" }),
   ).toBeDisabled();
+  await expect(page.getByRole("tab", { name: "Files & images" })).toBeEnabled();
+  await page.getByRole("tab", { name: "Files & images" }).click();
+  await expect(page.getByText("cat-avatar.jpg", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add file" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Clinical record" }).click();
 
   await page
     .getByRole("textbox", { name: "Addendum" })
@@ -799,7 +1199,9 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
     itemCancelDialog.getByLabel(/Additional note/);
   const itemCancelSubmit = itemCancelDialog.locator('button[type="submit"]');
   await expect(itemCancelSubmit).toBeDisabled();
-  await expect(itemCancelDialog.getByText("0/500", { exact: true })).toBeVisible();
+  await expect(
+    itemCancelDialog.getByText("0/500", { exact: true }),
+  ).toBeVisible();
   await itemCancellationNoteInput.fill(itemCancellationNote);
   await expect(
     itemCancelDialog.getByText(`${itemCancellationNote.length}/500`, {
@@ -832,7 +1234,9 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
     async (route) => {
       failedItemCancelKey = route.request().headers()["idempotency-key"] ?? "";
       await route.fulfill({
-        body: JSON.stringify({ message: "Synthetic item cancellation failure" }),
+        body: JSON.stringify({
+          message: "Synthetic item cancellation failure",
+        }),
         contentType: "application/json",
         status: 500,
       });
@@ -876,9 +1280,7 @@ test("Dentist creates, syncs, proposes, reopens, and cancels a Treatment Plan", 
   ).toBeDisabled();
   releaseItemCancelRequest();
   const recordedCancelEventRequest = await cancelEventRequest;
-  expectIdempotencyKey(
-    recordedCancelEventRequest.headers()["idempotency-key"],
-  );
+  expectIdempotencyKey(recordedCancelEventRequest.headers()["idempotency-key"]);
   expect(recordedCancelEventRequest.headers()["idempotency-key"]).toBe(
     failedItemCancelKey,
   );

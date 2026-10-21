@@ -49,6 +49,9 @@ export const AuditAction = {
   PATIENT_ALERT_CREATED: 'PATIENT_ALERT_CREATED',
   PATIENT_ALERT_UPDATED: 'PATIENT_ALERT_UPDATED',
   PATIENT_ALERT_RESOLVED: 'PATIENT_ALERT_RESOLVED',
+  PATIENT_FILE_CREATED: 'PATIENT_FILE_CREATED',
+  PATIENT_FILE_METADATA_UPDATED: 'PATIENT_FILE_METADATA_UPDATED',
+  PATIENT_FILE_ARCHIVED: 'PATIENT_FILE_ARCHIVED',
   OPERATORY_CREATED: 'OPERATORY_CREATED',
   OPERATORY_UPDATED: 'OPERATORY_UPDATED',
   OPERATORY_DEACTIVATED: 'OPERATORY_DEACTIVATED',
@@ -92,6 +95,7 @@ export type AuditResourceType =
   | 'SERVICE_GROUP'
   | 'PATIENT'
   | 'PATIENT_ALERT'
+  | 'PATIENT_FILE'
   | 'OPERATORY'
   | 'APPOINTMENT'
   | 'VISIT'
@@ -204,6 +208,11 @@ const PATIENT_ALERT_PAYLOAD: AuditPayloadPolicy = {
   before: ['category', 'severity', 'changedFields', 'resolvedAt'],
   after: ['category', 'severity', 'changedFields', 'resolvedAt'],
   metadata: ['reasonCode'],
+};
+const PATIENT_FILE_PAYLOAD: AuditPayloadPolicy = {
+  before: ['status'],
+  after: ['status', 'changedFields'],
+  metadata: [],
 };
 const OPERATORY_PAYLOAD: AuditPayloadPolicy = {
   before: ['code', 'type', 'isActive', 'changedFields'],
@@ -554,6 +563,24 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     'PATIENT_ALERT',
     false,
     PATIENT_ALERT_PAYLOAD,
+  ),
+  [AuditAction.PATIENT_FILE_CREATED]: definition(
+    AuditDomain.CLINICAL,
+    'PATIENT_FILE',
+    false,
+    PATIENT_FILE_PAYLOAD,
+  ),
+  [AuditAction.PATIENT_FILE_METADATA_UPDATED]: definition(
+    AuditDomain.CLINICAL,
+    'PATIENT_FILE',
+    false,
+    PATIENT_FILE_PAYLOAD,
+  ),
+  [AuditAction.PATIENT_FILE_ARCHIVED]: definition(
+    AuditDomain.CLINICAL,
+    'PATIENT_FILE',
+    false,
+    PATIENT_FILE_PAYLOAD,
   ),
   [AuditAction.OPERATORY_CREATED]: definition(
     AuditDomain.TENANT_ADMIN,
