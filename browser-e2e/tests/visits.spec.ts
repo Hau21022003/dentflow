@@ -32,7 +32,12 @@ test("Dentist starts, saves, completes, and adds to a Visit", async ({
   await page.locator(`button[data-date="${APPOINTMENT_DATE}"]`).click();
   await expect(page).toHaveURL(new RegExp(`date=${APPOINTMENT_DATE}`));
   await expect(page.getByText("1 appointment · 0h 30m total")).toBeVisible();
-  await expect(page.getByText("Female", { exact: true })).toBeVisible();
+  const appointment = page
+    .getByRole("listitem")
+    .filter({ hasText: "Synthetic Visit Patient" });
+  await expect(appointment.getByText("Female", { exact: true })).toHaveText(
+    "Female",
+  );
   const startRequest = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&

@@ -4,7 +4,15 @@ const envSchema = z.object({
   VITE_API_ENDPOINT: z
     .string()
     .min(1, "VITE_API_ENDPOINT is required")
-    .url("VITE_API_ENDPOINT must be a valid URL"),
+    .refine(
+      (value) =>
+        z.string().url().safeParse(value).success ||
+        (import.meta.env.MODE === "staging" && value === "/api"),
+      {
+        message:
+          "VITE_API_ENDPOINT must be a valid URL, or /api when building staging",
+      },
+    ),
 
   // VITE_APP_URL: z
   //   .string()
