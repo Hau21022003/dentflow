@@ -134,6 +134,14 @@ export function AppointmentListView({
         cell: ({ row }) => row.original.service?.name ?? row.original.visitReason ?? t("detail.notProvided"),
       },
       {
+        id: "operatory",
+        header: () => t("list.columns.operatory"),
+        cell: ({ row }) =>
+          row.original.operatory
+            ? `${row.original.operatory.code} · ${row.original.operatory.name}`
+            : t("detail.notProvided"),
+      },
+      {
         id: "status",
         header: () => t("list.columns.status"),
         cell: ({ row }) => <AppointmentStatusBadge status={row.original.status} />,

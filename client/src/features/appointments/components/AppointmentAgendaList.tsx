@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/empty";
 import { formatAppointmentTime } from "@/features/appointments/appointment-time";
 import type { Appointment, AssignedAppointment } from "@/features/appointments/appointments.types";
-import { CalendarDays, ChevronRight, Stethoscope } from "lucide-react";
+import { CalendarDays, ChevronRight, MapPin, Stethoscope } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AppointmentStatusBadge } from "./AppointmentStatusBadge";
 
@@ -84,6 +84,12 @@ export function AppointmentAgendaList({
                   <p className="truncate text-xs text-muted-foreground">
                     <Stethoscope aria-hidden="true" className="mr-1 inline size-3" />
                     {appointment.assignedDentist?.fullName ?? t("detail.notAssigned")}
+                  </p>
+                )}
+                {appointment.operatory && (
+                  <p className="truncate text-xs text-muted-foreground">
+                    <MapPin aria-hidden="true" className="mr-1 inline size-3" />
+                    {appointment.operatory.code} · {appointment.operatory.name}
                   </p>
                 )}
               </div>

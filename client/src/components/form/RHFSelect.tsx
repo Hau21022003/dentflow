@@ -28,6 +28,7 @@ export type RHFSelectProps<TFieldValues extends FieldValues> = {
   helperText?: ReactNode;
   label: ReactNode;
   name: FieldPath<TFieldValues>;
+  onValueChange?: (value: string) => void;
   options: readonly RHFSelectOption[];
   placeholder?: string;
   required?: boolean;
@@ -40,6 +41,7 @@ export function RHFSelect<TFieldValues extends FieldValues>({
   helperText,
   label,
   name,
+  onValueChange,
   options,
   rules,
   placeholder = "Chọn một lựa chọn",
@@ -65,7 +67,10 @@ export function RHFSelect<TFieldValues extends FieldValues>({
             </Label>
             <Select
               disabled={disabled}
-              onValueChange={field.onChange}
+              onValueChange={(value) => {
+                field.onChange(value);
+                onValueChange?.(value);
+              }}
               value={field.value ?? ""}
             >
               <SelectTrigger

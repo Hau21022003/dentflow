@@ -70,6 +70,12 @@ navigation và authorization nhất quán; giao diện không bao giờ là lớ
 Sau thay đổi, bổ sung/chỉnh E2E phù hợp (đặc biệt tenant/branch ngoài scope)
 và chạy `npm run lint`, `npm run build`.
 
+Các route branch mới của Patient/Operatory:
+
+- `/workspace/:tenantSlug/branches/:branchSlug/reception/patients/:patientId` dùng đồng thời `patient.administrative.manage` và `patient.clinical.read`; render bốn tab `?tab=overview|appointments|visits|treatment-plans`. Tab Appointments dùng patient-scoped history API, giữ Appointment detail bằng `appointmentId`, và tái sử dụng các dialog create/edit/action hiện có với Patient hiện tại bị khóa khi tạo mới. Tab Visits là danh sách read-only branch-scoped, có filter/sort/pagination server-side và chưa mở Visit Details, addendum hoặc Create Visit. Tab Treatment Plans cũng read-only, dùng filter/sort/pagination server-side, giữ sheet chi tiết bằng `planId`, không có lọc thời gian và không thay thế workflow tạo/sửa Plan trong Visit đang mở của Dentist.
+- `/workspace/:tenantSlug/branches/:branchSlug/operatories` dùng `operatory.manage`, xuất hiện trong sidebar cho Tenant Admin/Branch Admin. Receptionist không thấy route quản lý nhưng picker lịch hẹn vẫn lấy Operatory active từ booking-options API.
+- `/workspace/:tenantSlug/branches/:branchSlug/doctor/appointments/:appointmentId/visit/treatment-plans/:planId` là Editor riêng cho Treatment Plan `DRAFT` của Dentist, giữ `date` trong query để quay lại đúng Visit và cần đồng thời `clinical.visit.write` cùng `treatment-plan.write`. Từ bảng Treatment Plan trong Visit, các trạng thái khác mở Sheet chi tiết bên phải; lịch sử đầy đủ của hạng mục mở Dialog giữa màn hình, không lồng thêm Sheet. Form chỉnh sửa Treatment Plan Item không được nhúng trực tiếp trong Visit Details.
+
 ## Quy ước frontend
 
 - Dùng alias `@/` cho `src/`; utilities là `@/shared/lib/utils`.

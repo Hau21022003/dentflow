@@ -27,6 +27,7 @@ export type Appointment = {
   endAt: string;
   patient: { id: string; fullName: string; phone: string };
   assignedDentist: { id: string; fullName: string } | null;
+  operatory: { id: string; code: string; name: string; isActive: boolean } | null;
   service: {
     id: string;
     code: string;
@@ -57,11 +58,14 @@ export type AssignedAppointment = {
   endAt: string;
   patient: {
     id: string;
+    code: string;
     fullName: string;
+    phone: string;
     gender: PatientGender;
     dateOfBirth: string | null;
   };
   service: { id: string; code: string; name: string } | null;
+  operatory: Appointment["operatory"];
   visitReason: string | null;
 };
 
@@ -78,6 +82,13 @@ export type AppointmentServiceOption = {
   amount: number;
   currency: string;
   durationMinutes: number;
+};
+
+export type AppointmentOperatoryOption = {
+  id: string;
+  code: string;
+  name: string;
+  isActive: boolean;
 };
 
 export type AppointmentPage<TAppointment = Appointment> = {
@@ -117,6 +128,19 @@ export type BookingOptionQuery = {
   search?: string;
 };
 
+export type AppointmentAvailabilityQuery = {
+  startAt: string;
+  endAt: string;
+  dentistUserId?: string;
+  operatoryId?: string;
+  excludeAppointmentId?: string;
+};
+
+export type AppointmentAvailability = {
+  dentistConflict: boolean;
+  operatoryConflict: boolean;
+};
+
 export type CreateAppointmentInput = {
   patientId: string;
   source: AppointmentSource;
@@ -124,6 +148,7 @@ export type CreateAppointmentInput = {
   endAt: string;
   serviceId?: string | null;
   assignedDentistUserId?: string | null;
+  operatoryId?: string | null;
   visitReason?: string | null;
   operationalNote?: string | null;
 };

@@ -14,8 +14,10 @@ viết migration, endpoint hoặc UI. Khi có khác biệt, tài liệu này là
 định cho clinical workflow; [01-payment-model.md](./01-payment-model.md) vẫn là
 nguồn quyết định cho ranh giới hai dòng tiền.
 
-V1 không có odontogram trực quan, attachment Patient/Visit, chair/room,
-`DENTAL_ASSISTANT`, kho/vật tư/labo, payment online cho bệnh nhân hay passkey.
+V1 có bộ chọn mã răng FDI trực quan trong lúc chỉnh Treatment Plan `DRAFT`,
+nhưng không có hồ sơ odontogram theo Patient hoặc trạng thái lâm sàng riêng cho
+từng răng. V1 cũng chưa có attachment Patient/Visit, `DENTAL_ASSISTANT`,
+kho/vật tư/labo, payment online cho bệnh nhân hay passkey.
 Ảnh upload hiện có chỉ là object tạm; không được gắn vào clinical record cho đến
 khi có contract attachment riêng.
 
@@ -23,9 +25,16 @@ khi có contract attachment riêng.
 
 | Entity | Ownership | Quy tắc bắt buộc |
 | --- | --- | --- |
-| `Patient` | Tenant | Mang `tenantId`, không bị giới hạn branch; `phoneNormalized` unique trong tenant. |
-| `PatientAlert` | Tenant clinical | Thuộc Patient; chỉ Dentist đang có ca được phân công cho Patient mới xem/tạo/sửa. Alert có tính an toàn điều trị nên Dentist được phân công ở branch khác vẫn thấy alert hiện hành, nhưng không vì thế có quyền đọc lịch sử visit ở branch đó. |
+| `Patient` | Tenant | Mang `tenantId`, mã hiển thị tuần tự bất biến `PAT-*`, email optional/non-unique; `phoneNormalized` unique trong tenant. |
+| `PatientAlert` | Tenant clinical | Thuộc Patient; Overview cho Receptionist/Branch Admin đọc alert đang hiệu lực tenant-wide. Chỉ Dentist có ca chưa terminal được phân công tại branch hiện tại được xem lịch sử, tạo, sửa hoặc resolve; không hard-delete/reopen. |
+| `Operatory` | Tenant + branch | Đại diện thống nhất cho một phòng hoặc ghế; code bất biến, code/name unique trong branch và có lifecycle active/inactive. |
 | `Appointment`, `Visit`, `TreatmentPlan`, `TreatmentItem`, `TreatmentNote`, `PatientInvoice`, `Payment`, `FollowUpRecommendation` | Tenant + branch | Mọi query/write mang cả `tenantId` và `branchId` đã resolve từ route context. |
+
+`PatientAlert` lưu `updatedByUserId` do server lấy từ actor đã xác thực. Trường
+này được cập nhật khi tạo, khi nội dung thực sự thay đổi hoặc khi resolve; no-op
+update không đổi actor. Response alert trả `updatedBy: { id, fullName }` để UI
+hiển thị người cập nhật gần nhất, nhưng không đưa message hay tên bệnh nhân vào
+audit payload.
 
 `Patient` được truy cập qua route branch-scoped dù bản ghi thuộc tenant. Cách
 này cho phép Receptionist hoặc Branch Admin tại branch đã được cấp quyền tìm
@@ -34,7 +43,7 @@ tenant-wide thành quyền cho mọi user. Route global `/patients` chỉ là
 placeholder UI hiện tại, không phải contract API hoặc route sản phẩm sau khi
 module được triển khai.
 
-Thông tin hành chính của Patient gồm họ tên, số liên lạc, ngày sinh, giới tính,
+Thông tin hành chính của Patient gồm họ tên, số liên lạc, email optional/non-unique, ngày sinh, giới tính,
 địa chỉ, người liên hệ khẩn cấp và nguồn giới thiệu. `phoneNormalized` được
 chuẩn hóa server-side trước khi lưu; create trùng trong cùng tenant trả `409` và
 client phải chọn Patient có sẵn. V1 không hỗ trợ bypass duplicate bằng lý do.
@@ -76,8 +85,14 @@ gán, đổi hoặc bỏ gán Dentist đến hết `CHECKED_IN`. Appointment ch�
 Backend hard-block khoảng thời gian giao nhau của cùng Dentist trên các
 Appointment `BOOKED`, `CONFIRMED`, `CHECKED_IN` hoặc `IN_PROGRESS`. Hai khoảng
 giao nhau khi `startAt < existing.endAt` và `endAt > existing.startAt`. Kiểm tra
-phải concurrency-safe ở service/database, không chỉ cảnh báo UI. Chair/room và
-override trùng lịch không thuộc V1.
+phải concurrency-safe ở service/database, không chỉ cảnh báo UI. Appointment có tối đa một Operatory; backend xác minh Operatory active cùng tenant/branch khi gán và exclusion constraint riêng chặn giao thời gian ở `BOOKED`, `CONFIRMED`, `CHECKED_IN`, `IN_PROGRESS`. Dentist conflict và Operatory conflict trả `409` độc lập; không có override.
+
+Form tạo/sửa lịch nhận một ngày hẹn và hai mốc giờ theo bước 15 phút, mặc định
+đề xuất giờ kết thúc sau giờ bắt đầu 30 phút nhưng cho phép người dùng đổi. Client
+ghép các giá trị này theo timezone đã resolve của branch để tiếp tục gửi/lưu
+`startAt` và `endAt` dạng datetime. `GET /appointments/availability` cho phép UI
+cảnh báo sớm xung đột Dentist/Operatory; kết quả này chỉ mang tính advisory,
+không thay thế exclusion constraint khi command được ghi.
 
 ```text
 BOOKED → CONFIRMED → CHECKED_IN → IN_PROGRESS → COMPLETED
@@ -120,9 +135,15 @@ clinical record chỉ vì biết Patient/Visit ID; Dentist được gán ở bra
 cũng không có quyền lịch sử branch này. PatientAlert là ngoại lệ an toàn nêu ở
 mục 2.
 
+Riêng Patient Details dành cho actor có `patient.clinical.read`,
+`GET /patients/:patientId/visits` trả danh sách Visit read-only trong branch đã
+xác minh, gồm diagnosis nguyên bản hoặc `null`. Quyền này không mở full Visit,
+triệu chứng, khám, clinical note, addendum hoặc các command của Dentist Visit
+Workspace.
+
 ## 4. Treatment Plan, item và follow-up
 
-Treatment Plan thuộc Patient + Tenant + Branch và có nhiều TreatmentItem; `originVisitId` chỉ là Visit đã khởi tạo, bất biến nhưng không giới hạn Visit thực hiện sau đó. Mọi thao tác Dentist resolve một current Visit `OPEN` có Appointment `IN_PROGRESS` cùng Patient/Branch và Dentist được gán. Item snapshot Service `id`, code, name, price/currency, quantity, discount, đơn giá cuối cùng, vị trí/răng (FDI string hoặc mô tả), chỉ định và bác sĩ dự kiến. Chỉ Service `ACTIVE` của tenant và Dentist có grant active cùng branch được thêm/sửa ở Draft; thay đổi catalog hoặc grant sau đó không hồi tố snapshot.
+Treatment Plan thuộc Patient + Tenant + Branch, có mã hiển thị tuần tự bất biến `TP-*` và nhiều TreatmentItem; `originVisitId` chỉ là Visit đã khởi tạo, bất biến nhưng không giới hạn Visit thực hiện sau đó. Mọi thao tác Dentist resolve một current Visit `OPEN` có Appointment `IN_PROGRESS` cùng Patient/Branch và Dentist được gán. Item snapshot Service `id`, code, name, price/currency, quantity, discount, đơn giá cuối cùng, vị trí/răng (FDI string hoặc mô tả), chỉ định và bác sĩ dự kiến. UI Draft có thể tạo chuỗi FDI này bằng bộ chọn răng vĩnh viễn/răng sữa, nhưng không tạo entity hoặc trạng thái odontogram riêng. Chỉ Service `ACTIVE` của tenant và Dentist có grant active cùng branch được thêm/sửa ở Draft; thay đổi catalog hoặc grant sau đó không hồi tố snapshot.
 
 ```text
 DRAFT → PROPOSED → ACCEPTED → PARTIALLY_COMPLETED → COMPLETED
@@ -137,7 +158,7 @@ DRAFT → PROPOSED → ACCEPTED → PARTIALLY_COMPLETED → COMPLETED
 - Dentist muốn thay nội dung `PROPOSED` phải `REOPEN` về `DRAFT`, gửi reason
   code, xóa acceptance cũ và đề xuất/xác nhận lại. Không sửa trực tiếp Plan đã
   `PROPOSED` hoặc `ACCEPTED`.
-- Event Item là append-only và luôn giữ current Visit cùng Dentist thực hiện. `IN_PROGRESS` đầu tiên chuyển Item từ `PENDING`, event `IN_PROGRESS` tiếp theo chỉ ghi thêm buổi điều trị; `COMPLETED` chỉ từ `IN_PROGRESS`; `CANCELLED` từ `PENDING`/`IN_PROGRESS` cần reason code. Plan tự phản ánh `PARTIALLY_COMPLETED` khi có item completed nhưng chưa terminal toàn bộ, `COMPLETED` khi mọi item terminal với ít nhất một completed, và derived `CANCELLED` khi mọi item cancelled. Direct cancel chỉ từ `DRAFT`/`PROPOSED`/`ACCEPTED`, khi chưa có event; nó bulk-cancel item `PENDING`. V1 chưa có financial module nên không giả lập invoice/payment check.
+- Event Item là append-only và luôn giữ current Visit cùng Dentist thực hiện. `IN_PROGRESS` chỉ chuyển Item từ `PENDING`; `COMPLETED` chỉ từ `IN_PROGRESS`; `CANCELLED` từ `PENDING`/`IN_PROGRESS` cần reason code, nhận thêm `note?` tối đa 500 ký tự và bắt buộc note khác rỗng sau trim khi `reasonCode=OTHER`. Khi Item đang `IN_PROGRESS`, Dentist có thể tạo nhiều `PROGRESS_NOTE`; mỗi note lưu nội dung 1–2.000 ký tự và tối đa 5 ảnh private nhưng không đổi trạng thái Item/Plan và không tạo thêm event `IN_PROGRESS`. Note/ảnh không sửa hoặc xóa sau khi lưu. Plan tự phản ánh `PARTIALLY_COMPLETED` khi có item completed nhưng chưa terminal toàn bộ, `COMPLETED` khi mọi item terminal với ít nhất một completed, và derived `CANCELLED` khi mọi item cancelled. Direct cancel chỉ từ `DRAFT`/`PROPOSED`/`ACCEPTED`, khi chưa có event; command nhận `reasonCode` và `note?` tối đa 500 ký tự, trong đó `OTHER` bắt buộc có note khác rỗng sau trim. Nó bulk-cancel mọi item `PENDING` và ghi một event `CANCELLED` append-only cho từng item trong cùng transaction, cùng current Visit, actor, reason code và note. V1 chưa có financial module nên không giả lập invoice/payment check.
 
 Dentist tạo `FollowUpRecommendation` từ Visit hoặc Treatment Plan với lý do và
 mốc thời gian đề xuất. Recommendation không phải Appointment. Receptionist tạo
@@ -187,10 +208,11 @@ ID/slug trong body để chọn scope.
 
 | Capability | Contract route/command |
 | --- | --- |
-| Patient | `GET/POST /patients`, `GET/PATCH /patients/:patientId` cho `RECEPTIONIST` hoặc `BRANCH_ADMIN` có `patient.administrative.manage`; `POST`/`PATCH` cần `Idempotency-Key`. Administrative list phân trang tìm theo họ tên/số điện thoại, sort `fullName`, `dateOfBirth`, `createdAt`, `nextAppointmentAt`, `lastVisitAt`, và lọc `WITH_UPCOMING`/`WITHOUT_UPCOMING`. Response `meta.scheduleCounts` trả `{ all, withUpcoming, withoutUpcoming }` theo search hiện hành nhưng không bị thu hẹp bởi `scheduleFilter`, để UI hiển thị tổng quan các trạng thái; counts luôn dùng tenant/branch đã xác minh. Mỗi row kèm Appointment `BOOKED`/`CONFIRMED` gần nhất trong tương lai và Appointment `COMPLETED` gần nhất của branch đã xác minh. `GET /patients/assigned` dành cho Dentist có `appointment.assigned.read`, luôn lọc `assigned_dentist_user_id` theo actor và chỉ trả `id`, họ tên, phone, giới tính, ngày sinh cùng hai summary nói trên; `meta.scheduleCounts` cũng chỉ đếm tập Patient đã được gán cho actor. Không trả địa chỉ, emergency contact, referral source, timestamps hành chính hoặc cho phép write. `GET/POST /patients/:patientId/alerts` và `PATCH /patients/:patientId/alerts/:alertId` là module sau cho Dentist có case assignment. |
-| Appointment | V1 backend hiện có `GET/POST /appointments`, `GET /appointments/calendar-summary?month=YYYY-MM`, `GET/PATCH /appointments/:appointmentId`, `POST .../:id/confirm`, `/check-in`, `/assign`, `/cancel`, `/no-show`, `GET /appointments/assigned` và `GET /appointments/assigned/calendar-summary?month=YYYY-MM` cho Dentist. `GET /appointments/booking-options/dentists` và `/booking-options/services` cấp cho `appointment.manage` **hoặc** `treatment-plan.write`; chúng chỉ dùng làm picker read-only, phân trang/tìm kiếm server-side và chỉ trả Dentist active trong branch hoặc Service active trong tenant với trường tối thiểu. Dentist option trả `id`, `fullName` và `avatarUrl` signed ngắn hạn hoặc `null`; không trả email hay object key. List bắt buộc `from`/`to` tối đa 31 ngày, phân trang, lọc `status`, `patientId`, `dentistUserId`, và `search` theo họ tên/số điện thoại Patient trong đúng branch scope. `GET /appointments/:appointmentId` chỉ cấp cho `appointment.manage`; ngoài Patient `id`, họ tên và số điện thoại của Appointment response, detail trả thêm giới tính và ngày sinh hành chính để UI tính tuổi. Nó không trả `phoneNormalized`, địa chỉ, contact khẩn cấp, referral source hoặc dữ liệu clinical. Calendar summary quản trị chỉ cấp cho `appointment.manage`, nhận một tháng, dùng timezone hiệu lực đã resolve trong branch authorization context, và chỉ trả tổng số theo ngày bắt đầu cùng số lượng theo trạng thái; không trả Patient hay chi tiết Appointment. Hai endpoint `assigned` yêu cầu `appointment.assigned.read`, luôn lọc theo actor Dentist và branch đã xác minh; list chỉ trả `Patient.id`, họ tên, giới tính, ngày sinh cùng dữ liệu lịch an toàn, còn monthly summary không trả Patient/chi tiết Appointment. `POST /appointments/:appointmentId/start` chỉ cấp cho Dentist được gán; nó lock Appointment `CHECKED_IN`, tạo Visit duy nhất và chuyển Appointment sang `IN_PROGRESS` trong cùng transaction. |
-| Visit | Đã rollout: `GET/PATCH /appointments/:appointmentId/visit`, `POST .../visit/complete`, `POST .../visit/addenda`. Tất cả command cần `Idempotency-Key`; chỉ Dentist được gán của Appointment truy cập. Visit chứa `symptoms`, `relevantHistory`, `examination`, `diagnosis` và `clinicalNote`; các trường nullable khi `OPEN`, nhưng complete yêu cầu ít nhất một trường có nội dung. Complete atomically khóa Visit và chuyển Appointment sang `COMPLETED`; addendum là `TreatmentNote` append-only chỉ được tạo sau complete. |
-| Treatment | Dentist: `GET/POST /visits/:visitId/treatment-plans`, `GET/PATCH /visits/:visitId/treatment-plans/:planId`, `POST .../propose`, `/reopen`, `/cancel`, cùng `GET/POST .../items/:itemId/events`. Các command dùng `Idempotency-Key`; event body chỉ nhận event type và reason code khi cancel. Receptionist có riêng `POST /treatment-plans/:planId/accept`, chỉ trả receipt không clinical detail. |
+| Patient | Administrative API trả thêm email và response-only `code`. `GET /patients/:patientId/overview` cần đồng thời `patient.administrative.manage` + `patient.clinical.read`, trả derived activity status, active alerts, next appointment và treatment aggregate/featured plan trong branch. `GET /patients/:patientId/appointments` cần `appointment.manage`, do `PatientAppointmentsService` truy vấn trực tiếp `Repository<Appointment>` với tenant + branch đã xác minh và Patient từ path; endpoint không lookup Patient riêng để Patient không tồn tại/ngoài scope và Patient không có lịch ở branch hiện tại cùng trả trang rỗng. Query hỗ trợ pagination (mặc định 10, tối đa 100), search snapshot dịch vụ/lý do khám/bác sĩ/phòng ghế/ghi chú, lọc `status`, `dentistUserId`, cặp ISO `from`/`to` tùy chọn theo điều kiện giao nhau, và chỉ sort `startAt`; mặc định `startAt DESC, id DESC`. Response là read model lịch hẹn không lặp lại Patient. `GET /patients/:patientId/treatment-plans` và `GET /patients/:patientId/treatment-plans/:planId` cùng cần cặp quyền của Overview và chỉ đọc Plan trong branch đã xác minh. List có pagination mặc định 20/tối đa 100, search mã Plan và snapshot Item, lọc `status`/`dentistUserId`, chỉ sort `createdAt`, không có lọc thời gian; response trả Visit khởi tạo, Item đại diện, bác sĩ dự kiến, tiến độ và tổng giá snapshot nhóm theo currency. Tổng giá kế hoạch không phải invoice, số dư hay khoản đã thu. Alert commands gồm list/create/update/resolve, cần `patient-alert.manage`, case assignment và idempotency; audit không ghi message. Administrative list/assigned list tiếp tục dùng pagination, scope và dữ liệu tối thiểu như trên. |
+| Operatory | Operatory thuộc một trong hai loại bắt buộc `ROOM` hoặc `CHAIR`. `GET/POST/PATCH /operatories`, `POST /operatories/:id/activate` và `/deactivate` yêu cầu `operatory.manage`; create nhận `code`, `name`, `type`, còn update cho phép đổi `name` và `type` nhưng không đổi `code`. Lifecycle cần reason. Deactivate trả `409` nếu còn lịch chưa terminal. List hỗ trợ tìm theo code/tên, lọc active và sort theo code, tên, loại, trạng thái hoặc ngày tạo. `GET /appointments/booking-options/operatories` dùng `appointment.manage` và chỉ trả Operatory active. |
+| Appointment | V1 backend hiện có `GET/POST /appointments`, `GET /appointments/calendar-summary?month=YYYY-MM`, `GET /appointments/availability?startAt&endAt&dentistUserId?&operatoryId?&excludeAppointmentId?`, `GET/PATCH /appointments/:appointmentId`, `POST .../:id/confirm`, `/check-in`, `/assign`, `/cancel`, `/no-show`, `GET /appointments/assigned` và `GET /appointments/assigned/calendar-summary?month=YYYY-MM` cho Dentist. Availability yêu cầu `appointment.manage`, scope theo tenant/branch đã xác minh và chỉ trả `dentistConflict`/`operatoryConflict`; `excludeAppointmentId` hỗ trợ kiểm tra lúc sửa. `GET /appointments/booking-options/dentists` và `/booking-options/services` cấp cho `appointment.manage` **hoặc** `treatment-plan.write`; chúng chỉ dùng làm picker read-only, phân trang/tìm kiếm server-side và chỉ trả Dentist active trong branch hoặc Service active trong tenant với trường tối thiểu. Dentist option trả `id`, `fullName` và `avatarUrl` signed ngắn hạn hoặc `null`; không trả email hay object key. List bắt buộc `from`/`to` tối đa 31 ngày, phân trang, lọc `status`, `patientId`, `dentistUserId`, và `search` theo họ tên/số điện thoại Patient trong đúng branch scope. `GET /appointments/:appointmentId` chỉ cấp cho `appointment.manage`; ngoài Patient `id`, họ tên và số điện thoại của Appointment response, detail trả thêm giới tính và ngày sinh hành chính để UI tính tuổi. Nó không trả `phoneNormalized`, địa chỉ, contact khẩn cấp, referral source hoặc dữ liệu clinical. Calendar summary quản trị chỉ cấp cho `appointment.manage`, nhận một tháng, dùng timezone hiệu lực đã resolve trong branch authorization context, và chỉ trả tổng số theo ngày bắt đầu cùng số lượng theo trạng thái; không trả Patient hay chi tiết Appointment. Hai endpoint `assigned` yêu cầu `appointment.assigned.read`, luôn lọc theo actor Dentist và branch đã xác minh; list trả `Patient.id`, mã hiển thị, họ tên, số điện thoại, giới tính, ngày sinh cùng dữ liệu lịch an toàn nhưng không trả địa chỉ, email hoặc contact khẩn cấp, còn monthly summary không trả Patient/chi tiết Appointment. `POST /appointments/:appointmentId/start` chỉ cấp cho Dentist được gán; nó lock Appointment `CHECKED_IN`, tạo Visit duy nhất và chuyển Appointment sang `IN_PROGRESS` trong cùng transaction. |
+| Visit | Đã rollout: `GET /patients/:patientId/visits` cần `patient.clinical.read`, xác minh Patient trong tenant rồi scope mọi item/count/summary/filter option bằng tenant + branch + Patient. Endpoint chỉ trả read model lịch sử gồm trạng thái, timestamp thực tế lấy từ Appointment transition, Dentist, Operatory lịch sử và diagnosis nguyên bản; hỗ trợ pagination, `OPEN`/`COMPLETED`, Dentist, khoảng `startedAt` và ASC/DESC. Summary và Dentist options không chịu filter; endpoint không cấp full Visit/addenda và không có Create Visit. Dentist workspace tiếp tục dùng `GET/PATCH /appointments/:appointmentId/visit`, `POST .../visit/complete`, `POST .../visit/addenda`; tất cả command cần `Idempotency-Key` và chỉ Dentist được gán của Appointment truy cập. Visit chứa `symptoms`, `relevantHistory`, `examination`, `diagnosis` và `clinicalNote`; các trường nullable khi `OPEN`, nhưng complete yêu cầu ít nhất một trường có nội dung. Complete atomically khóa Visit và chuyển Appointment sang `COMPLETED`; addendum là `TreatmentNote` append-only chỉ được tạo sau complete. |
+| Treatment | Dentist: `GET/POST /visits/:visitId/treatment-plans`, `GET/PATCH /visits/:visitId/treatment-plans/:planId`, `POST .../propose`, `/reopen`, `/cancel`, cùng `GET/POST .../items/:itemId/events` và `POST .../items/:itemId/progress-notes`. Plan-cancel body là `{ reasonCode, note? }`; state-event cancel body là `{ eventType: "CANCELLED", reasonCode, note? }`. Cả hai giữ format reason code hiện có; `note` tối đa 500 ký tự và bắt buộc khi `reasonCode=OTHER`. Progress-note body nhận `content` và tối đa 5 `imageObjectKeys` staging; endpoint yêu cầu đồng thời `treatment-plan.write` + `treatment-item.execute`, current Visit mở và Dentist được gán. `GET .../events` hợp nhất state event/progress note theo thứ tự mới nhất trước, giữ `performedByUserId`, trả thêm tên người thực hiện, nội dung, `reasonCode`, cancellation `note` và signed URL ảnh nhưng không object key; dữ liệu cũ không có lý do/ghi chú trả `null`. List Visit-scoped vẫn resolve Patient từ ca được gán trong tenant/branch đã xác minh, trả mọi Plan của Patient tại branch để tiếp tục qua Visit sau, hỗ trợ pagination, search mã Plan/snapshot Item và lọc `status`; mỗi item danh sách trả thêm các bác sĩ dự kiến duy nhất để hiển thị nhưng tổng giá snapshot phía client chỉ là chi phí dự kiến, không phải invoice/số dư/thanh toán. Các command dùng `Idempotency-Key`. Receptionist có riêng `POST /treatment-plans/:planId/accept`, chỉ trả receipt không clinical detail. |
 | Financial | `GET/POST /patient-invoices`, `POST .../:invoiceId/issue`, `/void`, `/payments`, `/payments/:paymentId/refunds`, `/adjustments`. |
 | Recall | `POST /visits/:visitId/follow-up-recommendations`, `POST /follow-up-recommendations/:recommendationId/schedule`. |
 
@@ -202,7 +224,7 @@ clinical content cho role không được phép.
 Authorization snapshot trả `branch.timezone` là timezone vận hành **đã resolve**:
 timezone override của branch, hoặc `tenant.defaultTimezone` khi branch không có
 override. Frontend phải dùng giá trị này khi tạo `from`/`to`, nhập và hiển thị
-`timestamptz` của Appointment; không dùng timezone của thiết bị để suy ra giờ
+`timestamptz` của Appointment hoặc Visit; không dùng timezone của thiết bị để suy ra giờ
 vận hành của chi nhánh.
 
 `@TenantScope('branch')`, Subscription Guard, Branch Activity Guard và
@@ -213,8 +235,8 @@ invoiced và transition không hợp lệ trả `409`; field không hợp lệ t
 
 | Actor | Quyền workflow |
 | --- | --- |
-| Receptionist | Patient hành chính, Appointment/create-confirm-check-in-cancel-no-show, accept Plan, create/issue Invoice và record Payment trong branch được gán. Không đọc/ghi alert, diagnosis hoặc note. |
-| Branch Admin | Patient hành chính và điều phối Appointment, slot và Dentist assignment đến `CHECKED_IN`; refund/adjustment khi có `patient-payment.adjust`. Không ghi clinical content. |
+| Receptionist | Patient hành chính + Overview clinical read-only cùng branch, active alert tenant-wide, Appointment/Operatory picker và acceptance/payment workflow. Được đọc danh sách Visit cùng diagnosis và hồ sơ Treatment Plan read-only tại branch bằng cặp quyền Patient, nhưng không mở full Visit/addenda hoặc ghi clinical content. |
+| Branch Admin | Patient Overview, danh sách Visit/diagnosis và hồ sơ Treatment Plan cùng branch read-only, quản lý Operatory và điều phối Appointment/Dentist đến `CHECKED_IN`; không mở full Visit/addenda hoặc ghi clinical content. |
 | Dentist | Chỉ ca được gán: start/complete Appointment, Visit, PatientAlert, clinical note/addendum, Treatment Plan/Item và follow-up recommendation. |
 | Tenant Admin | Không tự có clinical hoặc financial-operational access; chỉ có khi có thêm role branch-scoped tương ứng. |
 
@@ -223,10 +245,12 @@ invoiced và transition không hợp lệ trả `409`; field không hợp lệ t
 Receptionist có `treatment-plan.accept` trong branch đã xác minh có thể đọc
 `GET /tenants/:tenantSlug/branches/:branchSlug/treatment-plan-acceptances`.
 Queue chỉ có Plan ID, `patient.fullName`, `patient.phone`, trạng thái `PROPOSED`,
-`createdAt` và `updatedAt`, theo pagination chuẩn; không có endpoint Receptionist
-đọc Plan detail và không được trả Item, Service, giá, quantity, discount,
-tooth position, indication, planned dentist, diagnosis, clinical note hoặc snapshot
-clinical. `POST .../treatment-plans/:planId/accept` vẫn idempotent, chỉ chuyển
+`createdAt` và `updatedAt`, theo pagination chuẩn; queue và acceptance command
+không được nhúng Item, Service, giá, quantity, discount, tooth position,
+indication, planned dentist, diagnosis, clinical note hoặc snapshot clinical.
+Quyền `treatment-plan.accept` riêng lẻ không cấp list/detail clinical; việc đọc
+Plan trong hồ sơ Patient là capability khác, cần đồng thời
+`patient.administrative.manage` + `patient.clinical.read`. `POST .../treatment-plans/:planId/accept` vẫn idempotent, chỉ chuyển
 `PROPOSED` sang `ACCEPTED` và chỉ trả receipt redacted gồm Plan ID, state, actor,
 timestamp. Tenant/branch luôn được resolve từ verified route context.
 

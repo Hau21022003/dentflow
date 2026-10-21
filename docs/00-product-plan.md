@@ -44,11 +44,11 @@ Một người dùng có thể được cấp nhiều vai trò/phạm vi, ví d�
 1. Lễ tân tìm kiếm theo số điện thoại để tránh tạo trùng hồ sơ trong cùng tenant.
 2. Nếu là bệnh nhân mới, tạo hồ sơ với thông tin liên hệ, ngày sinh, giới tính, địa chỉ, người liên hệ khẩn cấp và nguồn biết đến phòng khám.
 3. Bệnh nhân có thể có nhiều lần đến khám tại các chi nhánh khác nhau của cùng một tenant; hồ sơ hành chính vẫn thống nhất ở cấp tenant. Lịch sử clinical của từng branch chỉ Dentist có ca được phân công tại branch đó xem được.
-4. Cảnh báo như dị ứng thuốc là `PatientAlert` clinical-only: chỉ Dentist đang có ca được phân công mới tạo, xem hoặc sửa; alert không xuất hiện trong audit payload.
+4. Cảnh báo như dị ứng thuốc là `PatientAlert`: chỉ Dentist đang có ca chưa terminal được phân công mới tạo, sửa hoặc resolve. Receptionist và Branch Admin chỉ đọc alert đang hiệu lực trong Patient Overview như một ngoại lệ an toàn tenant-wide; nội dung alert không xuất hiện trong audit payload.
 
 ### 3.2 Lịch hẹn và check-in
 
-Lịch hẹn bao gồm bệnh nhân, chi nhánh, bác sĩ dự kiến tùy chọn, dịch vụ/lý do đến khám, khoảng thời gian, ghi chú và nguồn đặt hẹn. Ca chưa có Dentist vẫn check-in được nhưng không thể bắt đầu. Backend chặn cứng lịch giao nhau của Dentist đã được gán; chair/room scheduling là giai đoạn sau.
+Lịch hẹn bao gồm bệnh nhân, chi nhánh, bác sĩ dự kiến tùy chọn, Operatory tùy chọn, dịch vụ/lý do đến khám, khoảng thời gian, ghi chú và nguồn đặt hẹn. Ca chưa có Dentist vẫn check-in được nhưng không thể bắt đầu. Backend chặn cứng lịch giao nhau độc lập cho Dentist đã được gán và Operatory; lịch terminal không giữ slot.
 
 Vòng đời lịch hẹn:
 
@@ -71,7 +71,7 @@ Bác sĩ tạo **treatment plan** dài hạn thuộc Patient + Tenant + Branch, 
 
 - Bệnh nhân xác nhận kế hoạch tại quầy; lễ tân ghi lại người xác nhận và thời điểm. Dentist muốn sửa plan `PROPOSED` phải reopen về `DRAFT`, làm acceptance cũ mất hiệu lực rồi đề xuất/xác nhận lại.
 - Mỗi hạng mục điều trị tiến triển độc lập: `PENDING`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`.
-- MVP chỉ cần chọn răng theo mã/mô tả. Odontogram trực quan là hạng mục nâng cao, không chặn luồng điều trị cơ bản.
+- Màn chỉnh Treatment Plan `DRAFT` có bộ chọn răng trực quan theo mã FDI cho răng vĩnh viễn và răng sữa; kết quả vẫn chỉ được lưu vào `toothPosition` dưới dạng chuỗi mã/mô tả. Đây là trợ giúp nhập liệu, chưa phải hồ sơ odontogram theo bệnh nhân và không lưu trạng thái lâm sàng riêng cho từng răng.
 
 ### 3.4 Thanh toán và tái khám
 
@@ -118,8 +118,8 @@ Khi kết thúc điều trị hoặc thu tiền, lễ tân/bác sĩ tạo lịch
 | Tổ chức   | Branch, User, RoleAssignment                     | RoleAssignment có phạm vi branch tùy chọn                                                                                 |
 | Xác thực  | User, AuthSession, TotpFactor, PasskeyCredential | User là identity toàn hệ thống; có `fullName` và avatar cá nhân tùy chọn; session theo từng thiết bị, TOTP secret và refresh token chỉ lưu dạng mã hóa/hash         |
 | Danh mục  | ServiceGroup, Service                            | Nhóm dịch vụ tenant-scoped và Service có mã bất biến, giá hiện hành theo ISO currency, thời lượng và trạng thái hoạt động |
-| Bệnh nhân | Patient, PatientAlert                            | Patient thuộc tenant, không bị giới hạn branch; alert clinical-only                                                       |
-| Điều phối | Appointment, Visit, FollowUpRecommendation       | Appointment/Visit thuộc branch; start tạo Visit duy nhất; follow-up tạo lịch tái khám có nguồn                            |
+| Bệnh nhân | Patient, PatientAlert                            | Patient thuộc tenant, có email tùy chọn và mã `PAT-*`; alert được đọc an toàn tenant-wide nhưng chỉ Dentist theo case assignment được ghi |
+| Điều phối | Appointment, Operatory, Visit, FollowUpRecommendation | Appointment/Operatory/Visit thuộc branch; Operatory là một phòng hoặc ghế và chống trùng lịch ở database; start tạo Visit duy nhất |
 | Điều trị  | TreatmentPlan, TreatmentItem, TreatmentItemEvent, TreatmentNote | Plan thuộc Patient + Tenant + Branch với origin Visit bất biến; event giữ Visit/Dentist thực hiện, item snapshot Service |
 | Thu phí   | PatientInvoice, PatientInvoiceItem, Payment      | Tách biệt với hóa đơn SaaS; payment/refund/adjustment là immutable ledger records                                         |
 | Tuân thủ  | AuditLog                                         | Ai làm gì, trên bản ghi nào, khi nào                                                                                      |
@@ -136,7 +136,7 @@ Tài liệu này chỉ mô tả route nội bộ của backend và không ghi c�
 - `GET/POST /tenants/:tenantSlug/branches`, `PATCH /tenants/:tenantSlug/branches/:branchSlug`, `POST /tenants/:tenantSlug/branches/:branchSlug/deactivate` và `/activate`: Tenant Admin theo tenant scope; command branch dùng idempotency và không nhận `tenantId` từ client. Branch inactive bị chặn khỏi route vận hành branch-scoped, trừ route read-only khai báo ngoại lệ rõ ràng. Tenant Admin quản lý staff tenant-wide tại `/tenants/:tenantSlug/staff`; Branch Admin dùng `/tenants/:tenantSlug/branches/:branchSlug/staff` chỉ cho roster, invitation và grant/revoke `RECEPTIONIST`/`DENTIST` tại branch đã resolve.
 - `GET/POST /tenants/:tenantSlug/service-groups`, `GET/PATCH /tenants/:tenantSlug/service-groups/:serviceGroupId`, `POST .../:serviceGroupId/deactivate` và `/activate`: Tenant Admin quản lý nhóm danh mục tenant-scoped bằng tên unique không phân biệt hoa/thường; command dùng idempotency, không hard-delete. Nhóm inactive không nhận Service mới nhưng không tự deactivate Service hiện hữu.
 - `GET/POST /tenants/:tenantSlug/services`, `GET/PATCH /tenants/:tenantSlug/services/:serviceId`, `POST .../:serviceId/deactivate` và `/activate`: Tenant Admin quản lý catalog dịch vụ chung tenant. Mã dịch vụ dạng slug là bất biến và unique trong tenant; create/update dùng `serviceGroupId` active cùng tenant, command dùng idempotency và không nhận tenant context từ client. Chỉ service `ACTIVE` được chọn cho appointment/treatment mới khi các module đó được triển khai; bản ghi nghiệp vụ phải snapshot giá/currency tại thời điểm tạo để thay đổi catalog không hồi tố điều trị hoặc thanh toán.
-- Clinical API dùng route branch-scoped `/tenants/:tenantSlug/branches/:branchSlug/...`: Patient, Appointment, Visit, Treatment Plan/Item, PatientInvoice/Payment và follow-up. Contract route, state, permission, idempotency và error nằm tại [06-domain-workflows.md](./06-domain-workflows.md); không dùng `/patients`, `/appointments`, `/visits` hoặc `/patient-invoices` global.
+- Clinical API dùng route branch-scoped `/tenants/:tenantSlug/branches/:branchSlug/...`: Patient, Appointment, Visit, Treatment Plan/Item, PatientInvoice/Payment và follow-up. `GET /patients/:patientId/visits` dùng `patient.clinical.read` để trả danh sách lịch sử Visit cùng diagnosis tại branch đã xác minh; đây không phải quyền mở full Visit, addendum hay Dentist Visit Workspace. Contract route, state, permission, idempotency và error nằm tại [06-domain-workflows.md](./06-domain-workflows.md); không dùng `/patients`, `/appointments`, `/visits` hoặc `/patient-invoices` global.
 - `POST /tenants/:tenantSlug/branches/:branchSlug/uploads/image-intents`: route branch-scoped với permission `file.upload`; chỉ cấp presigned POST ngắn hạn cho ảnh JPG/PNG/WEBP không quá 2 MB dưới key temp do server tạo. Client upload trực tiếp vào object storage; route không nhận tenant/branch ID hoặc object key trong body, không lưu attachment và không trả public URL.
 - `POST /uploads/image-intents`: route chỉ yêu cầu JWT cho ảnh user-owned. Body nhận `folder` enum (V1 chỉ `AVATAR`), MIME và dung lượng; server lấy user ID từ JWT rồi tạo key temp. Client không truyền path, user ID hoặc permanent object key.
 - `POST /billing/checkout-session`, `POST /billing/webhook`; webhook không dùng JWT mà xác minh chữ ký Stripe.
@@ -153,7 +153,7 @@ Authorization snapshot trong auth response gồm platform role/permission và c�
 
 ## 8. Roadmap sau MVP
 
-1. Odontogram tương tác, ảnh X-quang/tệp điều trị và mẫu phiếu điều trị.
+1. Hồ sơ odontogram theo bệnh nhân với trạng thái lâm sàng từng răng, ảnh X-quang/tệp điều trị và mẫu phiếu điều trị.
 2. Nhắc hẹn SMS, Zalo OA hoặc email; chiến dịch gọi lại bệnh nhân không tái khám.
 3. Kho vật tư, nhà cung cấp, tiêu hao theo hạng mục điều trị.
 4. Báo cáo doanh thu/công nợ nâng cao, KPI bác sĩ, công suất ghế và export kế toán.

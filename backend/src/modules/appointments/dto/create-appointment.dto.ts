@@ -37,6 +37,11 @@ export class CreateAppointmentDto {
   @IsUUID()
   assignedDentistUserId?: string | null;
 
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  @IsOptional()
+  @IsUUID()
+  operatoryId?: string | null;
+
   @ApiPropertyOptional({ maxLength: 1000, nullable: true })
   @IsOptional()
   @NormalizeWhitespace()

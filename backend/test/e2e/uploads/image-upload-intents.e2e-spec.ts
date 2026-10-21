@@ -60,6 +60,22 @@ describe('Image upload intents (e2e)', () => {
       .post(route)
       .send({ contentType: 'image/jpeg', sizeBytes: 2 * 1024 * 1024 + 1 })
       .expect(413);
+    await agent
+      .post(route)
+      .send({
+        purpose: 'TREATMENT_PROGRESS',
+        contentType: 'image/jpeg',
+        sizeBytes: 5 * 1024 * 1024 + 1,
+      })
+      .expect(413);
+    await agent
+      .post(route)
+      .send({
+        purpose: 'TREATMENT_PROGRESS',
+        contentType: 'image/jpeg',
+        sizeBytes: 3 * 1024 * 1024,
+      })
+      .expect(503);
   });
 
   it('issues user-owned avatar intents only to authenticated users', async () => {

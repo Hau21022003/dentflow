@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   PayloadTooLargeException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -10,6 +11,7 @@ import {
   type PresignedPost,
 } from '../../infrastructure/storage';
 import type { AuthorizationContext } from '../authorization/authorization-context';
+import { BranchImageUploadPurpose } from './upload.constants';
 import { UploadsService } from './uploads.service';
 
 describe('UploadsService', () => {
@@ -72,6 +74,62 @@ describe('UploadsService', () => {
         sizeBytes: 2 * 1024 * 1024 + 1,
       }),
     ).rejects.toBeInstanceOf(PayloadTooLargeException);
+    expect(createPresignedPost).not.toHaveBeenCalled();
+  });
+
+  it('allows treatment progress images up to 5 MiB under an actor-scoped key', async () => {
+    const response = await service.createImageUploadIntent(branchContext(), {
+      contentType: 'image/png',
+      sizeBytes: 5 * 1024 * 1024,
+      purpose: BranchImageUploadPurpose.TREATMENT_PROGRESS,
+    });
+
+    expect(response.objectKey).toMatch(
+      /^temp\/tenant-uuid\/branch-uuid\/treatment-progress\/user-uuid\/[0-9a-f-]{36}\.png$/i,
+    );
+    expect(createPresignedPost).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        key: response.objectKey,
+        maxBytes: 5 * 1024 * 1024,
+      }),
+    );
+
+    await expect(
+      service.createImageUploadIntent(branchContext(), {
+        contentType: 'image/png',
+        sizeBytes: 5 * 1024 * 1024 + 1,
+        purpose: BranchImageUploadPurpose.TREATMENT_PROGRESS,
+      }),
+    ).rejects.toBeInstanceOf(PayloadTooLargeException);
+    expect(createPresignedPost).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['image/jpeg', 'image/png', 'image/webp'] as const)(
+    'accepts %s when allowed by the treatment progress policy',
+    async (contentType) => {
+      await service.createImageUploadIntent(branchContext(), {
+        contentType,
+        sizeBytes: 1,
+        purpose: BranchImageUploadPurpose.TREATMENT_PROGRESS,
+      });
+
+      expect(createPresignedPost).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contentType,
+          maxBytes: 5 * 1024 * 1024,
+        }),
+      );
+    },
+  );
+
+  it('rejects a content type not allowed by the selected policy', async () => {
+    await expect(
+      service.createImageUploadIntent(branchContext(), {
+        contentType: 'image/gif',
+        sizeBytes: 1,
+        purpose: BranchImageUploadPurpose.TREATMENT_PROGRESS,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(createPresignedPost).not.toHaveBeenCalled();
   });
 

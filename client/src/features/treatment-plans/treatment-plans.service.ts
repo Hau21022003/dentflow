@@ -1,11 +1,15 @@
 import http from "@/shared/lib/http";
 import type { IdempotentCommand } from "@/shared/lib/idempotency";
 import type {
+  CancelTreatmentPlanInput,
+  RecordTreatmentItemEventInput,
   RecordTreatmentItemEventResponse,
+  CreateTreatmentProgressNoteInput,
   SyncTreatmentPlanInput,
   TreatmentItemEventPage,
-  TreatmentItemEventType,
+  TreatmentItemEvent,
   TreatmentPlan,
+  TreatmentPlanListQuery,
   TreatmentPlanPage,
   TreatmentReasonInput,
 } from "./treatment-plans.types";
@@ -25,9 +29,12 @@ function planRoute(scope: TreatmentPlanScope, planId: string) {
 }
 
 export const treatmentPlansService = {
-  async list(scope: TreatmentPlanScope, page = 1, limit = 100): Promise<TreatmentPlanPage> {
+  async list(
+    scope: TreatmentPlanScope,
+    query: TreatmentPlanListQuery = { page: 1, limit: 100 },
+  ): Promise<TreatmentPlanPage> {
     const { payload } = await http.get<TreatmentPlanPage>(plansRoute(scope), {
-      params: { page, limit },
+      params: query,
     });
     return payload;
   },
@@ -35,32 +42,71 @@ export const treatmentPlansService = {
     const { payload } = await http.get<TreatmentPlan>(planRoute(scope, planId));
     return payload;
   },
-  async create(scope: TreatmentPlanScope & IdempotentCommand): Promise<TreatmentPlan> {
+  async create(
+    scope: TreatmentPlanScope & IdempotentCommand,
+  ): Promise<TreatmentPlan> {
     const { idempotencyKey, ...routeScope } = scope;
-    const { payload } = await http.post<TreatmentPlan>(plansRoute(routeScope), {}, { idempotencyKey });
+    const { payload } = await http.post<TreatmentPlan>(
+      plansRoute(routeScope),
+      {},
+      { idempotencyKey },
+    );
     return payload;
   },
-  async sync(command: TreatmentPlanScope & IdempotentCommand & { planId: string; input: SyncTreatmentPlanInput }): Promise<TreatmentPlan> {
+  async sync(
+    command: TreatmentPlanScope &
+      IdempotentCommand & { planId: string; input: SyncTreatmentPlanInput },
+  ): Promise<TreatmentPlan> {
     const { planId, input, idempotencyKey, ...scope } = command;
-    const { payload } = await http.patch<TreatmentPlan>(planRoute(scope, planId), input, { idempotencyKey });
+    const { payload } = await http.patch<TreatmentPlan>(
+      planRoute(scope, planId),
+      input,
+      { idempotencyKey },
+    );
     return payload;
   },
-  async propose(command: TreatmentPlanScope & IdempotentCommand & { planId: string }): Promise<TreatmentPlan> {
+  async propose(
+    command: TreatmentPlanScope & IdempotentCommand & { planId: string },
+  ): Promise<TreatmentPlan> {
     const { planId, idempotencyKey, ...scope } = command;
-    const { payload } = await http.post<TreatmentPlan>(`${planRoute(scope, planId)}/propose`, {}, { idempotencyKey });
+    const { payload } = await http.post<TreatmentPlan>(
+      `${planRoute(scope, planId)}/propose`,
+      {},
+      { idempotencyKey },
+    );
     return payload;
   },
-  async reopen(command: TreatmentPlanScope & IdempotentCommand & { planId: string; input: TreatmentReasonInput }): Promise<TreatmentPlan> {
+  async reopen(
+    command: TreatmentPlanScope &
+      IdempotentCommand & { planId: string; input: TreatmentReasonInput },
+  ): Promise<TreatmentPlan> {
     const { planId, input, idempotencyKey, ...scope } = command;
-    const { payload } = await http.post<TreatmentPlan>(`${planRoute(scope, planId)}/reopen`, input, { idempotencyKey });
+    const { payload } = await http.post<TreatmentPlan>(
+      `${planRoute(scope, planId)}/reopen`,
+      input,
+      { idempotencyKey },
+    );
     return payload;
   },
-  async cancel(command: TreatmentPlanScope & IdempotentCommand & { planId: string; input: TreatmentReasonInput }): Promise<TreatmentPlan> {
+  async cancel(
+    command: TreatmentPlanScope &
+      IdempotentCommand & { planId: string; input: CancelTreatmentPlanInput },
+  ): Promise<TreatmentPlan> {
     const { planId, input, idempotencyKey, ...scope } = command;
-    const { payload } = await http.post<TreatmentPlan>(`${planRoute(scope, planId)}/cancel`, input, { idempotencyKey });
+    const { payload } = await http.post<TreatmentPlan>(
+      `${planRoute(scope, planId)}/cancel`,
+      input,
+      { idempotencyKey },
+    );
     return payload;
   },
-  async listEvents(scope: TreatmentPlanScope & { planId: string; itemId: string; cursor?: string | null }): Promise<TreatmentItemEventPage> {
+  async listEvents(
+    scope: TreatmentPlanScope & {
+      planId: string;
+      itemId: string;
+      cursor?: string | null;
+    },
+  ): Promise<TreatmentItemEventPage> {
     const { planId, itemId, cursor, ...routeScope } = scope;
     const { payload } = await http.get<TreatmentItemEventPage>(
       `${planRoute(routeScope, planId)}/items/${encodeURIComponent(itemId)}/events`,
@@ -68,12 +114,36 @@ export const treatmentPlansService = {
     );
     return payload;
   },
-  async recordEvent(command: TreatmentPlanScope & IdempotentCommand & { planId: string; itemId: string; input: { eventType: TreatmentItemEventType; reasonCode?: string } }): Promise<RecordTreatmentItemEventResponse> {
+  async recordEvent(
+    command: TreatmentPlanScope &
+      IdempotentCommand & {
+        planId: string;
+        itemId: string;
+        input: RecordTreatmentItemEventInput;
+      },
+  ): Promise<RecordTreatmentItemEventResponse> {
     const { planId, itemId, input, idempotencyKey, ...scope } = command;
     const { payload } = await http.post<RecordTreatmentItemEventResponse>(
       `${planRoute(scope, planId)}/items/${encodeURIComponent(itemId)}/events`,
       input,
       { idempotencyKey },
+    );
+    return payload;
+  },
+  async createProgressNote(
+    command: TreatmentPlanScope &
+      IdempotentCommand & {
+        planId: string;
+        itemId: string;
+        input: CreateTreatmentProgressNoteInput;
+        signal?: AbortSignal;
+      },
+  ): Promise<TreatmentItemEvent> {
+    const { planId, itemId, input, idempotencyKey, signal, ...scope } = command;
+    const { payload } = await http.post<TreatmentItemEvent>(
+      `${planRoute(scope, planId)}/items/${encodeURIComponent(itemId)}/progress-notes`,
+      input,
+      { idempotencyKey, signal },
     );
     return payload;
   },

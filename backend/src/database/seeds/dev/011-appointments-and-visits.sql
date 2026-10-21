@@ -67,6 +67,7 @@ WITH "config" AS (
     (("schedule"."scheduled_date"::timestamp + TIME '08:00' + (("schedule"."n" - 1) / 3 % 6) * INTERVAL '2 hours') AT TIME ZONE "schedule"."time_zone") AS "start_at",
     "service"."duration_minutes",
     "dentists"."user_id" AS "assigned_dentist_user_id",
+    "operatory"."id" AS "operatory_id",
     "service"."id" AS "service_id",
     "service"."code" AS "service_code",
     "service"."name" AS "service_name",
@@ -74,6 +75,11 @@ WITH "config" AS (
     "service"."currency" AS "service_currency"
   FROM "schedule"
   INNER JOIN "dentists" ON "dentists"."position" = 1 + ("schedule"."n" - 1) % 3
+  INNER JOIN "operatories" AS "operatory"
+    ON "operatory"."tenant_id" = "schedule"."tenant_id"
+    AND "operatory"."branch_id" = "schedule"."branch_id"
+    AND "operatory"."code" = 'CHAIR-0' || (1 + ("schedule"."n" - 1) % 3)::text
+    AND "operatory"."is_active" = true
   INNER JOIN "patients" AS "patient"
     ON "patient"."tenant_id" = "schedule"."tenant_id"
     AND "patient"."id" = ('22000000-0000-4000-8000-' || lpad((1 + ("schedule"."n" - 1) % 22)::text, 12, '0'))::uuid
@@ -84,17 +90,18 @@ WITH "config" AS (
 )
 INSERT INTO "appointments" (
   "id", "tenant_id", "branch_id", "patient_id", "status", "source", "start_at", "end_at",
-  "assigned_dentist_user_id", "service_id", "service_code", "service_name", "service_amount",
+  "assigned_dentist_user_id", "operatory_id", "service_id", "service_code", "service_name", "service_amount",
   "service_currency", "service_duration_minutes", "visit_reason", "operational_note", "created_at", "updated_at"
 )
 SELECT
   "id", "tenant_id", "branch_id", "patient_id", "status", "source", "start_at", "start_at" + "duration_minutes" * INTERVAL '1 minute',
-  "assigned_dentist_user_id", "service_id", "service_code", "service_name", "service_amount",
+  "assigned_dentist_user_id", "operatory_id", "service_id", "service_code", "service_name", "service_amount",
   "service_currency", "duration_minutes", NULL, 'Synthetic appointment fixture for calendar testing', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 FROM "seed_appointments"
 ON CONFLICT ("id") DO UPDATE SET
   "patient_id" = EXCLUDED."patient_id", "status" = EXCLUDED."status", "source" = EXCLUDED."source",
   "start_at" = EXCLUDED."start_at", "end_at" = EXCLUDED."end_at", "assigned_dentist_user_id" = EXCLUDED."assigned_dentist_user_id",
+  "operatory_id" = EXCLUDED."operatory_id",
   "service_id" = EXCLUDED."service_id", "service_code" = EXCLUDED."service_code", "service_name" = EXCLUDED."service_name",
   "service_amount" = EXCLUDED."service_amount", "service_currency" = EXCLUDED."service_currency",
   "service_duration_minutes" = EXCLUDED."service_duration_minutes", "visit_reason" = EXCLUDED."visit_reason",

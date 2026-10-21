@@ -5,17 +5,354 @@
   "planLabel": "Treatment plan {{id}}",
   "itemCount_one": "{{count}} item",
   "itemCount_other": "{{count}} items",
+  "toothCount_one": "{{count}} tooth",
+  "toothCount_other": "{{count}} teeth",
   "statuses": {
-    "plan": { "DRAFT": "Draft", "PROPOSED": "Proposed", "ACCEPTED": "Accepted", "PARTIALLY_COMPLETED": "Partially completed", "COMPLETED": "Completed", "CANCELLED": "Cancelled" },
-    "item": { "PENDING": "Pending", "IN_PROGRESS": "In progress", "COMPLETED": "Completed", "CANCELLED": "Cancelled" }
+    "plan": {
+      "DRAFT": "Draft",
+      "PROPOSED": "Proposed",
+      "ACCEPTED": "Accepted",
+      "PARTIALLY_COMPLETED": "Partially completed",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "item": {
+      "PENDING": "Pending",
+      "IN_PROGRESS": "In progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    }
   },
-  "actions": { "createDraft": "Create draft", "addItem": "Add item", "removeItem": "Remove item", "saveDraft": "Save draft", "propose": "Propose", "reopen": "Reopen", "cancelPlan": "Cancel plan", "cancelItem": "Cancel item", "start": "Start", "recordProgress": "Record progress", "complete": "Complete", "history": "Event history", "close": "Close", "saving": "Saving" },
-  "fields": { "service": "Service", "plannedDentist": "Planned dentist", "quantity": "Quantity", "discountAmount": "Discount amount", "toothPosition": "Tooth position", "indication": "Indication", "reasonCode": "Reason code", "reasonCodePlaceholder": "Example: PATIENT_REQUEST" },
-  "picker": { "servicePlaceholder": "Choose a service", "serviceSearch": "Search services...", "emptyServices": "No active services found.", "dentistPlaceholder": "Choose a dentist", "dentistSearch": "Search dentists...", "emptyDentists": "No active dentists found." },
-  "validation": { "required": "This field is required.", "quantity": "Quantity must be between 1 and 10,000.", "discount": "Discount cannot be negative.", "reasonCode": "Use uppercase letters, numbers, and underscores only." },
-  "editor": { "noItems": "Add at least one treatment item before proposing this plan.", "item": "Item {{count}}", "saveBeforePropose": "Save your draft changes before proposing." },
-  "detail": { "title": "Plan details", "originVisit": "Origin Visit: {{id}}", "quantity": "Quantity: {{count}}" },
-  "events": { "title": "Event history", "loading": "Loading event history...", "loadError": "Could not load event history. Please try again.", "empty": "No execution events have been recorded.", "loadMore": "Load more", "types": { "IN_PROGRESS": "In progress", "COMPLETED": "Completed", "CANCELLED": "Cancelled" } },
-  "errors": { "plansLoad": "Could not load treatment plans. Please retry.", "planLoad": "Could not load this treatment plan. Please retry." },
-  "dialogs": { "reopen": { "title": "Reopen treatment plan", "description": "This clears the previous acceptance and returns the plan to Draft.", "submit": "Reopen" }, "cancelPlan": { "title": "Cancel treatment plan", "description": "This cancels the plan and all pending items. This cannot be used after execution events exist.", "submit": "Cancel plan" }, "cancelItem": { "title": "Cancel treatment item", "description": "Record a cancellation event for this item.", "submit": "Cancel item" } }
+  "actions": {
+    "createDraft": "Create draft",
+    "createPlan": "Create plan",
+    "createTreatmentPlan": "Create treatment plan",
+    "addItem": "Add item",
+    "addToPlan": "Add to plan",
+    "updateItem": "Update item",
+    "removeItem": "Remove item",
+    "editItem": "Edit item {{count}}",
+    "deleteItem": "Delete item {{count}}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "clearAll": "Clear all",
+    "cancelEdit": "Cancel editing",
+    "cancel": "Cancel",
+    "saveDraft": "Save draft",
+    "propose": "Propose",
+    "reopen": "Reopen",
+    "cancelPlan": "Cancel plan",
+    "cancelItem": "Cancel item",
+    "start": "Start",
+    "recordProgress": "Record progress",
+    "complete": "Complete",
+    "history": "Treatment history",
+    "historyShort": "History",
+    "hideHistory": "Hide history",
+    "recordProgressShort": "Progress",
+    "close": "Close",
+    "saving": "Saving",
+    "keepEditing": "Keep editing",
+    "discard": "Discard changes",
+    "more": "More actions"
+  },
+  "fields": {
+    "service": "Service",
+    "plannedDentist": "Planned dentist",
+    "quantity": "Quantity",
+    "discountAmount": "Discount amount",
+    "toothPosition": "Tooth position",
+    "indication": "Indication",
+    "reasonCode": "Reason code",
+    "reasonCodePlaceholder": "Example: PATIENT_REQUEST"
+  },
+  "picker": {
+    "servicePlaceholder": "Choose a service",
+    "serviceSearch": "Search services...",
+    "emptyServices": "No active services found.",
+    "dentistPlaceholder": "Choose a dentist",
+    "dentistSearch": "Search dentists...",
+    "emptyDentists": "No active dentists found."
+  },
+  "validation": {
+    "required": "This field is required.",
+    "quantity": "Quantity must be between 1 and 10,000.",
+    "discount": "Discount cannot be negative.",
+    "discountExceeds": "Discount cannot exceed the service price.",
+    "wholeAmount": "Amount must be a whole number in the currency's smallest unit.",
+    "activeService": "Choose an active service.",
+    "reasonCode": "Use uppercase letters, numbers, and underscores only."
+  },
+  "odontogram": {
+    "title": "Dental chart (FDI)",
+    "description": "Select teeth on the chart to add them to a treatment item.",
+    "dentitionLabel": "Choose dentition",
+    "dentitions": {
+      "permanent": "Permanent teeth",
+      "primary": "Primary teeth"
+    },
+    "upperArch": "Upper arch",
+    "lowerArch": "Lower arch",
+    "toothLabel": "Tooth {{code}}",
+    "selectedCount": "Selected: {{count}} teeth",
+    "selectedList": "Selected teeth: {{codes}}",
+    "noneSelected": "No teeth selected",
+    "clear": "Clear selection",
+    "zoom": "Enlarge dental chart",
+    "zoomTitle": "Dental chart",
+    "zoomHint": "Drag horizontally to inspect and select teeth.",
+    "legend": { "selected": "Selected tooth", "normal": "Normal tooth" }
+  },
+  "editor": {
+    "title": "Add treatment item",
+    "editTitle": "Edit treatment item",
+    "description": "Create a treatment item for the selected teeth.",
+    "noItems": "No treatment items yet",
+    "noItemsDescription": "Choose a service, dentist, and tooth position, then add the item to this plan.",
+    "item": "Item {{count}}",
+    "itemsTitle": "Added items ({{count}})",
+    "itemsDescription": "These items will be saved to the treatment plan for this Visit.",
+    "pendingComposer": "Add or update the item currently being edited before saving the plan.",
+    "needItem": "Add at least one treatment item before creating the treatment plan.",
+    "quantityHelper": "Defaults to the selected tooth count and can still be edited.",
+    "toothPositionHelper": "Filled from the selected teeth and can still be edited.",
+    "indicationPlaceholder": "Enter treatment indication, tooth condition, notes...",
+    "legacyToothWarning": "The current position contains text that is not an FDI code. Selecting a tooth on the chart will replace it with an FDI code list.",
+    "dentistUnavailable": "Dentist no longer available",
+    "estimatedTotal": "Total estimated cost",
+    "columns": {
+      "service": "Service",
+      "teeth": "Teeth",
+      "dentist": "Planned dentist",
+      "cost": "Estimated cost",
+      "actions": "Actions"
+    }
+  },
+  "feedback": {
+    "draftSaved": "Treatment plan draft saved.",
+    "proposed": "Treatment plan created and proposed."
+  },
+  "detail": {
+    "title": "Plan details",
+    "originVisit": "Origin Visit: {{id}}",
+    "createdAt": "Created on {{date}}",
+    "quantity": "Quantity: {{count}}",
+    "responsibleDentist": "Responsible dentist",
+    "itemTotal": "Treatment items",
+    "progressTitle": "Treatment progress",
+    "progressValue": "{{completed}}/{{total}} completed ({{percentage}}%)",
+    "completedCount": "Completed: {{count}}",
+    "inProgressCount": "In progress: {{count}}",
+    "pendingCount": "Pending: {{count}}",
+    "cancelledCount": "Cancelled: {{count}}",
+    "assignedTeeth": "Assigned teeth",
+    "assignedToothLabel": "Tooth {{code}}, assigned",
+    "otherPositions": "Other positions: {{positions}}",
+    "itemsTitle": "Treatment items ({{count}})",
+    "readOnly": "Read only",
+    "toothValue": "Tooth: {{position}}",
+    "noTooth": "No tooth assigned",
+    "unitPrice": "Unit price: {{amount}}",
+    "indicationValue": "Indication: {{indication}}",
+    "dentistValue": "Dentist: {{name}}",
+    "expandItem": "Expand item {{count}}",
+    "collapseItem": "Collapse item {{count}}"
+  },
+  "visitList": {
+    "title": "Related treatment plans",
+    "description": "Treatment plans related to this visit.",
+    "detailPageDescription": "Manage treatment plan content and state without interrupting the Visit record.",
+    "quickView": "Treatment plan quick view",
+    "quickViewDescription": "Read-only information; open the detail page to take action.",
+    "quickViewPlan": "Quick view {{code}}",
+    "openDetail": "View details",
+    "retry": "Try again",
+    "noItems": "No items yet",
+    "noResults": "No treatment plans match the current filters.",
+    "notAssigned": "Not assigned",
+    "searchPlaceholder": "Search by plan code or treatment name...",
+    "allStatuses": "All statuses",
+    "toothPositionValue": "Tooth position: {{position}}",
+    "progress": "{{completed}} / {{total}} completed",
+    "columns": {
+      "plan": "Plan",
+      "createdAt": "Created",
+      "dentist": "Dentist",
+      "progress": "Progress",
+      "status": "Status",
+      "cost": "Estimated cost",
+      "actions": "Actions"
+    }
+  },
+  "progress": {
+    "title": "Record treatment progress",
+    "recordedAt": "{{date}}",
+    "content": "Work performed",
+    "contentPlaceholder": "Describe the work performed and the patient's response...",
+    "characterCount": "{{count}}/2,000",
+    "images": "Attached images",
+    "imagesHint": "Optional (up to {{count}} images)",
+    "chooseImages": "Choose treatment images",
+    "imageFormats": "JPG, PNG, WEBP (up to 5 MiB/image)",
+    "save": "Save note",
+    "success": "Treatment progress was recorded.",
+    "imagePreviewTitle": "Treatment image",
+    "imagePreviewAlt": "Enlarged treatment image",
+    "imageAlt": "Treatment image {{count}}",
+    "previewImage": "Preview treatment image {{count}}",
+    "removeImage": "Remove treatment image {{count}}",
+    "imageUnavailable": "Image unavailable",
+    "validation": {
+      "contentRequired": "Work performed is required.",
+      "contentMax": "Work performed must not exceed 2,000 characters.",
+      "tooManyImages": "You can attach up to {{count}} images.",
+      "imageType": "Only JPG, PNG, and WEBP images are supported.",
+      "imageEmpty": "An image file must not be empty.",
+      "imageSize": "Each image must not exceed 5 MiB."
+    },
+    "errors": {
+      "upload": "One or more images could not be uploaded. Successful uploads were kept; please retry."
+    }
+  },
+  "events": {
+    "title": "Treatment history",
+    "fullTitle": "Treatment history",
+    "loading": "Loading event history...",
+    "loadError": "Could not load event history. Please try again.",
+    "empty": "No execution events have been recorded.",
+    "noResults": "No matching events found.",
+    "recent": "{{count}} most recent events",
+    "viewAll": "View full history",
+    "performedBy": "Dentist: {{name}}",
+    "cancelReason": "Reason: {{reason}}",
+    "cancellationReasons": {
+      "PATIENT_REQUEST": "Patient request",
+      "ENTERED_IN_ERROR": "Entered in error",
+      "DUPLICATE": "Duplicate",
+      "NO_LONGER_APPLICABLE": "No longer applicable",
+      "TRANSFER_OF_CARE": "Transfer of care",
+      "OTHER": "Other"
+    },
+    "searchPlaceholder": "Search by content, dentist, or event type...",
+    "all": "All",
+    "loadMore": "Load more",
+    "export": "Export history",
+    "exporting": "Exporting...",
+    "exportError": "Could not export treatment history. Please try again.",
+    "exportColumns": {
+      "time": "Time",
+      "event": "Event type",
+      "dentist": "Dentist",
+      "reason": "Cancellation reason",
+      "note": "Cancellation note",
+      "content": "Content",
+      "images": "Image count"
+    },
+    "types": {
+      "IN_PROGRESS": "In progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "PROGRESS_NOTE": "Progress note"
+    }
+  },
+  "errors": {
+    "plansLoad": "Could not load treatment plans. Please retry.",
+    "planLoad": "Could not load this treatment plan. Please retry."
+  },
+  "dialogs": {
+    "clearAll": {
+      "title": "Clear all treatment items?",
+      "description": "Items are removed from the draft only after you save it."
+    },
+    "discard": {
+      "title": "Discard unsaved changes?",
+      "description": "Changes made to this treatment plan will not be saved."
+    },
+    "reopen": {
+      "title": "Reopen treatment plan",
+      "description": "This clears the previous acceptance and returns the plan to Draft.",
+      "submit": "Reopen"
+    },
+    "cancelPlan": {
+      "title": "Cancel treatment plan",
+      "description": "This will cancel the entire treatment plan and every pending item. This action cannot be undone.",
+      "submit": "Cancel plan",
+      "reasonLabel": "Cancellation reason",
+      "noteLabel": "Additional note",
+      "noteOptional": "(optional)",
+      "noteRequired": "(required)",
+      "notePlaceholder": "Add details if needed...",
+      "noteCount": "{{count}}/500",
+      "historyHint": "The cancellation reason will be stored in treatment history for follow-up and reporting.",
+      "auditHint": "This action will be recorded in treatment history.",
+      "validation": {
+        "noteRequired": "Enter a note when the reason is Other.",
+        "noteMax": "The note must not exceed 500 characters."
+      },
+      "reasons": {
+        "PATIENT_REQUEST": {
+          "label": "Patient request",
+          "description": "Requested by the patient"
+        },
+        "ENTERED_IN_ERROR": {
+          "label": "Entered in error",
+          "description": "The plan information was entered incorrectly"
+        },
+        "DUPLICATE": {
+          "label": "Duplicate plan",
+          "description": "Another treatment plan already exists"
+        },
+        "NO_LONGER_APPLICABLE": {
+          "label": "No longer applicable",
+          "description": "No longer suitable for the current condition"
+        },
+        "TRANSFER_OF_CARE": {
+          "label": "Transfer of care",
+          "description": "Transfer to another clinic or dentist"
+        },
+        "OTHER": {
+          "label": "Other",
+          "description": "Another reason"
+        }
+      }
+    },
+    "cancelItem": {
+      "title": "Cancel treatment item",
+      "description": "This will cancel the current treatment item and record the reason in the patient's treatment history.",
+      "submit": "Cancel item",
+      "reasonLabel": "Cancellation reason",
+      "noteLabel": "Additional note",
+      "noteOptional": "(optional)",
+      "noteRequired": "(required)",
+      "notePlaceholder": "Add more information about the cancellation if needed...",
+      "noteCount": "{{count}}/500",
+      "auditHint": "This action will be recorded in treatment history.",
+      "validation": {
+        "noteRequired": "Enter a note when the reason is Other.",
+        "noteMax": "The note must not exceed 500 characters."
+      },
+      "reasons": {
+        "PATIENT_REQUEST": {
+          "label": "Patient request",
+          "description": "Requested by the patient."
+        },
+        "ENTERED_IN_ERROR": {
+          "label": "Item entered in error",
+          "description": "The wrong service or tooth was selected."
+        },
+        "NO_LONGER_APPLICABLE": {
+          "label": "No longer applicable",
+          "description": "No longer suitable for the current condition."
+        },
+        "DUPLICATE": {
+          "label": "Duplicate item",
+          "description": "A similar treatment item already exists."
+        },
+        "OTHER": {
+          "label": "Other",
+          "description": "Another reason."
+        }
+      }
+    }
+  }
 }

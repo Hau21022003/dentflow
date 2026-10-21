@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { TreatmentItemEvent } from './entities/treatment-item-event.entity';
+import { TreatmentItemEventImage } from './entities/treatment-item-event-image.entity';
 import { TreatmentItem } from './entities/treatment-item.entity';
 import { TreatmentPlan } from './entities/treatment-plan.entity';
 @Injectable()
@@ -11,6 +12,8 @@ export class TreatmentPlansRepository {
     @InjectRepository(TreatmentItem) readonly items: Repository<TreatmentItem>,
     @InjectRepository(TreatmentItemEvent)
     readonly events: Repository<TreatmentItemEvent>,
+    @InjectRepository(TreatmentItemEventImage)
+    readonly eventImages: Repository<TreatmentItemEventImage>,
   ) {}
   findPlanForUpdate(
     manager: EntityManager,
@@ -57,12 +60,12 @@ export class TreatmentPlansRepository {
       .createQueryBuilder('event')
       .where('event.treatmentPlanId=:planId', { planId })
       .andWhere('event.treatmentItemId=:itemId', { itemId })
-      .orderBy('event.createdAt', 'ASC')
-      .addOrderBy('event.id', 'ASC')
+      .orderBy('event.createdAt', 'DESC')
+      .addOrderBy('event.id', 'DESC')
       .take(51);
     if (cursor)
       q.andWhere(
-        '(event.createdAt > :createdAt OR (event.createdAt = :createdAt AND event.id > :id))',
+        '(event.createdAt < :createdAt OR (event.createdAt = :createdAt AND event.id < :id))',
         cursor,
       );
     return q.getMany();

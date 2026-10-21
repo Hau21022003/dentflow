@@ -22,6 +22,7 @@
     "doctorWorkspace": "My Schedule",
     "doctorPatients": "My patients",
     "treatmentPlanAcceptances": "Plan acceptances"
+    ,"operatories": "Treatment rooms / chairs"
   },
   "language": {
     "switchToEnglish": "Switch to English",

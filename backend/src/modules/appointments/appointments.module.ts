@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditModule } from '../audit/audit.module';
 import { AuthorizationModule } from '../authorization/authorization.module';
 import { UsersModule } from '../users/users.module';
+import { Operatory } from '../operatories/entities/operatory.entity';
 import { AppointmentsController } from './appointments.controller';
 import { AppointmentsRepository } from './appointments.repository';
 import { AppointmentsService } from './appointments.service';
@@ -11,7 +12,11 @@ import { AppointmentStatusTransition } from './entities/appointment-status-trans
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Appointment, AppointmentStatusTransition]),
+    TypeOrmModule.forFeature([
+      Appointment,
+      AppointmentStatusTransition,
+      Operatory,
+    ]),
     AuditModule,
     AuthorizationModule,
     UsersModule,

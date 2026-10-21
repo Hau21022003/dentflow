@@ -11,13 +11,16 @@ import { EmailTemplateManagementPage } from "../../pages/platform/EmailTemplateM
 import { SubscriptionPlanManagementPage } from "../../pages/platform/SubscriptionPlanManagementPage";
 import { TenantManagementPage } from "../../pages/platform/TenantManagementPage";
 import { TenantDetailPage } from "../../pages/platform/TenantDetailPage";
+import { PatientDetailPage } from "../../pages/patients/PatientDetailPage";
 import { BranchWorkspaceHomePage } from "../../pages/workspace/branch/BranchWorkspaceHomePage";
 import { BranchStaffManagementPage } from "../../pages/workspace/branch/BranchStaffManagementPage";
+import { OperatoryManagementPage } from "../../pages/workspace/branch/OperatoryManagementPage";
 import { DataTableMobileDemoPage } from "../../pages/workspace/branch/DataTableMobileDemoPage";
 import { TempImageUploadTestPage } from "../../pages/workspace/branch/TempImageUploadTestPage";
 import { DoctorHomePage } from "../../pages/workspace/doctor/DoctorHomePage";
 import { DoctorPatientsPage } from "../../pages/workspace/doctor/DoctorPatientsPage";
 import { DoctorVisitPage } from "../../pages/workspace/doctor/DoctorVisitPage";
+import { DoctorTreatmentPlanPage } from "../../pages/workspace/doctor/DoctorTreatmentPlanPage";
 import { AppointmentsPage } from "../../pages/workspace/reception/AppointmentsPage";
 import { TreatmentPlanAcceptancesPage } from "../../pages/workspace/reception/TreatmentPlanAcceptancesPage";
 import { BranchManagementPage } from "../../pages/workspace/tenant/BranchManagementPage";
@@ -181,6 +184,17 @@ export const routes: RouteObject[] = [
                         ],
                       },
                       {
+                        path: "operatories",
+                        element: (
+                          <RequireBranchPermission
+                            permission={PERMISSIONS.operatoryManage}
+                          />
+                        ),
+                        children: [
+                          { index: true, element: <OperatoryManagementPage /> },
+                        ],
+                      },
+                      {
                         path: "branch/staff",
                         element: <LegacyBranchStaffRedirect />,
                       },
@@ -208,7 +222,23 @@ export const routes: RouteObject[] = [
                             permission={PERMISSIONS.patientAdministrativeManage}
                           />
                         ),
-                        children: [{ index: true, element: <PatientManagementPage /> }],
+                        children: [
+                          { index: true, element: <PatientManagementPage /> },
+                          {
+                            path: ":patientId",
+                            element: (
+                              <RequireBranchPermission
+                                permission={[
+                                  PERMISSIONS.patientAdministrativeManage,
+                                  PERMISSIONS.patientClinicalRead,
+                                ]}
+                              />
+                            ),
+                            children: [
+                              { index: true, element: <PatientDetailPage /> },
+                            ],
+                          },
+                        ],
                       },
                       {
                         path: "reception/appointments",
@@ -252,6 +282,29 @@ export const routes: RouteObject[] = [
                           />
                         ),
                         children: [{ index: true, element: <DoctorVisitPage /> }],
+                      },
+                      {
+                        path: "doctor/appointments/:appointmentId/visit/treatment-plans/:planId",
+                        element: (
+                          <RequireBranchPermission
+                            permission={PERMISSIONS.clinicalVisitWrite}
+                          />
+                        ),
+                        children: [
+                          {
+                            element: (
+                              <RequireBranchPermission
+                                permission={PERMISSIONS.treatmentPlanWrite}
+                              />
+                            ),
+                            children: [
+                              {
+                                index: true,
+                                element: <DoctorTreatmentPlanPage />,
+                              },
+                            ],
+                          },
+                        ],
                       },
                     ],
                   },

@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily DentFlow staging PostgreSQL backup at 02:30 Asia/Ho_Chi_Minh
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 Asia/Ho_Chi_Minh
+Persistent=true
+AccuracySec=1min
+Unit=dentflow-postgres-backup.service
+
+[Install]
+WantedBy=timers.target

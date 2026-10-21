@@ -46,9 +46,11 @@ WITH "seed_tenant" AS (
 INSERT INTO "patients" (
   "id",
   "tenant_id",
+  "display_number",
   "full_name",
   "phone",
   "phone_normalized",
+  "email",
   "date_of_birth",
   "gender",
   "address",
@@ -62,9 +64,11 @@ INSERT INTO "patients" (
 SELECT
   "seed_patients"."id"::uuid,
   "seed_tenant"."id",
+  right("seed_patients"."id", 12)::bigint,
   "seed_patients"."full_name",
   "seed_patients"."phone",
   "seed_patients"."phone_normalized",
+  concat('patient.', right("seed_patients"."id", 12), '@synthetic.dentflow.test'),
   "seed_patients"."date_of_birth"::date,
   "seed_patients"."gender"::"patient_gender_enum",
   "seed_patients"."address",
@@ -76,4 +80,5 @@ SELECT
   "seed_patients"."created_at"::timestamptz
 FROM "seed_tenant"
 CROSS JOIN "seed_patients"
-ON CONFLICT ("id") DO NOTHING;
+ON CONFLICT ("id") DO UPDATE SET
+  "email" = EXCLUDED."email";

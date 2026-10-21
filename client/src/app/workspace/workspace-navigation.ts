@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarDays,
   ClipboardCheck,
+  DoorOpen,
   LayoutDashboard,
   Mail,
   ShieldCheck,
@@ -232,6 +233,23 @@ const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     to: (context) =>
       context
         ? pathFor.workspaceTenantServices(context.tenantSlug)
+        : null,
+  },
+  {
+    end: true,
+    group: "management",
+    icon: DoorOpen,
+    id: "branch-operatories",
+    labelKey: "navigation.operatories",
+    order: 45,
+    permission: PERMISSIONS.operatoryManage,
+    scope: "branch",
+    to: (context) =>
+      context?.branchSlug
+        ? pathFor.workspaceBranchOperatories(
+            context.tenantSlug,
+            context.branchSlug,
+          )
         : null,
   },
   {

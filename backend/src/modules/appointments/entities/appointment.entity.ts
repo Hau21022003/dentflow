@@ -14,6 +14,7 @@ import { Patient } from '../../patients/entities/patient.entity';
 import { Service } from '../../services/entities/service.entity';
 import { Tenant } from '../../tenants/entities/tenant.entity';
 import { User } from '../../users/entities/user.entity';
+import { Operatory } from '../../operatories/entities/operatory.entity';
 
 export enum AppointmentStatus {
   BOOKED = 'BOOKED',
@@ -50,6 +51,13 @@ export enum AppointmentSource {
   'tenantId',
   'branchId',
   'assignedDentistUserId',
+  'startAt',
+  'id',
+])
+@Index('idx_appointments_patient_start_at_id', [
+  'tenantId',
+  'branchId',
+  'patientId',
   'startAt',
   'id',
 ])
@@ -98,6 +106,9 @@ export class Appointment {
 
   @Column({ name: 'assigned_dentist_user_id', type: 'uuid', nullable: true })
   assignedDentistUserId: string | null;
+
+  @Column({ name: 'operatory_id', type: 'uuid', nullable: true })
+  operatoryId: string | null;
 
   @Column({ name: 'service_id', type: 'uuid', nullable: true })
   serviceId: string | null;
@@ -175,4 +186,12 @@ export class Appointment {
   @ManyToOne(() => User, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'assigned_dentist_user_id', referencedColumnName: 'id' })
   assignedDentist: User | null;
+
+  @ManyToOne(() => Operatory, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn([
+    { name: 'operatory_id', referencedColumnName: 'id' },
+    { name: 'tenant_id', referencedColumnName: 'tenantId' },
+    { name: 'branch_id', referencedColumnName: 'branchId' },
+  ])
+  operatory: Operatory | null;
 }

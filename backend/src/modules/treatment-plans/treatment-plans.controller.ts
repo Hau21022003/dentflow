@@ -16,7 +16,9 @@ import { TenantScope } from '../../common/decorators/tenant-scope.decorator';
 import type { AuthorizationContext } from '../authorization/authorization-context';
 import { Permission } from '../authorization/authorization.policy';
 import { Idempotent } from '../idempotency/idempotent.decorator';
+import { CancelTreatmentPlanDto } from './dto/cancel-treatment-plan.dto';
 import { ListTreatmentItemEventsDto } from './dto/list-treatment-item-events.dto';
+import { CreateTreatmentProgressNoteDto } from './dto/create-treatment-progress-note.dto';
 import { ListTreatmentPlansQueryDto } from './dto/list-treatment-plans-query.dto';
 import { RecordTreatmentItemEventDto } from './dto/record-treatment-item-event.dto';
 import { SyncTreatmentPlanDto } from './dto/sync-treatment-plan.dto';
@@ -88,7 +90,7 @@ export class TreatmentPlansController {
     @RequestContext() context: AuthorizationContext,
     @Param('visitId', ParseUUIDPipe) visitId: string,
     @Param('planId', ParseUUIDPipe) planId: string,
-    @Body() body: TreatmentReasonDto,
+    @Body() body: CancelTreatmentPlanDto,
   ) {
     return this.service.cancel(context, visitId, planId, body);
   }
@@ -116,6 +118,29 @@ export class TreatmentPlansController {
     @Body() body: RecordTreatmentItemEventDto,
   ) {
     return this.service.recordEvent(context, visitId, planId, itemId, body);
+  }
+
+  @Post(':planId/items/:itemId/progress-notes')
+  @HttpCode(HttpStatus.OK)
+  @Idempotent('clinical.treatment-item.progress-note.create')
+  @RequirePermissions(
+    Permission.TREATMENT_PLAN_WRITE,
+    Permission.TREATMENT_ITEM_EXECUTE,
+  )
+  createProgressNote(
+    @RequestContext() context: AuthorizationContext,
+    @Param('visitId', ParseUUIDPipe) visitId: string,
+    @Param('planId', ParseUUIDPipe) planId: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @Body() body: CreateTreatmentProgressNoteDto,
+  ) {
+    return this.service.createProgressNote(
+      context,
+      visitId,
+      planId,
+      itemId,
+      body,
+    );
   }
 }
 

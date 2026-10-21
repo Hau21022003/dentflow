@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import {
@@ -37,12 +41,19 @@ export class TreatmentPlanAcceptanceService {
     private readonly audit: AuditLogService,
   ) {}
 
-  async list(context: AuthorizationContext, query: ListTreatmentPlanAcceptancesQueryDto) {
+  async list(
+    context: AuthorizationContext,
+    query: ListTreatmentPlanAcceptancesQueryDto,
+  ) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const qb = this.repository.plans
       .createQueryBuilder('plan')
-      .innerJoin(Patient, 'patient', 'patient.id = plan.patientId AND patient.tenantId = plan.tenantId')
+      .innerJoin(
+        Patient,
+        'patient',
+        'patient.id = plan.patientId AND patient.tenantId = plan.tenantId',
+      )
       .select([
         'plan.id AS id',
         'plan.status AS status',
@@ -53,7 +64,9 @@ export class TreatmentPlanAcceptanceService {
       ])
       .where('plan.tenantId = :tenantId', { tenantId: context.tenant!.id })
       .andWhere('plan.branchId = :branchId', { branchId: context.branch!.id })
-      .andWhere('plan.status = :status', { status: TreatmentPlanStatus.PROPOSED })
+      .andWhere('plan.status = :status', {
+        status: TreatmentPlanStatus.PROPOSED,
+      })
       .orderBy('plan.createdAt', 'DESC')
       .addOrderBy('plan.id', 'DESC');
     applyOffsetPagination(qb, { page, limit });
@@ -65,7 +78,10 @@ export class TreatmentPlanAcceptanceService {
     };
   }
 
-  async accept(context: AuthorizationContext, planId: string): Promise<TreatmentPlanAcceptanceReceipt> {
+  async accept(
+    context: AuthorizationContext,
+    planId: string,
+  ): Promise<TreatmentPlanAcceptanceReceipt> {
     return this.dataSource.transaction(async (manager) => {
       const plan = await this.repository.findPlanForUpdate(
         manager,
@@ -75,7 +91,9 @@ export class TreatmentPlanAcceptanceService {
       );
       if (!plan) throw new NotFoundException('Treatment Plan was not found.');
       if (plan.status !== TreatmentPlanStatus.PROPOSED) {
-        throw new ConflictException('Only Proposed Treatment Plans may be accepted.');
+        throw new ConflictException(
+          'Only Proposed Treatment Plans may be accepted.',
+        );
       }
 
       const before = plan.status;

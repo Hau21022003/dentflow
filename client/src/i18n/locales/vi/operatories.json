@@ -1,0 +1,47 @@
+{
+  "title": "Phòng và ghế điều trị",
+  "description": "Quản lý tài nguyên xếp lịch theo từng chi nhánh.",
+  "actions": {
+    "create": "Thêm phòng / ghế",
+    "edit": "Chỉnh sửa",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "activate": "Kích hoạt",
+    "deactivate": "Ngừng hoạt động",
+    "retry": "Thử lại"
+  },
+  "filters": {
+    "statusLabel": "Lọc theo trạng thái",
+    "all": "Tất cả trạng thái",
+    "active": "Đang hoạt động",
+    "inactive": "Ngừng hoạt động"
+  },
+  "types": {
+    "ROOM": "Phòng",
+    "CHAIR": "Ghế"
+  },
+  "list": {
+    "search": "Tìm theo mã hoặc tên...",
+    "code": "Mã",
+    "name": "Tên",
+    "type": "Loại",
+    "status": "Trạng thái",
+    "createdAt": "Ngày tạo",
+    "actions": "Thao tác",
+    "itemCount": "{{count}} mục",
+    "empty": "Không có phòng hoặc ghế phù hợp với bộ lọc."
+  },
+  "form": {
+    "createTitle": "Thêm phòng hoặc ghế",
+    "editTitle": "Chỉnh sửa phòng hoặc ghế",
+    "description": "Mã không thể thay đổi sau khi tạo và phải duy nhất trong chi nhánh.",
+    "type": "Loại"
+  },
+  "lifecycle": {
+    "activateTitle": "Kích hoạt {{name}}?",
+    "deactivateTitle": "Ngừng hoạt động {{name}}?",
+    "activateDescription": "Tài nguyên sẽ xuất hiện trong biểu mẫu đặt lịch.",
+    "deactivateDescription": "Không thể ngừng hoạt động nếu còn lịch chưa kết thúc đang sử dụng.",
+    "reason": "Lý do"
+  }
+}

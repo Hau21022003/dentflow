@@ -17,8 +17,12 @@ export const PATHS = {
   workspaceTenantStaff: "/workspace/:tenantSlug/tenant/staff",
   workspaceBranch: "/workspace/:tenantSlug/branches/:branchSlug",
   workspaceBranchStaff: "/workspace/:tenantSlug/branches/:branchSlug/staff",
+  workspaceBranchOperatories:
+    "/workspace/:tenantSlug/branches/:branchSlug/operatories",
   workspaceReceptionPatients:
     "/workspace/:tenantSlug/branches/:branchSlug/reception/patients",
+  workspaceReceptionPatientDetail:
+    "/workspace/:tenantSlug/branches/:branchSlug/reception/patients/:patientId",
   workspaceReceptionAppointments:
     "/workspace/:tenantSlug/branches/:branchSlug/reception/appointments",
   workspaceReceptionTreatmentPlanAcceptances:
@@ -28,6 +32,8 @@ export const PATHS = {
     "/workspace/:tenantSlug/branches/:branchSlug/doctor/patients",
   workspaceDoctorVisit:
     "/workspace/:tenantSlug/branches/:branchSlug/doctor/appointments/:appointmentId/visit",
+  workspaceDoctorTreatmentPlan:
+    "/workspace/:tenantSlug/branches/:branchSlug/doctor/appointments/:appointmentId/visit/treatment-plans/:planId",
   workspaceUploadTest:
     "/workspace/:tenantSlug/branches/:branchSlug/upload-test",
   workspaceDataTableMobileDemo:
@@ -56,8 +62,16 @@ export const pathFor = {
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}`,
   workspaceBranchStaff: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/staff`,
+  workspaceBranchOperatories: (tenantSlug: string, branchSlug: string) =>
+    `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/operatories`,
   workspaceReceptionPatients: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/reception/patients`,
+  workspaceReceptionPatientDetail: (
+    tenantSlug: string,
+    branchSlug: string,
+    patientId: string,
+  ) =>
+    `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/reception/patients/${toPathSegment(patientId)}`,
   workspaceReceptionAppointments: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/reception/appointments`,
   workspaceReceptionTreatmentPlanAcceptances: (tenantSlug: string, branchSlug: string) =>
@@ -73,6 +87,14 @@ export const pathFor = {
     date: string,
   ) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/doctor/appointments/${toPathSegment(appointmentId)}/visit?date=${toPathSegment(date)}`,
+  workspaceDoctorTreatmentPlan: (
+    tenantSlug: string,
+    branchSlug: string,
+    appointmentId: string,
+    planId: string,
+    date: string,
+  ) =>
+    `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/doctor/appointments/${toPathSegment(appointmentId)}/visit/treatment-plans/${toPathSegment(planId)}?date=${toPathSegment(date)}`,
   workspaceUploadTest: (tenantSlug: string, branchSlug: string) =>
     `/workspace/${toPathSegment(tenantSlug)}/branches/${toPathSegment(branchSlug)}/upload-test`,
   workspaceDataTableMobileDemo: (tenantSlug: string, branchSlug: string) =>

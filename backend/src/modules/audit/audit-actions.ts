@@ -46,6 +46,13 @@ export const AuditAction = {
   SERVICE_GROUP_ACTIVATED: 'SERVICE_GROUP_ACTIVATED',
   PATIENT_CREATED: 'PATIENT_CREATED',
   PATIENT_ADMINISTRATIVE_UPDATED: 'PATIENT_ADMINISTRATIVE_UPDATED',
+  PATIENT_ALERT_CREATED: 'PATIENT_ALERT_CREATED',
+  PATIENT_ALERT_UPDATED: 'PATIENT_ALERT_UPDATED',
+  PATIENT_ALERT_RESOLVED: 'PATIENT_ALERT_RESOLVED',
+  OPERATORY_CREATED: 'OPERATORY_CREATED',
+  OPERATORY_UPDATED: 'OPERATORY_UPDATED',
+  OPERATORY_DEACTIVATED: 'OPERATORY_DEACTIVATED',
+  OPERATORY_ACTIVATED: 'OPERATORY_ACTIVATED',
   APPOINTMENT_CREATED: 'APPOINTMENT_CREATED',
   APPOINTMENT_UPDATED: 'APPOINTMENT_UPDATED',
   APPOINTMENT_ASSIGNMENT_CHANGED: 'APPOINTMENT_ASSIGNMENT_CHANGED',
@@ -84,6 +91,8 @@ export type AuditResourceType =
   | 'SERVICE'
   | 'SERVICE_GROUP'
   | 'PATIENT'
+  | 'PATIENT_ALERT'
+  | 'OPERATORY'
   | 'APPOINTMENT'
   | 'VISIT'
   | 'TREATMENT_NOTE'
@@ -191,12 +200,23 @@ const PATIENT_PAYLOAD: AuditPayloadPolicy = {
   after: ['changedFields'],
   metadata: ['changedFields', 'reasonCode'],
 };
+const PATIENT_ALERT_PAYLOAD: AuditPayloadPolicy = {
+  before: ['category', 'severity', 'changedFields', 'resolvedAt'],
+  after: ['category', 'severity', 'changedFields', 'resolvedAt'],
+  metadata: ['reasonCode'],
+};
+const OPERATORY_PAYLOAD: AuditPayloadPolicy = {
+  before: ['code', 'type', 'isActive', 'changedFields'],
+  after: ['code', 'type', 'isActive', 'changedFields'],
+  metadata: ['reasonCode'],
+};
 const APPOINTMENT_PAYLOAD: AuditPayloadPolicy = {
   before: [
     'status',
     'startAt',
     'endAt',
     'assignedDentistUserId',
+    'operatoryId',
     'changedFields',
   ],
   after: [
@@ -204,6 +224,7 @@ const APPOINTMENT_PAYLOAD: AuditPayloadPolicy = {
     'startAt',
     'endAt',
     'assignedDentistUserId',
+    'operatoryId',
     'changedFields',
   ],
   metadata: ['reasonCode'],
@@ -515,6 +536,48 @@ export const AUDIT_ACTION_DEFINITIONS: Readonly<
     'PATIENT',
     false,
     PATIENT_PAYLOAD,
+  ),
+  [AuditAction.PATIENT_ALERT_CREATED]: definition(
+    AuditDomain.CLINICAL,
+    'PATIENT_ALERT',
+    false,
+    PATIENT_ALERT_PAYLOAD,
+  ),
+  [AuditAction.PATIENT_ALERT_UPDATED]: definition(
+    AuditDomain.CLINICAL,
+    'PATIENT_ALERT',
+    false,
+    PATIENT_ALERT_PAYLOAD,
+  ),
+  [AuditAction.PATIENT_ALERT_RESOLVED]: definition(
+    AuditDomain.CLINICAL,
+    'PATIENT_ALERT',
+    false,
+    PATIENT_ALERT_PAYLOAD,
+  ),
+  [AuditAction.OPERATORY_CREATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'OPERATORY',
+    false,
+    OPERATORY_PAYLOAD,
+  ),
+  [AuditAction.OPERATORY_UPDATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'OPERATORY',
+    false,
+    OPERATORY_PAYLOAD,
+  ),
+  [AuditAction.OPERATORY_DEACTIVATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'OPERATORY',
+    true,
+    OPERATORY_PAYLOAD,
+  ),
+  [AuditAction.OPERATORY_ACTIVATED]: definition(
+    AuditDomain.TENANT_ADMIN,
+    'OPERATORY',
+    true,
+    OPERATORY_PAYLOAD,
   ),
   [AuditAction.APPOINTMENT_CREATED]: definition(
     AuditDomain.CLINICAL,

@@ -9,11 +9,14 @@ import {
 } from "@/components/form";
 import { Alert } from "@/components/ui/alert";
 import {
-  fromDateTimeLocal,
+  addDaysInTimeZone,
+  fromAppointmentDateAndTime,
   toDateTimeLocal,
 } from "@/features/appointments/appointment-time";
 import {
+  useAppointmentAvailabilityQuery,
   useAppointmentDentistsQuery,
+  useAppointmentOperatoriesQuery,
   useAppointmentServicesQuery,
   useCreateAppointmentMutation,
   useUpdateAppointmentMutation,
@@ -21,41 +24,87 @@ import {
 import {
   APPOINTMENT_SOURCES,
   type Appointment,
+  type AppointmentAvailabilityQuery,
   type AppointmentSource,
   type CreateAppointmentInput,
   type UpdateAppointmentInput,
 } from "@/features/appointments/appointments.types";
 import { PatientFormDialog } from "@/features/patients/components/PatientFormDialog";
 import { useBranchPatientsQuery } from "@/features/patients/patients.hooks";
+import type { Patient } from "@/features/patients/patients.types";
 import { handleApiError } from "@/shared/lib/error";
-import { toast } from "sonner";
 import {
   idempotencyKeyForIntent,
   type IdempotencyIntent,
 } from "@/shared/lib/idempotency";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
+import { AlertTriangle, Clock3, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { z } from "zod";
 
 type AppointmentFormValues = {
   patientId: string;
   source: AppointmentSource;
+  appointmentDate: string;
   startAt: string;
   endAt: string;
   serviceId: string;
   assignedDentistUserId: string;
+  operatoryId: string;
   visitReason: string;
   operationalNote: string;
   reasonCode: string;
 };
 
+const TIME_STEP_MINUTES = 15;
+const DEFAULT_DURATION_MINUTES = 30;
+
+function formatTime(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function timeInMinutes(value: string): number | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 24 || minutes > 59 || (hours === 24 && minutes !== 0)) {
+    return null;
+  }
+  return hours * 60 + minutes;
+}
+
+function suggestedEndTime(startTime: string): string | null {
+  const startMinutes = timeInMinutes(startTime);
+  if (startMinutes === null) return null;
+  const endMinutes = startMinutes + DEFAULT_DURATION_MINUTES;
+  return endMinutes <= 24 * 60 ? formatTime(endMinutes) : null;
+}
+
+const START_TIME_OPTIONS = Array.from(
+  { length: (24 * 60) / TIME_STEP_MINUTES },
+  (_, index) => {
+    const value = formatTime(index * TIME_STEP_MINUTES);
+    return { value, label: value };
+  },
+) satisfies RHFSelectOption[];
+
+const END_TIME_OPTIONS = [
+  ...START_TIME_OPTIONS,
+  { value: "24:00", label: "24:00" },
+] satisfies RHFSelectOption[];
+
 type AppointmentFormDialogProps = {
   appointment?: Appointment;
   branchSlug: string;
   defaultDate: string;
+  initialPatient?: Pick<Patient, "id" | "fullName" | "phone">;
+  lockPatient?: boolean;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   tenantSlug: string;
@@ -67,10 +116,10 @@ function blankToNull(value: string): string | null {
   return trimmed || null;
 }
 
-function useDebouncedValue(value: string): string {
+function useDebouncedValue<T>(value: T): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
-    const timeout = window.setTimeout(() => setDebounced(value.trim()), 300);
+    const timeout = window.setTimeout(() => setDebounced(value), 300);
     return () => window.clearTimeout(timeout);
   }, [value]);
   return debounced;
@@ -80,27 +129,40 @@ function initialValues(
   appointment: Appointment | undefined,
   defaultDate: string,
   timeZone: string,
+  initialPatientId: string,
 ): AppointmentFormValues {
   if (appointment) {
+    const startAt = toDateTimeLocal(appointment.startAt, timeZone);
+    const endAt = toDateTimeLocal(appointment.endAt, timeZone);
+    const appointmentDate = startAt.slice(0, 10);
+    const endDate = endAt.slice(0, 10);
+    const nextDate = addDaysInTimeZone(appointmentDate, 1, timeZone);
     return {
       patientId: appointment.patient.id,
       source: appointment.source,
-      startAt: toDateTimeLocal(appointment.startAt, timeZone),
-      endAt: toDateTimeLocal(appointment.endAt, timeZone),
+      appointmentDate,
+      startAt: startAt.slice(11),
+      endAt:
+        endDate === nextDate && endAt.slice(11) === "00:00"
+          ? "24:00"
+          : endAt.slice(11),
       serviceId: appointment.service?.id ?? "",
       assignedDentistUserId: appointment.assignedDentist?.id ?? "",
+      operatoryId: appointment.operatory?.id ?? "",
       visitReason: appointment.visitReason ?? "",
       operationalNote: appointment.operationalNote ?? "",
       reasonCode: "",
     };
   }
   return {
-    patientId: "",
+    patientId: initialPatientId,
     source: "PHONE",
-    startAt: `${defaultDate}T09:00`,
-    endAt: `${defaultDate}T09:30`,
+    appointmentDate: defaultDate,
+    startAt: "09:00",
+    endAt: "09:30",
     serviceId: "",
     assignedDentistUserId: "",
+    operatoryId: "",
     visitReason: "",
     operationalNote: "",
     reasonCode: "",
@@ -121,6 +183,8 @@ export function AppointmentFormDialog({
   appointment,
   branchSlug,
   defaultDate,
+  initialPatient,
+  lockPatient = false,
   onOpenChange,
   open,
   tenantSlug,
@@ -130,13 +194,15 @@ export function AppointmentFormDialog({
   const [patientSearch, setPatientSearch] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [dentistSearch, setDentistSearch] = useState("");
+  const [operatorySearch, setOperatorySearch] = useState("");
   const [createPatientOpen, setCreatePatientOpen] = useState(false);
-  const patientTerm = useDebouncedValue(patientSearch);
-  const serviceTerm = useDebouncedValue(serviceSearch);
-  const dentistTerm = useDebouncedValue(dentistSearch);
+  const patientTerm = useDebouncedValue(patientSearch.trim());
+  const serviceTerm = useDebouncedValue(serviceSearch.trim());
+  const dentistTerm = useDebouncedValue(dentistSearch.trim());
+  const operatoryTerm = useDebouncedValue(operatorySearch.trim());
   const defaults = useMemo(
-    () => initialValues(appointment, defaultDate, timeZone),
-    [appointment, defaultDate, timeZone],
+    () => initialValues(appointment, defaultDate, timeZone, initialPatient?.id ?? ""),
+    [appointment, defaultDate, initialPatient?.id, timeZone],
   );
   const schema = useMemo(
     () =>
@@ -146,10 +212,14 @@ export function AppointmentFormDialog({
           source: z.enum(APPOINTMENT_SOURCES, {
             message: t("validation.sourceRequired"),
           }),
+          appointmentDate: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, t("validation.dateRequired")),
           startAt: z.string().min(1, t("validation.startRequired")),
           endAt: z.string().min(1, t("validation.endRequired")),
           serviceId: z.string(),
           assignedDentistUserId: z.string(),
+          operatoryId: z.string(),
           visitReason: z
             .string()
             .trim()
@@ -158,8 +228,16 @@ export function AppointmentFormDialog({
           reasonCode: z.string(),
         })
         .superRefine((values, context) => {
-          const start = fromDateTimeLocal(values.startAt, timeZone);
-          const end = fromDateTimeLocal(values.endAt, timeZone);
+          const start = fromAppointmentDateAndTime(
+            values.appointmentDate,
+            values.startAt,
+            timeZone,
+          );
+          const end = fromAppointmentDateAndTime(
+            values.appointmentDate,
+            values.endAt,
+            timeZone,
+          );
           if (!start) {
             context.addIssue({
               code: "custom",
@@ -214,16 +292,55 @@ export function AppointmentFormDialog({
     resolver: zodResolver(schema),
   });
   const selectedPatientId = useWatch({ control, name: "patientId" });
+  const selectedDate = useWatch({ control, name: "appointmentDate" });
+  const selectedStartTime = useWatch({ control, name: "startAt" });
+  const selectedEndTime = useWatch({ control, name: "endAt" });
   const selectedServiceId = useWatch({ control, name: "serviceId" });
   const selectedDentistId = useWatch({
     control,
     name: "assignedDentistUserId",
   });
-  const patientsQuery = useBranchPatientsQuery(tenantSlug, branchSlug, {
-    page: 1,
-    limit: 20,
-    ...(patientTerm ? { search: patientTerm } : {}),
-  });
+  const selectedOperatoryId = useWatch({ control, name: "operatoryId" });
+  const availabilityInput = useMemo<AppointmentAvailabilityQuery | null>(() => {
+    if (!selectedDentistId && !selectedOperatoryId) return null;
+    const startAt = fromAppointmentDateAndTime(
+      selectedDate,
+      selectedStartTime,
+      timeZone,
+    );
+    const endAt = fromAppointmentDateAndTime(
+      selectedDate,
+      selectedEndTime,
+      timeZone,
+    );
+    if (!startAt || !endAt || new Date(startAt) >= new Date(endAt)) return null;
+    return {
+      startAt,
+      endAt,
+      ...(selectedDentistId ? { dentistUserId: selectedDentistId } : {}),
+      ...(selectedOperatoryId ? { operatoryId: selectedOperatoryId } : {}),
+      ...(appointment ? { excludeAppointmentId: appointment.id } : {}),
+    };
+  }, [
+    appointment,
+    selectedDate,
+    selectedDentistId,
+    selectedEndTime,
+    selectedOperatoryId,
+    selectedStartTime,
+    timeZone,
+  ]);
+  const debouncedAvailabilityInput = useDebouncedValue(availabilityInput);
+  const patientsQuery = useBranchPatientsQuery(
+    tenantSlug,
+    branchSlug,
+    {
+      page: 1,
+      limit: 20,
+      ...(patientTerm ? { search: patientTerm } : {}),
+    },
+    !appointment && !lockPatient,
+  );
   const servicesQuery = useAppointmentServicesQuery(tenantSlug, branchSlug, {
     page: 1,
     limit: 20,
@@ -234,6 +351,20 @@ export function AppointmentFormDialog({
     limit: 20,
     ...(dentistTerm ? { search: dentistTerm } : {}),
   });
+  const operatoriesQuery = useAppointmentOperatoriesQuery(
+    tenantSlug,
+    branchSlug,
+    {
+      page: 1,
+      limit: 20,
+      ...(operatoryTerm ? { search: operatoryTerm } : {}),
+    },
+  );
+  const availabilityQuery = useAppointmentAvailabilityQuery(
+    tenantSlug,
+    branchSlug,
+    open ? debouncedAvailabilityInput : null,
+  );
   const createMutation = useCreateAppointmentMutation();
   const updateMutation = useUpdateAppointmentMutation();
   const mutation = appointment ? updateMutation : createMutation;
@@ -250,9 +381,11 @@ export function AppointmentFormDialog({
       selectedPatientId,
       appointment?.patient.id === selectedPatientId
         ? appointment.patient.fullName
-        : null,
+        : initialPatient?.id === selectedPatientId
+          ? initialPatient.fullName
+          : null,
     );
-  }, [appointment, patientsQuery.data?.items, selectedPatientId]);
+  }, [appointment, initialPatient, patientsQuery.data?.items, selectedPatientId]);
   const serviceOptions = useMemo(() => {
     const options = (servicesQuery.data?.items ?? []).map((service) => ({
       value: service.id,
@@ -289,6 +422,22 @@ export function AppointmentFormDialog({
       })) satisfies RHFSelectOption[],
     [t],
   );
+  const operatoryOptions = useMemo(() => {
+    const options = [
+      { value: "", label: t("form.noOperatory") },
+      ...(operatoriesQuery.data?.items ?? []).map((operatory) => ({
+        value: operatory.id,
+        label: `${operatory.code} · ${operatory.name}`,
+      })),
+    ];
+    return withSelectedOption(
+      options,
+      selectedOperatoryId,
+      appointment?.operatory?.id === selectedOperatoryId
+        ? `${appointment.operatory.code} · ${appointment.operatory.name}`
+        : null,
+    );
+  }, [appointment, operatoriesQuery.data?.items, selectedOperatoryId, t]);
   const rescheduleOptions = useMemo(
     () =>
       [
@@ -303,6 +452,26 @@ export function AppointmentFormDialog({
       ] satisfies RHFSelectOption[],
     [t],
   );
+  const durationMinutes = useMemo(() => {
+    const startAt = fromAppointmentDateAndTime(
+      selectedDate,
+      selectedStartTime,
+      timeZone,
+    );
+    const endAt = fromAppointmentDateAndTime(
+      selectedDate,
+      selectedEndTime,
+      timeZone,
+    );
+    if (!startAt || !endAt) return null;
+    const duration =
+      (new Date(endAt).getTime() - new Date(startAt).getTime()) / 60_000;
+    return duration > 0 ? duration : null;
+  }, [selectedDate, selectedEndTime, selectedStartTime, timeZone]);
+  const availability = availabilityQuery.data;
+  const hasAvailabilityConflict = Boolean(
+    availability?.dentistConflict || availability?.operatoryConflict,
+  );
 
   useEffect(() => {
     if (open) reset(defaults);
@@ -314,14 +483,23 @@ export function AppointmentFormDialog({
       setPatientSearch("");
       setServiceSearch("");
       setDentistSearch("");
+      setOperatorySearch("");
       reset(defaults);
     }
     onOpenChange(nextOpen);
   }
 
   async function submit(values: AppointmentFormValues) {
-    const startAt = fromDateTimeLocal(values.startAt, timeZone);
-    const endAt = fromDateTimeLocal(values.endAt, timeZone);
+    const startAt = fromAppointmentDateAndTime(
+      values.appointmentDate,
+      values.startAt,
+      timeZone,
+    );
+    const endAt = fromAppointmentDateAndTime(
+      values.appointmentDate,
+      values.endAt,
+      timeZone,
+    );
     if (!startAt || !endAt) return;
     try {
       if (!appointment) {
@@ -332,6 +510,7 @@ export function AppointmentFormDialog({
           endAt,
           serviceId: values.serviceId || null,
           assignedDentistUserId: values.assignedDentistUserId || null,
+          operatoryId: values.operatoryId || null,
           visitReason: blankToNull(values.visitReason),
           operationalNote: blankToNull(values.operationalNote),
         };
@@ -360,6 +539,10 @@ export function AppointmentFormDialog({
       const nextServiceId = values.serviceId || null;
       if (nextServiceId !== (appointment.service?.id ?? null))
         input.serviceId = nextServiceId;
+      const nextOperatoryId = values.operatoryId || null;
+      if (nextOperatoryId !== (appointment.operatory?.id ?? null)) {
+        input.operatoryId = nextOperatoryId;
+      }
       const visitReason = blankToNull(values.visitReason);
       if (visitReason !== appointment.visitReason)
         input.visitReason = visitReason;
@@ -429,7 +612,7 @@ export function AppointmentFormDialog({
                     *
                   </span>
                 </span>
-                {!appointment && (
+                {!appointment && !lockPatient && (
                   <button
                     className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                     onClick={() => setCreatePatientOpen(true)}
@@ -442,7 +625,7 @@ export function AppointmentFormDialog({
               </div>
               <RHFCombobox
                 control={control}
-                disabled={Boolean(appointment)}
+                disabled={Boolean(appointment) || lockPatient}
                 emptyMessage={
                   patientsQuery.isFetching
                     ? t("form.searching")
@@ -485,22 +668,86 @@ export function AppointmentFormDialog({
                 searchPlaceholder={t("form.dentistSearchPlaceholder")}
               />
             )}
-            <RHFTextField
+            <div className="sm:col-span-2">
+              <RHFTextField
+                control={control}
+                fullWidth
+                // helperText={t("form.timeZoneHint", { timeZone })}
+                label={t("form.fields.appointmentDate")}
+                name="appointmentDate"
+                required
+                type="date"
+              />
+            </div>
+            <RHFSelect
               control={control}
               fullWidth
               label={t("form.fields.startAt")}
               name="startAt"
+              onValueChange={(value) => {
+                const nextEndTime = suggestedEndTime(value);
+                if (nextEndTime) {
+                  setValue("endAt", nextEndTime, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                }
+              }}
+              options={START_TIME_OPTIONS}
+              placeholder={t("form.startTimePlaceholder")}
               required
-              type="datetime-local"
             />
-            <RHFTextField
+            <RHFSelect
               control={control}
               fullWidth
               label={t("form.fields.endAt")}
               name="endAt"
+              options={END_TIME_OPTIONS}
+              placeholder={t("form.endTimePlaceholder")}
               required
-              type="datetime-local"
             />
+            {(durationMinutes || hasAvailabilityConflict) && (
+              <div className="sm:col-span-2 space-y-2">
+                {durationMinutes && (
+                  <div className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                    <Clock3 aria-hidden="true" className="size-3.5" />
+                    <span>
+                      {t("form.estimatedDuration", { count: durationMinutes })}
+                    </span>
+                  </div>
+                )}
+                {hasAvailabilityConflict && (
+                  <Alert className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                    <AlertTriangle aria-hidden="true" />
+                    <div className="space-y-1">
+                      {availability?.dentistConflict && (
+                        <p>{t("form.dentistConflictWarning")}</p>
+                      )}
+                      {availability?.operatoryConflict && (
+                        <p>{t("form.operatoryConflictWarning")}</p>
+                      )}
+                    </div>
+                  </Alert>
+                )}
+              </div>
+            )}
+            <div className="sm:col-span-2">
+              <RHFCombobox
+                control={control}
+                emptyMessage={
+                  operatoriesQuery.isFetching
+                    ? t("form.searching")
+                    : t("form.noOperatories")
+                }
+                fullWidth
+                label={t("form.fields.operatory")}
+                name="operatoryId"
+                onSearchChange={setOperatorySearch}
+                options={operatoryOptions}
+                placeholder={t("form.operatoryPlaceholder")}
+                searchPlaceholder={t("form.operatorySearchPlaceholder")}
+              />
+            </div>
             <div className="sm:col-span-2">
               <RHFCombobox
                 control={control}

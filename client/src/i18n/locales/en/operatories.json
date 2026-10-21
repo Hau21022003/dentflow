@@ -1,0 +1,48 @@
+{
+  "title": "Treatment rooms and chairs",
+  "description": "Manage branch-scoped scheduling resources used by appointments.",
+  "actions": {
+    "create": "Add room / chair",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "retry": "Try again"
+  },
+  "filters": {
+    "statusLabel": "Filter by status",
+    "all": "All statuses",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "types": {
+    "ROOM": "Room",
+    "CHAIR": "Chair"
+  },
+  "list": {
+    "search": "Search by code or name...",
+    "code": "Code",
+    "name": "Name",
+    "type": "Type",
+    "status": "Status",
+    "createdAt": "Created at",
+    "actions": "Actions",
+    "itemCount_one": "{{count}} item",
+    "itemCount_other": "{{count}} items",
+    "empty": "No rooms or chairs match the current filters."
+  },
+  "form": {
+    "createTitle": "Add room or chair",
+    "editTitle": "Edit room or chair",
+    "description": "The code is immutable after creation and unique within the branch.",
+    "type": "Type"
+  },
+  "lifecycle": {
+    "activateTitle": "Activate {{name}}?",
+    "deactivateTitle": "Deactivate {{name}}?",
+    "activateDescription": "It will become available in appointment booking.",
+    "deactivateDescription": "This is blocked while non-terminal appointments are assigned.",
+    "reason": "Reason"
+  }
+}

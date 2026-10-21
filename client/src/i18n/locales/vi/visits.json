@@ -8,6 +8,7 @@
   "actions": {
     "open": "Mở phiếu khám",
     "backToSchedule": "Quay lại lịch hẹn của tôi",
+    "backToVisit": "Quay lại lần khám",
     "retry": "Thử lại",
     "start": "Bắt đầu khám",
     "starting": "Đang bắt đầu khám",
@@ -18,6 +19,37 @@
     "confirmComplete": "Hoàn tất phiếu khám",
     "cancel": "Hủy",
     "addAddendum": "Thêm bổ sung"
+  },
+  "header": {
+    "age": "{{count}} tuổi",
+    "viewPatientProfile": "Xem hồ sơ bệnh nhân",
+    "visitTime": "Ngày giờ khám",
+    "operatory": "Phòng / ghế",
+    "noOperatory": "Chưa phân phòng / ghế",
+    "dentist": "Bác sĩ phụ trách",
+    "status": "Trạng thái Visit"
+  },
+  "tabs": {
+    "label": "Nội dung lần khám",
+    "clinical": "Ghi nhận lâm sàng",
+    "safety": "Ghi chú an toàn",
+    "treatmentPlans": "Kế hoạch điều trị liên quan"
+  },
+  "references": {
+    "safetyTitle": "Cảnh báo an toàn nổi bật",
+    "plansTitle": "Kế hoạch điều trị liên quan",
+    "viewAll": "Xem tất cả",
+    "loadingAlerts": "Đang tải cảnh báo an toàn nổi bật…",
+    "alertLoadError": "Không thể tải cảnh báo an toàn.",
+    "planLoadError": "Không thể tải kế hoạch điều trị.",
+    "noActiveAlerts": "Không có cảnh báo an toàn đang hiệu lực.",
+    "noPlans": "Chưa có kế hoạch điều trị liên quan.",
+    "planWithoutItems": "Chưa có hạng mục"
+  },
+  "saveStatus": {
+    "saving": "Đang lưu thay đổi",
+    "unsaved": "Có thay đổi chưa lưu",
+    "savedAt": "Đã lưu lúc {{time}}"
   },
   "appointment": {
     "patient": "Bệnh nhân",

@@ -1,18 +1,353 @@
 {
   "title": "Kế hoạch điều trị",
-  "description": "Tạo, đề xuất và thực hiện điều trị trong Visit hiện tại của bệnh nhân.",
+  "description": "Tạo, đề xuất và thực hiện điều trị cho lần khám hiện tại của bệnh nhân.",
   "empty": "Chưa có kế hoạch điều trị nào cho bệnh nhân này.",
   "planLabel": "Kế hoạch điều trị {{id}}",
-  "itemCount_one": "{{count}} hạng mục",
-  "itemCount_other": "{{count}} hạng mục",
-  "statuses": { "plan": { "DRAFT": "Bản nháp", "PROPOSED": "Đã đề xuất", "ACCEPTED": "Đã chấp thuận", "PARTIALLY_COMPLETED": "Hoàn thành một phần", "COMPLETED": "Đã hoàn thành", "CANCELLED": "Đã hủy" }, "item": { "PENDING": "Chờ thực hiện", "IN_PROGRESS": "Đang thực hiện", "COMPLETED": "Đã hoàn thành", "CANCELLED": "Đã hủy" } },
-  "actions": { "createDraft": "Tạo bản nháp", "addItem": "Thêm hạng mục", "removeItem": "Xóa hạng mục", "saveDraft": "Lưu bản nháp", "propose": "Đề xuất", "reopen": "Mở lại", "cancelPlan": "Hủy kế hoạch", "cancelItem": "Hủy hạng mục", "start": "Bắt đầu", "recordProgress": "Ghi nhận tiến độ", "complete": "Hoàn thành", "history": "Lịch sử sự kiện", "close": "Đóng", "saving": "Đang lưu" },
-  "fields": { "service": "Dịch vụ", "plannedDentist": "Bác sĩ dự kiến", "quantity": "Số lượng", "discountAmount": "Giảm giá", "toothPosition": "Vị trí răng", "indication": "Chỉ định", "reasonCode": "Mã lý do", "reasonCodePlaceholder": "Ví dụ: PATIENT_REQUEST" },
-  "picker": { "servicePlaceholder": "Chọn dịch vụ", "serviceSearch": "Tìm dịch vụ...", "emptyServices": "Không có dịch vụ hoạt động.", "dentistPlaceholder": "Chọn bác sĩ", "dentistSearch": "Tìm bác sĩ...", "emptyDentists": "Không có bác sĩ hoạt động." },
-  "validation": { "required": "Trường này là bắt buộc.", "quantity": "Số lượng phải từ 1 đến 10.000.", "discount": "Giảm giá không được âm.", "reasonCode": "Chỉ dùng chữ in hoa, số và dấu gạch dưới." },
-  "editor": { "noItems": "Thêm ít nhất một hạng mục trước khi đề xuất kế hoạch.", "item": "Hạng mục {{count}}", "saveBeforePropose": "Hãy lưu thay đổi bản nháp trước khi đề xuất." },
-  "detail": { "title": "Chi tiết kế hoạch", "originVisit": "Visit khởi tạo: {{id}}", "quantity": "Số lượng: {{count}}" },
-  "events": { "title": "Lịch sử sự kiện", "loading": "Đang tải lịch sử sự kiện...", "loadError": "Không thể tải lịch sử sự kiện. Vui lòng thử lại.", "empty": "Chưa có sự kiện thực hiện.", "loadMore": "Tải thêm", "types": { "IN_PROGRESS": "Đang thực hiện", "COMPLETED": "Đã hoàn thành", "CANCELLED": "Đã hủy" } },
-  "errors": { "plansLoad": "Không thể tải kế hoạch điều trị. Vui lòng thử lại.", "planLoad": "Không thể tải kế hoạch này. Vui lòng thử lại." },
-  "dialogs": { "reopen": { "title": "Mở lại kế hoạch điều trị", "description": "Thao tác này xóa chấp thuận trước đó và đưa kế hoạch về Bản nháp.", "submit": "Mở lại" }, "cancelPlan": { "title": "Hủy kế hoạch điều trị", "description": "Thao tác này hủy kế hoạch và mọi hạng mục đang chờ. Không dùng được sau khi đã có sự kiện thực hiện.", "submit": "Hủy kế hoạch" }, "cancelItem": { "title": "Hủy hạng mục điều trị", "description": "Ghi nhận sự kiện hủy cho hạng mục này.", "submit": "Hủy hạng mục" } }
+  "itemCount": "{{count}} hạng mục",
+  "toothCount": "{{count}} răng",
+  "statuses": {
+    "plan": {
+      "DRAFT": "Bản nháp",
+      "PROPOSED": "Đã đề xuất",
+      "ACCEPTED": "Đã chấp thuận",
+      "PARTIALLY_COMPLETED": "Hoàn thành một phần",
+      "COMPLETED": "Đã hoàn thành",
+      "CANCELLED": "Đã hủy"
+    },
+    "item": {
+      "PENDING": "Đang chờ",
+      "IN_PROGRESS": "Đang thực hiện",
+      "COMPLETED": "Đã hoàn thành",
+      "CANCELLED": "Đã hủy"
+    }
+  },
+  "actions": {
+    "createDraft": "Tạo bản nháp",
+    "createPlan": "Tạo kế hoạch",
+    "createTreatmentPlan": "Tạo kế hoạch điều trị",
+    "addItem": "Thêm hạng mục",
+    "addToPlan": "Thêm vào kế hoạch",
+    "updateItem": "Cập nhật hạng mục",
+    "removeItem": "Xóa hạng mục",
+    "editItem": "Sửa hạng mục {{count}}",
+    "deleteItem": "Xóa hạng mục {{count}}",
+    "edit": "Sửa",
+    "delete": "Xóa",
+    "clearAll": "Xóa tất cả",
+    "cancelEdit": "Hủy chỉnh sửa",
+    "cancel": "Hủy",
+    "saveDraft": "Lưu bản nháp",
+    "propose": "Đề xuất",
+    "reopen": "Mở lại",
+    "cancelPlan": "Hủy kế hoạch",
+    "cancelItem": "Hủy hạng mục",
+    "start": "Bắt đầu",
+    "recordProgress": "Ghi nhận tiến độ",
+    "complete": "Hoàn thành",
+    "history": "Lịch sử điều trị",
+    "historyShort": "Lịch sử",
+    "hideHistory": "Ẩn lịch sử",
+    "recordProgressShort": "Tiến độ",
+    "close": "Đóng",
+    "saving": "Đang lưu",
+    "keepEditing": "Tiếp tục chỉnh sửa",
+    "discard": "Bỏ thay đổi",
+    "more": "Thêm thao tác"
+  },
+  "fields": {
+    "service": "Dịch vụ",
+    "plannedDentist": "Bác sĩ dự kiến",
+    "quantity": "Số lượng",
+    "discountAmount": "Giảm giá",
+    "toothPosition": "Vị trí răng",
+    "indication": "Chỉ định",
+    "reasonCode": "Mã lý do",
+    "reasonCodePlaceholder": "Ví dụ: PATIENT_REQUEST"
+  },
+  "picker": {
+    "servicePlaceholder": "Chọn dịch vụ",
+    "serviceSearch": "Tìm dịch vụ...",
+    "emptyServices": "Không tìm thấy dịch vụ đang hoạt động.",
+    "dentistPlaceholder": "Chọn bác sĩ",
+    "dentistSearch": "Tìm bác sĩ...",
+    "emptyDentists": "Không tìm thấy bác sĩ đang hoạt động."
+  },
+  "validation": {
+    "required": "Trường này là bắt buộc.",
+    "quantity": "Số lượng phải từ 1 đến 10.000.",
+    "discount": "Giảm giá không được âm.",
+    "discountExceeds": "Giảm giá không được vượt quá giá dịch vụ.",
+    "wholeAmount": "Số tiền phải là số nguyên theo đơn vị tiền tệ nhỏ nhất.",
+    "activeService": "Hãy chọn một dịch vụ đang hoạt động.",
+    "reasonCode": "Chỉ dùng chữ in hoa, số và dấu gạch dưới."
+  },
+  "odontogram": {
+    "title": "Sơ đồ răng (FDI)",
+    "description": "Chọn răng trên sơ đồ để thêm vào hạng mục điều trị.",
+    "dentitionLabel": "Chọn bộ răng",
+    "dentitions": { "permanent": "Răng vĩnh viễn", "primary": "Răng sữa" },
+    "upperArch": "Hàm trên",
+    "lowerArch": "Hàm dưới",
+    "toothLabel": "Răng {{code}}",
+    "selectedCount": "Đã chọn: {{count}} răng",
+    "selectedList": "Răng đã chọn: {{codes}}",
+    "noneSelected": "Chưa chọn răng",
+    "clear": "Xóa chọn",
+    "zoom": "Phóng to sơ đồ răng",
+    "zoomTitle": "Sơ đồ răng",
+    "zoomHint": "Kéo ngang để xem và chọn răng dễ hơn.",
+    "legend": { "selected": "Răng đã chọn", "normal": "Răng bình thường" }
+  },
+  "editor": {
+    "title": "Thêm hạng mục điều trị",
+    "editTitle": "Chỉnh sửa hạng mục điều trị",
+    "description": "Tạo hạng mục điều trị cho các răng đã chọn.",
+    "noItems": "Chưa có hạng mục điều trị",
+    "noItemsDescription": "Chọn dịch vụ, bác sĩ và vị trí răng rồi thêm hạng mục vào kế hoạch.",
+    "item": "Hạng mục {{count}}",
+    "itemsTitle": "Hạng mục đã thêm ({{count}})",
+    "itemsDescription": "Các hạng mục sẽ được lưu vào kế hoạch điều trị của lần khám này.",
+    "pendingComposer": "Hãy thêm hoặc cập nhật hạng mục đang nhập trước khi lưu kế hoạch.",
+    "needItem": "Thêm ít nhất một hạng mục trước khi tạo kế hoạch điều trị.",
+    "quantityHelper": "Tự điền theo số răng đã chọn và vẫn có thể chỉnh sửa.",
+    "toothPositionHelper": "Tự điền theo răng đã chọn và vẫn có thể chỉnh sửa.",
+    "indicationPlaceholder": "Nhập chỉ định điều trị, tình trạng răng, lưu ý...",
+    "legacyToothWarning": "Vị trí hiện tại có mô tả không phải mã FDI. Lần chọn răng tiếp theo trên sơ đồ sẽ thay thế mô tả này bằng danh sách mã FDI.",
+    "dentistUnavailable": "Bác sĩ không còn khả dụng",
+    "estimatedTotal": "Tổng chi phí dự kiến",
+    "columns": {
+      "service": "Dịch vụ",
+      "teeth": "Răng",
+      "dentist": "Bác sĩ dự kiến",
+      "cost": "Chi phí dự kiến",
+      "actions": "Thao tác"
+    }
+  },
+  "feedback": {
+    "draftSaved": "Đã lưu bản nháp kế hoạch điều trị.",
+    "proposed": "Đã tạo và đề xuất kế hoạch điều trị."
+  },
+  "detail": {
+    "title": "Chi tiết kế hoạch",
+    "originVisit": "Visit khởi tạo: {{id}}",
+    "createdAt": "Tạo ngày {{date}}",
+    "quantity": "Số lượng: {{count}}",
+    "responsibleDentist": "Bác sĩ phụ trách",
+    "itemTotal": "Số hạng mục",
+    "progressTitle": "Tiến độ điều trị",
+    "progressValue": "{{completed}}/{{total}} hoàn thành ({{percentage}}%)",
+    "completedCount": "Hoàn thành: {{count}}",
+    "inProgressCount": "Đang thực hiện: {{count}}",
+    "pendingCount": "Đang chờ: {{count}}",
+    "cancelledCount": "Đã hủy: {{count}}",
+    "assignedTeeth": "Răng được chỉ định",
+    "assignedToothLabel": "Răng {{code}}, được chỉ định",
+    "otherPositions": "Vị trí khác: {{positions}}",
+    "itemsTitle": "Hạng mục điều trị ({{count}})",
+    "readOnly": "Chỉ đọc",
+    "toothValue": "Răng: {{position}}",
+    "noTooth": "Chưa chỉ định răng",
+    "unitPrice": "Đơn giá: {{amount}}",
+    "indicationValue": "Chỉ định: {{indication}}",
+    "dentistValue": "Bác sĩ: {{name}}",
+    "expandItem": "Mở hạng mục {{count}}",
+    "collapseItem": "Thu gọn hạng mục {{count}}"
+  },
+  "visitList": {
+    "title": "Kế hoạch điều trị liên quan",
+    "description": "Các kế hoạch liên quan đến lần khám này.",
+    "detailPageDescription": "Quản lý nội dung và trạng thái kế hoạch điều trị mà không làm gián đoạn phiếu khám.",
+    "quickView": "Xem nhanh kế hoạch",
+    "quickViewDescription": "Thông tin chỉ đọc; mở trang chi tiết để thực hiện thao tác.",
+    "quickViewPlan": "Xem nhanh {{code}}",
+    "openDetail": "Xem chi tiết",
+    "retry": "Thử lại",
+    "noItems": "Chưa có hạng mục",
+    "noResults": "Không tìm thấy kế hoạch phù hợp với bộ lọc.",
+    "notAssigned": "Chưa chỉ định",
+    "searchPlaceholder": "Tìm theo mã kế hoạch, tên điều trị...",
+    "allStatuses": "Tất cả trạng thái",
+    "toothPositionValue": "Vị trí răng: {{position}}",
+    "progress": "{{completed}} / {{total}} hoàn tất",
+    "columns": {
+      "plan": "Kế hoạch",
+      "createdAt": "Ngày tạo",
+      "dentist": "Bác sĩ",
+      "progress": "Tiến độ",
+      "status": "Trạng thái",
+      "cost": "Chi phí dự kiến",
+      "actions": "Thao tác"
+    }
+  },
+  "progress": {
+    "title": "Ghi nhận tiến độ",
+    "recordedAt": "{{date}}",
+    "content": "Nội dung thực hiện",
+    "contentPlaceholder": "Mô tả nội dung đã thực hiện và phản hồi của bệnh nhân...",
+    "characterCount": "{{count}}/2.000",
+    "images": "Hình ảnh đính kèm",
+    "imagesHint": "Không bắt buộc (tối đa {{count}} ảnh)",
+    "chooseImages": "Thêm ảnh điều trị",
+    "imageFormats": "JPG, PNG, WEBP (tối đa 5 MiB/ảnh)",
+    "save": "Lưu ghi nhận",
+    "success": "Đã ghi nhận tiến độ điều trị.",
+    "imagePreviewTitle": "Ảnh điều trị",
+    "imagePreviewAlt": "Ảnh điều trị phóng to",
+    "imageAlt": "Ảnh điều trị {{count}}",
+    "previewImage": "Xem ảnh điều trị {{count}}",
+    "removeImage": "Xóa ảnh điều trị {{count}}",
+    "imageUnavailable": "Không thể tải ảnh",
+    "validation": {
+      "contentRequired": "Nội dung thực hiện là bắt buộc.",
+      "contentMax": "Nội dung thực hiện không được vượt quá 2.000 ký tự.",
+      "tooManyImages": "Chỉ được đính kèm tối đa {{count}} ảnh.",
+      "imageType": "Chỉ hỗ trợ ảnh JPG, PNG và WEBP.",
+      "imageEmpty": "Tệp ảnh không được để trống.",
+      "imageSize": "Mỗi ảnh không được vượt quá 5 MiB."
+    },
+    "errors": {
+      "upload": "Không thể tải lên một hoặc nhiều ảnh. Các ảnh đã tải thành công được giữ lại; vui lòng thử lại."
+    }
+  },
+  "events": {
+    "title": "Lịch sử điều trị",
+    "fullTitle": "Lịch sử điều trị",
+    "loading": "Đang tải lịch sử sự kiện...",
+    "loadError": "Không thể tải lịch sử sự kiện. Vui lòng thử lại.",
+    "empty": "Chưa có sự kiện thực hiện.",
+    "noResults": "Không tìm thấy sự kiện phù hợp.",
+    "recent": "{{count}} sự kiện gần nhất",
+    "viewAll": "Xem toàn bộ lịch sử",
+    "performedBy": "Bác sĩ: {{name}}",
+    "cancelReason": "Lý do: {{reason}}",
+    "cancellationReasons": {
+      "PATIENT_REQUEST": "Bệnh nhân yêu cầu",
+      "ENTERED_IN_ERROR": "Nhập nhầm",
+      "DUPLICATE": "Trùng lặp",
+      "NO_LONGER_APPLICABLE": "Không còn phù hợp",
+      "TRANSFER_OF_CARE": "Chuyển điều trị",
+      "OTHER": "Khác"
+    },
+    "searchPlaceholder": "Tìm theo nội dung, bác sĩ, loại sự kiện...",
+    "all": "Tất cả",
+    "loadMore": "Tải thêm",
+    "export": "Xuất lịch sử",
+    "exporting": "Đang xuất...",
+    "exportError": "Không thể xuất lịch sử điều trị. Vui lòng thử lại.",
+    "exportColumns": {
+      "time": "Thời gian",
+      "event": "Loại sự kiện",
+      "dentist": "Bác sĩ",
+      "reason": "Lý do hủy",
+      "note": "Ghi chú hủy",
+      "content": "Nội dung",
+      "images": "Số ảnh"
+    },
+    "types": {
+      "IN_PROGRESS": "Đang thực hiện",
+      "COMPLETED": "Đã hoàn thành",
+      "CANCELLED": "Đã hủy",
+      "PROGRESS_NOTE": "Ghi nhận tiến độ"
+    }
+  },
+  "errors": {
+    "plansLoad": "Không thể tải kế hoạch điều trị. Vui lòng thử lại.",
+    "planLoad": "Không thể tải kế hoạch này. Vui lòng thử lại."
+  },
+  "dialogs": {
+    "clearAll": {
+      "title": "Xóa tất cả hạng mục?",
+      "description": "Các hạng mục chỉ bị xóa khỏi bản nháp sau khi bạn lưu."
+    },
+    "discard": {
+      "title": "Bỏ các thay đổi chưa lưu?",
+      "description": "Những thay đổi trong kế hoạch điều trị sẽ không được lưu lại."
+    },
+    "reopen": {
+      "title": "Mở lại kế hoạch điều trị",
+      "description": "Thao tác này xóa chấp thuận trước đó và đưa kế hoạch về Bản nháp.",
+      "submit": "Mở lại"
+    },
+    "cancelPlan": {
+      "title": "Hủy kế hoạch điều trị",
+      "description": "Thao tác này sẽ hủy toàn bộ kế hoạch điều trị và mọi hạng mục đang chờ. Hành động không thể hoàn tác.",
+      "submit": "Hủy kế hoạch",
+      "reasonLabel": "Lý do hủy",
+      "noteLabel": "Ghi chú thêm",
+      "noteOptional": "(không bắt buộc)",
+      "noteRequired": "(bắt buộc)",
+      "notePlaceholder": "Nhập thêm chi tiết nếu cần...",
+      "noteCount": "{{count}}/500",
+      "historyHint": "Lý do hủy sẽ được lưu vào lịch sử điều trị để phục vụ theo dõi và báo cáo.",
+      "auditHint": "Hành động này sẽ được ghi vào lịch sử điều trị.",
+      "validation": {
+        "noteRequired": "Vui lòng nhập ghi chú khi chọn lý do Khác.",
+        "noteMax": "Ghi chú không được vượt quá 500 ký tự."
+      },
+      "reasons": {
+        "PATIENT_REQUEST": {
+          "label": "Bệnh nhân yêu cầu",
+          "description": "Theo yêu cầu của bệnh nhân"
+        },
+        "ENTERED_IN_ERROR": {
+          "label": "Nhập nhầm kế hoạch",
+          "description": "Nhập sai thông tin kế hoạch"
+        },
+        "DUPLICATE": {
+          "label": "Trùng kế hoạch",
+          "description": "Đã có kế hoạch khác"
+        },
+        "NO_LONGER_APPLICABLE": {
+          "label": "Không còn phù hợp",
+          "description": "Không phù hợp tình trạng hiện tại"
+        },
+        "TRANSFER_OF_CARE": {
+          "label": "Chuyển điều trị",
+          "description": "Chuyển sang cơ sở hoặc bác sĩ khác"
+        },
+        "OTHER": {
+          "label": "Khác",
+          "description": "Lý do khác"
+        }
+      }
+    },
+    "cancelItem": {
+      "title": "Hủy hạng mục điều trị",
+      "description": "Hành động này sẽ hủy hạng mục điều trị hiện tại và ghi nhận lý do vào lịch sử điều trị của bệnh nhân.",
+      "submit": "Hủy hạng mục",
+      "reasonLabel": "Lý do hủy",
+      "noteLabel": "Ghi chú thêm",
+      "noteOptional": "(không bắt buộc)",
+      "noteRequired": "(bắt buộc)",
+      "notePlaceholder": "Nhập thêm thông tin về lý do hủy hạng mục (nếu có)...",
+      "noteCount": "{{count}}/500",
+      "auditHint": "Hành động này sẽ được ghi vào lịch sử điều trị.",
+      "validation": {
+        "noteRequired": "Vui lòng nhập ghi chú khi chọn lý do Khác.",
+        "noteMax": "Ghi chú không được vượt quá 500 ký tự."
+      },
+      "reasons": {
+        "PATIENT_REQUEST": {
+          "label": "Bệnh nhân yêu cầu",
+          "description": "Theo yêu cầu của bệnh nhân."
+        },
+        "ENTERED_IN_ERROR": {
+          "label": "Nhập nhầm hạng mục",
+          "description": "Chọn nhầm dịch vụ hoặc răng."
+        },
+        "NO_LONGER_APPLICABLE": {
+          "label": "Không còn phù hợp",
+          "description": "Không phù hợp với tình trạng hiện tại."
+        },
+        "DUPLICATE": {
+          "label": "Trùng hạng mục",
+          "description": "Đã có hạng mục tương tự."
+        },
+        "OTHER": {
+          "label": "Khác",
+          "description": "Lý do khác."
+        }
+      }
+    }
+  }
 }

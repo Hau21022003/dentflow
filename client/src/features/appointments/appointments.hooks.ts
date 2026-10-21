@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { patientQueryKeys } from "@/features/patients/patients.hooks";
 import { appointmentsService } from "./appointments.service";
 import type {
   AppointmentAgendaQuery,
+  AppointmentAvailabilityQuery,
   AppointmentCalendarSummary,
   AppointmentListQuery,
   BookingOptionQuery,
@@ -25,10 +27,18 @@ export const appointmentQueryKeys = {
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "calendar-summary", month] as const,
   detail: (tenantSlug: string, branchSlug: string, appointmentId: string) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "detail", appointmentId] as const,
+  availability: (
+    tenantSlug: string,
+    branchSlug: string,
+    query: AppointmentAvailabilityQuery | null,
+  ) =>
+    [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "availability", query] as const,
   dentists: (tenantSlug: string, branchSlug: string, query: BookingOptionQuery) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "dentists", query] as const,
   services: (tenantSlug: string, branchSlug: string, query: BookingOptionQuery) =>
     [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "services", query] as const,
+  operatories: (tenantSlug: string, branchSlug: string, query: BookingOptionQuery) =>
+    [...appointmentQueryKeys.branch(tenantSlug, branchSlug), "operatories", query] as const,
 };
 
 async function loadAllPages<T>(
@@ -131,6 +141,23 @@ export function useAppointmentDetailQuery(
   });
 }
 
+export function useAppointmentAvailabilityQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  query: AppointmentAvailabilityQuery | null,
+) {
+  return useQuery({
+    queryKey: appointmentQueryKeys.availability(tenantSlug, branchSlug, query),
+    queryFn: () =>
+      appointmentsService.checkAvailability(
+        { tenantSlug, branchSlug },
+        query!,
+      ),
+    enabled: Boolean(tenantSlug && branchSlug && query),
+    staleTime: 5_000,
+  });
+}
+
 export function useAppointmentDentistsQuery(
   tenantSlug: string,
   branchSlug: string,
@@ -155,18 +182,45 @@ export function useAppointmentServicesQuery(
   });
 }
 
+export function useAppointmentOperatoriesQuery(
+  tenantSlug: string,
+  branchSlug: string,
+  query: BookingOptionQuery,
+) {
+  return useQuery({
+    queryKey: appointmentQueryKeys.operatories(tenantSlug, branchSlug, query),
+    queryFn: () =>
+      appointmentsService.listOperatories({ tenantSlug, branchSlug }, query),
+    enabled: Boolean(tenantSlug && branchSlug),
+  });
+}
+
 function useAppointmentMutation<TVariables, TResult>(
   mutationFn: (variables: TVariables) => Promise<TResult>,
 ) {
   const queryClient = useQueryClient();
   return useMutation<TResult, Error, TVariables>({
     mutationFn,
-    onSuccess: async (_result, command) => {
+    onSuccess: async (result, command) => {
       const scoped = command as { tenantSlug?: string; branchSlug?: string };
       if (scoped.tenantSlug && scoped.branchSlug) {
-        await queryClient.invalidateQueries({
-          queryKey: appointmentQueryKeys.branch(scoped.tenantSlug, scoped.branchSlug),
-        });
+        const patientId = (result as { patient?: { id?: string } })?.patient?.id;
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: appointmentQueryKeys.branch(scoped.tenantSlug, scoped.branchSlug),
+          }),
+          ...(patientId
+            ? [
+                queryClient.invalidateQueries({
+                  queryKey: patientQueryKeys.detail(
+                    scoped.tenantSlug,
+                    scoped.branchSlug,
+                    patientId,
+                  ),
+                }),
+              ]
+            : []),
+        ]);
       }
     },
   });

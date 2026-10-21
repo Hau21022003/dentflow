@@ -20,6 +20,9 @@ export enum Permission {
   NOTIFICATION_SETTINGS_MANAGE = 'notification-settings.manage',
   FILE_UPLOAD = 'file.upload',
   PATIENT_ADMINISTRATIVE_MANAGE = 'patient.administrative.manage',
+  PATIENT_CLINICAL_READ = 'patient.clinical.read',
+  PATIENT_ALERT_MANAGE = 'patient-alert.manage',
+  OPERATORY_MANAGE = 'operatory.manage',
   APPOINTMENT_MANAGE = 'appointment.manage',
   PATIENT_INVOICE_CREATE = 'patient-invoice.create',
   PATIENT_PAYMENT_RECORD = 'patient-payment.record',
@@ -52,6 +55,7 @@ const tenantAdminPermissions = [
   Permission.SAAS_BILLING_MANAGE,
   Permission.NOTIFICATION_SETTINGS_MANAGE,
   Permission.FILE_UPLOAD,
+  Permission.OPERATORY_MANAGE,
 ] as const;
 
 export const platformRolePermissions: Readonly<
@@ -67,6 +71,8 @@ export const tenantRolePermissions: Readonly<
   [TenantRoleCode.BRANCH_ADMIN]: [
     Permission.STAFF_BRANCH_MANAGE,
     Permission.PATIENT_ADMINISTRATIVE_MANAGE,
+    Permission.PATIENT_CLINICAL_READ,
+    Permission.OPERATORY_MANAGE,
     Permission.APPOINTMENT_MANAGE,
     Permission.REPORT_READ,
     Permission.AUDIT_LOG_READ,
@@ -74,6 +80,7 @@ export const tenantRolePermissions: Readonly<
   ],
   [TenantRoleCode.RECEPTIONIST]: [
     Permission.PATIENT_ADMINISTRATIVE_MANAGE,
+    Permission.PATIENT_CLINICAL_READ,
     Permission.APPOINTMENT_MANAGE,
     Permission.PATIENT_INVOICE_CREATE,
     Permission.PATIENT_PAYMENT_RECORD,
@@ -86,6 +93,7 @@ export const tenantRolePermissions: Readonly<
     Permission.TREATMENT_PLAN_WRITE,
     Permission.TREATMENT_ITEM_EXECUTE,
     Permission.FOLLOW_UP_RECOMMEND,
+    Permission.PATIENT_ALERT_MANAGE,
     Permission.FILE_UPLOAD,
   ],
 };

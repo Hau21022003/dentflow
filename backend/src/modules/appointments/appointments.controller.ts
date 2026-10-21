@@ -20,6 +20,7 @@ import { Idempotent } from '../idempotency/idempotent.decorator';
 import { AppointmentsService } from './appointments.service';
 import { AssignAppointmentDto } from './dto/assign-appointment.dto';
 import { CancelAppointmentDto } from './dto/cancel-appointment.dto';
+import { CheckAppointmentAvailabilityQueryDto } from './dto/check-appointment-availability-query.dto';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { GetAppointmentCalendarSummaryQueryDto } from './dto/get-appointment-calendar-summary-query.dto';
 import { ListAppointmentsQueryDto } from './dto/list-appointments-query.dto';
@@ -56,7 +57,10 @@ export class AppointmentsController {
     @RequestContext() context: AuthorizationContext,
     @Query() query: GetAppointmentCalendarSummaryQueryDto,
   ) {
-    return this.appointmentsService.assignedCalendarSummary(context, query.month);
+    return this.appointmentsService.assignedCalendarSummary(
+      context,
+      query.month,
+    );
   }
 
   @Get('booking-options/dentists')
@@ -83,6 +87,15 @@ export class AppointmentsController {
     return this.appointmentsService.listBookingServices(context, query);
   }
 
+  @Get('booking-options/operatories')
+  @RequirePermissions(Permission.APPOINTMENT_MANAGE)
+  listBookingOperatories(
+    @RequestContext() context: AuthorizationContext,
+    @Query() query: ListAppointmentBookingOptionsQueryDto,
+  ) {
+    return this.appointmentsService.listBookingOperatories(context, query);
+  }
+
   @Get('calendar-summary')
   @RequirePermissions(Permission.APPOINTMENT_MANAGE)
   calendarSummary(
@@ -90,6 +103,15 @@ export class AppointmentsController {
     @Query() query: GetAppointmentCalendarSummaryQueryDto,
   ) {
     return this.appointmentsService.calendarSummary(context, query.month);
+  }
+
+  @Get('availability')
+  @RequirePermissions(Permission.APPOINTMENT_MANAGE)
+  checkAvailability(
+    @RequestContext() context: AuthorizationContext,
+    @Query() query: CheckAppointmentAvailabilityQueryDto,
+  ) {
+    return this.appointmentsService.checkAvailability(context, query);
   }
 
   @Get(':appointmentId')

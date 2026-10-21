@@ -31,6 +31,7 @@
     "fields": {
       "fullName": "họ và tên",
       "phone": "số điện thoại",
+      "email": "email",
       "gender": "giới tính",
       "dateOfBirth": "ngày sinh",
       "address": "địa chỉ",
@@ -75,5 +76,245 @@
   },
   "errors": {
     "listTitle": "Không thể tải danh sách bệnh nhân"
+  },
+  "alertsManagement": {
+    "title": "Cảnh báo an toàn bệnh nhân",
+    "description": "Xem lịch sử và quản lý cảnh báo đang hiệu lực cho ca được phân công.",
+    "add": "Thêm cảnh báo",
+    "addShort": "Thêm",
+    "loading": "Đang tải cảnh báo an toàn…",
+    "empty": "Bệnh nhân chưa có lịch sử cảnh báo.",
+    "emptyActive": "Không có cảnh báo đang hoạt động.",
+    "emptyResolved": "Không có cảnh báo đã xử lý.",
+    "resolved": "Đã xử lý",
+    "resolve": "Xử lý xong",
+    "editActionDescription": "Chỉnh sửa phân loại, mức độ và nội dung của cảnh báo này.",
+    "resolveActionDescription": "Đánh dấu cảnh báo đã xử lý và chuyển cảnh báo vào lịch sử.",
+    "updatedBy": "bởi {{name}}",
+    "filters": {
+      "label": "Lọc cảnh báo theo trạng thái",
+      "ACTIVE": "Đang hoạt động",
+      "RESOLVED": "Đã xử lý",
+      "ALL": "Tất cả"
+    },
+    "statuses": {
+      "ACTIVE": "Đang hoạt động",
+      "RESOLVED": "Đã xử lý"
+    },
+    "columns": {
+      "category": "Loại",
+      "severity": "Mức độ",
+      "message": "Nội dung",
+      "updated": "Cập nhật",
+      "status": "Trạng thái",
+      "actions": "Thao tác"
+    },
+    "createTitle": "Tạo cảnh báo bệnh nhân",
+    "editTitle": "Chỉnh sửa cảnh báo",
+    "formDescription": "Ghi nhận thông tin an toàn cần lưu ý khi điều trị.",
+    "category": "Phân loại",
+    "severity": "Mức độ",
+    "severityDescriptions": {
+      "INFO": "Thông tin tham khảo khi điều trị",
+      "WARNING": "Cần lưu ý khi điều trị",
+      "CRITICAL": "Nguy cơ cao, cần đặc biệt lưu ý"
+    },
+    "message": "Nội dung cảnh báo",
+    "messagePlaceholder": "Nhập nội dung cảnh báo...",
+    "messageHelp": "Ghi rõ thông tin quan trọng cần lưu ý.",
+    "characterCount": "{{count}} / {{max}}",
+    "createSubmit": "Tạo cảnh báo",
+    "editSubmit": "Lưu thay đổi",
+    "cancel": "Hủy",
+    "resolveTitle": "Xử lý xong cảnh báo này?",
+    "resolveDescription": "Cảnh báo đã xử lý vẫn nằm trong lịch sử và không thể mở lại.",
+    "resolveNotice": "Sau khi xử lý, cảnh báo sẽ được chuyển vào lịch sử và không thể mở lại.",
+    "reason": "Lý do xử lý",
+    "reasons": {
+      "NO_LONGER_APPLICABLE": "Không còn áp dụng",
+      "ENTERED_IN_ERROR": "Nhập nhầm",
+      "DUPLICATE": "Trùng lặp"
+    }
+  },
+  "detail": {
+    "overview": "Tổng quan",
+    "tabs": {
+      "label": "Nội dung hồ sơ bệnh nhân",
+      "overview": "Tổng quan",
+      "appointments": "Lịch hẹn",
+      "visits": "Lần khám",
+      "treatment-plans": "Kế hoạch điều trị"
+    },
+    "actions": { "back": "Quay lại danh sách bệnh nhân" },
+    "activity": { "ACTIVE": "Đang hoạt động", "INACTIVE": "Không hoạt động" },
+    "notFound": {
+      "title": "Không tìm thấy bệnh nhân",
+      "description": "Bệnh nhân không tồn tại hoặc không thuộc tenant hiện tại."
+    },
+    "error": { "title": "Không thể tải hồ sơ bệnh nhân" },
+    "information": {
+      "title": "Thông tin bệnh nhân",
+      "patientCode": "Mã bệnh nhân"
+    },
+    "alerts": {
+      "title": "Cảnh báo an toàn",
+      "empty": "Không có cảnh báo an toàn đang hiệu lực.",
+      "categories": {
+        "ALLERGY": "Dị ứng",
+        "MEDICAL_CONDITION": "Bệnh lý",
+        "MEDICATION": "Thuốc đang dùng",
+        "OTHER": "Khác"
+      },
+      "severities": { "INFO": "Thông tin", "WARNING": "Cảnh báo", "CRITICAL": "Nghiêm trọng" }
+    },
+    "nextAppointment": {
+      "title": "Lịch hẹn tiếp theo",
+      "view": "Xem lịch hẹn",
+      "unassigned": "Chưa phân công nha sĩ",
+      "emptyTitle": "Chưa có lịch hẹn sắp tới",
+      "emptyDescription": "Không có lịch đã đặt hoặc xác nhận trong tương lai tại chi nhánh này."
+    },
+    "appointments": {
+      "upcomingTitle": "Lịch hẹn sắp tới",
+      "listTitle": "Danh sách lịch hẹn",
+      "searchPlaceholder": "Tìm dịch vụ, bác sĩ, phòng ghế hoặc ghi chú…",
+      "allStatuses": "Tất cả trạng thái",
+      "allDentists": "Tất cả bác sĩ",
+      "dateRangePlaceholder": "Chọn khoảng thời gian",
+      "dateRangeValue": "{{from}} – {{to}}",
+      "clearFilters": "Xóa bộ lọc",
+      "viewDetails": "Xem chi tiết",
+      "loadErrorTitle": "Không thể tải lịch sử lịch hẹn",
+      "emptyTitle": "Chưa có lịch hẹn",
+      "emptyDescription": "Bệnh nhân chưa có lịch hẹn phù hợp với bộ lọc tại chi nhánh này.",
+      "columns": {
+        "dateTime": "Ngày giờ",
+        "service": "Loại lịch hẹn",
+        "dentist": "Bác sĩ",
+        "operatory": "Phòng / ghế",
+        "duration": "Thời lượng",
+        "status": "Trạng thái",
+        "note": "Ghi chú",
+        "actions": "Thao tác"
+      }
+    },
+    "visits": {
+      "title": "Lịch sử lần khám",
+      "description": "Theo dõi các lần khám của bệnh nhân tại chi nhánh hiện tại.",
+      "viewDetails": "Xem chi tiết",
+      "comingSoon": "Tính năng đang phát triển",
+      "loadErrorTitle": "Không thể tải lịch sử lần khám",
+      "summary": {
+        "total": "Tổng lần khám",
+        "completed": "Đã hoàn thành",
+        "inProgress": "Đang thực hiện"
+      },
+      "statuses": {
+        "OPEN": "Đang thực hiện",
+        "COMPLETED": "Đã hoàn thành"
+      },
+      "filters": {
+        "status": "Trạng thái",
+        "dentist": "Bác sĩ",
+        "dateRange": "Khoảng thời gian",
+        "dateRangePlaceholder": "Chọn khoảng thời gian",
+        "dateRangeValue": "{{from}} – {{to}}",
+        "allStatuses": "Tất cả trạng thái",
+        "allDentists": "Tất cả bác sĩ",
+        "newest": "Mới nhất trước",
+        "oldest": "Cũ nhất trước",
+        "clear": "Xóa bộ lọc"
+      },
+      "columns": {
+        "dateTime": "Ngày khám",
+        "dentist": "Bác sĩ",
+        "operatory": "Phòng / ghế",
+        "diagnosis": "Chẩn đoán",
+        "status": "Trạng thái",
+        "actions": "Thao tác"
+      },
+      "empty": {
+        "title": "Chưa có lần khám",
+        "description": "Bệnh nhân chưa có lần khám tại chi nhánh này."
+      },
+      "noResults": {
+        "title": "Không tìm thấy lần khám phù hợp",
+        "description": "Hãy thay đổi hoặc xóa bộ lọc để xem các lần khám khác."
+      }
+    },
+    "treatmentPlans": {
+      "title": "Kế hoạch điều trị",
+      "description": "Theo dõi các kế hoạch điều trị của bệnh nhân tại chi nhánh hiện tại.",
+      "searchPlaceholder": "Tìm theo mã, dịch vụ, chỉ định hoặc vị trí răng…",
+      "allStatuses": "Tất cả trạng thái",
+      "allDentists": "Tất cả bác sĩ",
+      "clearFilters": "Xóa bộ lọc",
+      "viewDetails": "Xem chi tiết",
+      "visitLabel": "Lần khám {{date}}",
+      "sortNewest": "Mới nhất trước",
+      "sortOldest": "Cũ nhất trước",
+      "loadErrorTitle": "Không thể tải kế hoạch điều trị",
+      "columns": {
+        "plan": "Kế hoạch",
+        "dentist": "Bác sĩ",
+        "visit": "Lần khám",
+        "createdAt": "Ngày tạo",
+        "status": "Trạng thái",
+        "progress": "Tiến độ",
+        "total": "Tổng chi phí dự kiến",
+        "actions": "Thao tác"
+      },
+      "empty": {
+        "title": "Chưa có kế hoạch điều trị",
+        "description": "Bệnh nhân chưa có kế hoạch điều trị tại chi nhánh hiện tại."
+      },
+      "noResults": {
+        "title": "Không tìm thấy kế hoạch phù hợp",
+        "description": "Hãy thay đổi hoặc xóa bộ lọc để xem các kế hoạch khác."
+      }
+    },
+    "appointmentStatuses": {
+      "BOOKED": "Đã đặt",
+      "CONFIRMED": "Đã xác nhận",
+      "CHECKED_IN": "Đã check-in",
+      "IN_PROGRESS": "Đang thực hiện",
+      "COMPLETED": "Đã hoàn tất",
+      "CANCELLED": "Đã hủy",
+      "NO_SHOW": "Không đến"
+    },
+    "treatment": {
+      "title": "Tổng quan điều trị",
+      "activePlans": "Kế hoạch đang mở",
+      "completedItems": "Hạng mục hoàn tất",
+      "pendingItems": "Hạng mục chờ",
+      "fallbackName": "Kế hoạch điều trị",
+      "created": "Tạo ngày {{date}}",
+      "viewPlan": "Xem kế hoạch",
+      "emptyTitle": "Chưa có kế hoạch đang mở",
+      "emptyDescription": "Bệnh nhân chưa có kế hoạch điều trị đang mở tại chi nhánh này.",
+      "planDetails": "Chi tiết kế hoạch điều trị",
+      "readOnly": "Thông tin lâm sàng chỉ đọc",
+      "quantity": "Số lượng",
+      "tooth": "Vị trí răng",
+      "price": "Thành tiền",
+      "discount": "Giảm giá",
+      "dentist": "Nha sĩ dự kiến",
+      "indication": "Chỉ định",
+      "noItems": "Kế hoạch chưa có hạng mục."
+    },
+    "planStatuses": {
+      "DRAFT": "Bản nháp",
+      "PROPOSED": "Đã đề xuất",
+      "ACCEPTED": "Đã chấp thuận",
+      "PARTIALLY_COMPLETED": "Hoàn tất một phần",
+      "COMPLETED": "Đã hoàn tất",
+      "CANCELLED": "Đã hủy"
+    },
+    "itemStatuses": {
+      "PENDING": "Đang chờ",
+      "IN_PROGRESS": "Đang thực hiện",
+      "COMPLETED": "Đã hoàn tất",
+      "CANCELLED": "Đã hủy"
+    }
   }
 }

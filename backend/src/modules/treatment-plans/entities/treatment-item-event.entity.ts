@@ -9,6 +9,7 @@ export enum TreatmentItemEventType {
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
+  PROGRESS_NOTE = 'PROGRESS_NOTE',
 }
 @Entity({ name: 'treatment_item_events' })
 @Index('idx_treatment_item_events_item_created_id', [
@@ -35,6 +36,11 @@ export class TreatmentItemEvent {
     enumName: 'treatment_item_event_type_enum',
   })
   eventType: TreatmentItemEventType;
+  @Column({ type: 'text', nullable: true }) content: string | null;
+  @Column({ name: 'reason_code', type: 'varchar', length: 80, nullable: true })
+  reasonCode: string | null;
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  note: string | null;
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

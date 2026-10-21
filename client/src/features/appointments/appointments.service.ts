@@ -3,10 +3,13 @@ import type { IdempotentCommand } from "@/shared/lib/idempotency";
 import type {
   Appointment,
   AppointmentAgendaQuery,
+  AppointmentAvailability,
+  AppointmentAvailabilityQuery,
   AppointmentCalendarSummary,
   AppointmentDetail,
   AppointmentDentistOption,
   AppointmentListQuery,
+  AppointmentOperatoryOption,
   AppointmentPage,
   AppointmentServiceOption,
   AssignedAppointment,
@@ -78,6 +81,17 @@ export const appointmentsService = {
     return payload;
   },
 
+  async checkAvailability(
+    scope: AppointmentScope,
+    query: AppointmentAvailabilityQuery,
+  ): Promise<AppointmentAvailability> {
+    const { payload } = await http.get<AppointmentAvailability>(
+      `${appointmentsRoute(scope)}/availability`,
+      { params: query },
+    );
+    return payload;
+  },
+
   async listDentists(
     scope: AppointmentScope,
     query: BookingOptionQuery,
@@ -95,6 +109,17 @@ export const appointmentsService = {
   ): Promise<AppointmentPage<AppointmentServiceOption>> {
     const { payload } = await http.get<AppointmentPage<AppointmentServiceOption>>(
       `${appointmentsRoute(scope)}/booking-options/services`,
+      { params: query },
+    );
+    return payload;
+  },
+
+  async listOperatories(
+    scope: AppointmentScope,
+    query: BookingOptionQuery,
+  ): Promise<AppointmentPage<AppointmentOperatoryOption>> {
+    const { payload } = await http.get<AppointmentPage<AppointmentOperatoryOption>>(
+      `${appointmentsRoute(scope)}/booking-options/operatories`,
       { params: query },
     );
     return payload;

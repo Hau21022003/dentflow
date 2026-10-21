@@ -127,6 +127,27 @@ describe('Appointment workflow (e2e)', () => {
     expect(JSON.stringify(audit)).not.toContain('Synthetic operational note');
 
     await fixture.receptionist.agent
+      .get(`${fixture.route}/availability`)
+      .query({
+        startAt: '2026-10-10T02:30:00.000Z',
+        endAt: '2026-10-10T03:30:00.000Z',
+        dentistUserId: fixture.dentist.user.id,
+      })
+      .expect(200)
+      .expect({ dentistConflict: true, operatoryConflict: false });
+
+    await fixture.receptionist.agent
+      .get(`${fixture.route}/availability`)
+      .query({
+        startAt: '2026-10-10T02:30:00.000Z',
+        endAt: '2026-10-10T03:30:00.000Z',
+        dentistUserId: fixture.dentist.user.id,
+        excludeAppointmentId: body.id,
+      })
+      .expect(200)
+      .expect({ dentistConflict: false, operatoryConflict: false });
+
+    await fixture.receptionist.agent
       .post(fixture.route)
       .set('Idempotency-Key', randomUUID())
       .send(
@@ -167,10 +188,12 @@ describe('Appointment workflow (e2e)', () => {
       fixture.branch,
       TenantRoleCode.DENTIST,
     );
-    await dataSource.getRepository(TenantUserMembership).update(
-      { tenantId: fixture.tenant.id, userId: inactiveDentist.user.id },
-      { status: TenantUserMembershipStatus.INACTIVE },
-    );
+    await dataSource
+      .getRepository(TenantUserMembership)
+      .update(
+        { tenantId: fixture.tenant.id, userId: inactiveDentist.user.id },
+        { status: TenantUserMembershipStatus.INACTIVE },
+      );
     const otherBranch = await authFixtures.createBranch(fixture.tenant, {
       slug: 'other-branch',
     });
@@ -214,7 +237,9 @@ describe('Appointment workflow (e2e)', () => {
     );
 
     const dentistsResponse = await fixture.receptionist.agent
-      .get(`${fixture.route}/booking-options/dentists?search=Synthetic%20DENTIST`)
+      .get(
+        `${fixture.route}/booking-options/dentists?search=Synthetic%20DENTIST`,
+      )
       .expect(200);
     expect(dentistsResponse.body.items).toEqual(
       expect.arrayContaining([
@@ -263,7 +288,10 @@ describe('Appointment workflow (e2e)', () => {
       .expect(200);
     expect(servicesResponse.body.items).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: fixture.service.id, name: 'Synthetic Exam' }),
+        expect.objectContaining({
+          id: fixture.service.id,
+          name: 'Synthetic Exam',
+        }),
       ]),
     );
     expect(servicesResponse.body.items).not.toEqual(
@@ -281,9 +309,11 @@ describe('Appointment workflow (e2e)', () => {
       'name',
     ]);
 
-    const meResponse = await fixture.receptionist.agent.get('/auth/me').expect(200);
-    const branchSnapshot = meResponse.body.user.authorization.tenants[0].branches[0]
-      .branch;
+    const meResponse = await fixture.receptionist.agent
+      .get('/auth/me')
+      .expect(200);
+    const branchSnapshot =
+      meResponse.body.user.authorization.tenants[0].branches[0].branch;
     expect(branchSnapshot).toMatchObject({
       id: fixture.branch.id,
       timezone: fixture.branch.timezone ?? fixture.tenant.defaultTimezone,
@@ -378,26 +408,32 @@ describe('Appointment workflow (e2e)', () => {
           id: appointmentId,
           patient: {
             id: fixture.patient.id,
+            code: expect.stringMatching(/^PAT-\d{6}$/),
             fullName: fixture.patient.fullName,
+            phone: fixture.patient.phone,
             gender: PatientGender.OTHER,
             dateOfBirth: null,
           },
         });
         expect(item).not.toHaveProperty('operationalNote');
-        expect(JSON.stringify(item)).not.toContain(fixture.patient.phone);
-        expect(item?.patient).not.toHaveProperty('phone');
         expect(item?.patient).not.toHaveProperty('address');
+        expect(item?.patient).not.toHaveProperty('email');
         expect(item?.patient).not.toHaveProperty('emergencyContactPhone');
       });
   });
 
   it('returns a monthly summary only for the authenticated Dentist assignments', async () => {
     const fixture = await createFixture('assigned-calendar-summary');
-    const otherDentist = await createActor(fixture.branch, TenantRoleCode.DENTIST);
-    await dataSource.getRepository(Patient).update(
-      { id: fixture.patient.id },
-      { gender: PatientGender.FEMALE, dateOfBirth: '2000-01-15' },
+    const otherDentist = await createActor(
+      fixture.branch,
+      TenantRoleCode.DENTIST,
     );
+    await dataSource
+      .getRepository(Patient)
+      .update(
+        { id: fixture.patient.id },
+        { gender: PatientGender.FEMALE, dateOfBirth: '2000-01-15' },
+      );
 
     await createStoredAppointment({
       tenant: fixture.tenant,
@@ -556,6 +592,183 @@ describe('Appointment workflow (e2e)', () => {
     });
   });
 
+  it('lists patient Appointment history with scoped search, filters, ordering, and pagination', async () => {
+    const fixture = await createFixture('patient-appointment-history');
+    const otherPatient = await createPatient(
+      fixture.tenant,
+      'Synthetic Other History Patient',
+    );
+    const emptyPatient = await createPatient(
+      fixture.tenant,
+      'Synthetic Empty History Patient',
+    );
+    const otherBranch = await authFixtures.createBranch(fixture.tenant, {
+      slug: 'history-other-branch',
+    });
+    const otherTenant = await authFixtures.createTenant({
+      slug: 'patient-history-other-tenant',
+    });
+    const otherTenantBranch = await authFixtures.createBranch(otherTenant, {
+      slug: 'main',
+    });
+    const otherTenantPatient = await createPatient(
+      otherTenant,
+      'Synthetic Other Tenant History Patient',
+    );
+
+    const oldest = await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: fixture.patient,
+      startAt: '2026-09-10T02:00:00.000Z',
+      endAt: '2026-09-10T03:00:00.000Z',
+      status: AppointmentStatus.COMPLETED,
+      visitReason: 'Synthetic routine follow-up',
+    });
+    const matching = await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: fixture.patient,
+      startAt: '2026-10-20T02:00:00.000Z',
+      endAt: '2026-10-20T03:00:00.000Z',
+      status: AppointmentStatus.CONFIRMED,
+      assignedDentistUserId: fixture.dentist.user.id,
+      operationalNote: 'Synthetic history needle',
+    });
+    const newest = await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: fixture.patient,
+      startAt: '2026-11-10T02:00:00.000Z',
+      endAt: '2026-11-10T03:00:00.000Z',
+      status: AppointmentStatus.BOOKED,
+      visitReason: 'Synthetic newest appointment',
+    });
+
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: fixture.branch,
+      patient: otherPatient,
+      startAt: '2026-12-10T02:00:00.000Z',
+      endAt: '2026-12-10T03:00:00.000Z',
+      status: AppointmentStatus.BOOKED,
+    });
+    await createStoredAppointment({
+      tenant: fixture.tenant,
+      branch: otherBranch,
+      patient: fixture.patient,
+      startAt: '2026-12-11T02:00:00.000Z',
+      endAt: '2026-12-11T03:00:00.000Z',
+      status: AppointmentStatus.BOOKED,
+    });
+    await createStoredAppointment({
+      tenant: otherTenant,
+      branch: otherTenantBranch,
+      patient: otherTenantPatient,
+      startAt: '2026-12-12T02:00:00.000Z',
+      endAt: '2026-12-12T03:00:00.000Z',
+      status: AppointmentStatus.BOOKED,
+    });
+
+    const patientRoute = `/tenants/${fixture.tenant.slug}/branches/${fixture.branch.slug}/patients/${fixture.patient.id}/appointments`;
+    const firstPage = await fixture.receptionist.agent
+      .get(`${patientRoute}?page=1&limit=2`)
+      .expect(200);
+    const firstPageBody = firstPage.body as {
+      items: Array<Record<string, unknown> & { id: string }>;
+      meta: { page: number; limit: number; total: number; totalPages: number };
+    };
+    expect(firstPageBody).toMatchObject({
+      meta: { page: 1, limit: 2, total: 3, totalPages: 2 },
+    });
+    expect(firstPageBody.items.map((item) => item.id)).toEqual([
+      newest.id,
+      matching.id,
+    ]);
+    expect(firstPageBody.items[0]).not.toHaveProperty('patient');
+
+    await fixture.receptionist.agent
+      .get(`${patientRoute}?page=2&limit=2`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as { items: Array<{ id: string }> };
+        expect(body.items).toEqual([
+          expect.objectContaining({ id: oldest.id }),
+        ]);
+      });
+
+    const filtered = await fixture.receptionist.agent
+      .get(patientRoute)
+      .query({
+        search: 'needle',
+        status: AppointmentStatus.CONFIRMED,
+        dentistUserId: fixture.dentist.user.id,
+        from: '2026-10-20T02:30:00.000Z',
+        to: '2026-10-20T03:30:00.000Z',
+      })
+      .expect(200);
+    const filteredBody = filtered.body as {
+      items: Array<{
+        id: string;
+        status: AppointmentStatus;
+        assignedDentist: { id: string } | null;
+      }>;
+      meta: { total: number };
+    };
+    expect(filteredBody).toMatchObject({ meta: { total: 1 } });
+    expect(filteredBody.items).toHaveLength(1);
+    expect(filteredBody.items[0]).toMatchObject({
+      id: matching.id,
+      status: AppointmentStatus.CONFIRMED,
+      assignedDentist: { id: fixture.dentist.user.id },
+    });
+
+    await fixture.receptionist.agent
+      .get(patientRoute)
+      .query({ sortOrder: 'ASC' })
+      .expect(200)
+      .expect((response) => {
+        expect(
+          (response.body as { items: Array<{ id: string }> }).items.map(
+            (item) => item.id,
+          ),
+        ).toEqual([oldest.id, matching.id, newest.id]);
+      });
+
+    for (const query of [
+      { from: WINDOW_FROM },
+      { to: WINDOW_TO },
+      { from: WINDOW_TO, to: WINDOW_FROM },
+    ]) {
+      await fixture.receptionist.agent
+        .get(patientRoute)
+        .query(query)
+        .expect(422);
+    }
+
+    for (const patientId of [
+      emptyPatient.id,
+      otherTenantPatient.id,
+      randomUUID(),
+    ]) {
+      await fixture.receptionist.agent
+        .get(
+          `/tenants/${fixture.tenant.slug}/branches/${fixture.branch.slug}/patients/${patientId}/appointments`,
+        )
+        .expect(200)
+        .expect((response) => {
+          expect(response.body).toMatchObject({
+            items: [],
+            meta: { total: 0, totalPages: 0 },
+          });
+        });
+    }
+
+    await fixture.receptionist.agent
+      .get(`${fixture.route}?from=${WINDOW_FROM}&to=2026-12-01T00:00:00.000Z`)
+      .expect(422);
+  });
+
   it('returns only administrative gender and date of birth in Appointment detail', async () => {
     const fixture = await createFixture('appointment-detail-patient');
     await dataSource.getRepository(Patient).update(
@@ -622,10 +835,9 @@ describe('Appointment workflow (e2e)', () => {
           timeZone: fixture.tenant.defaultTimezone,
         });
       });
-    await dataSource.getRepository(Branch).update(
-      { id: fixture.branch.id },
-      { timezone: 'America/New_York' },
-    );
+    await dataSource
+      .getRepository(Branch)
+      .update({ id: fixture.branch.id }, { timezone: 'America/New_York' });
     fixture.branch.timezone = 'America/New_York';
     const otherBranch = await authFixtures.createBranch(fixture.tenant, {
       slug: 'other-branch',
@@ -694,9 +906,7 @@ describe('Appointment workflow (e2e)', () => {
       ]),
     );
     expect(summary.body.days).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ date: '2026-10-31' }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ date: '2026-10-31' })]),
     );
 
     await fixture.receptionist.agent
@@ -712,6 +922,106 @@ describe('Appointment workflow (e2e)', () => {
         `/tenants/${otherTenant.slug}/branches/${otherTenantBranch.slug}/appointments/calendar-summary?month=2026-11`,
       )
       .expect(403);
+  });
+
+  it('manages branch operatories and rejects overlapping room assignments independently', async () => {
+    const fixture = await createFixture('appointment-operatory');
+    const operatoryRoute = `/tenants/${fixture.tenant.slug}/branches/${fixture.branch.slug}/operatories`;
+    const created = await fixture.branchAdmin.agent
+      .post(operatoryRoute)
+      .set('Idempotency-Key', randomUUID())
+      .send({ code: 'R-01', name: 'Synthetic Room 01', type: 'ROOM' })
+      .expect(201);
+    const operatory = created.body as {
+      id: string;
+      code: string;
+      type: string;
+      isActive: boolean;
+    };
+    expect(operatory).toMatchObject({
+      code: 'R-01',
+      type: 'ROOM',
+      isActive: true,
+    });
+
+    await fixture.receptionist.agent.get(operatoryRoute).expect(403);
+    await fixture.receptionist.agent
+      .get(`${fixture.route}/booking-options/operatories?page=1&limit=20`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as { items: Array<Record<string, unknown>> };
+        expect(body.items).toEqual([
+          expect.objectContaining({ id: operatory.id, isActive: true }),
+        ]);
+      });
+
+    const first = await fixture.receptionist.agent
+      .post(fixture.route)
+      .set('Idempotency-Key', randomUUID())
+      .send(
+        appointmentPayload(fixture, {
+          startAt: '2027-10-10T02:00:00.000Z',
+          endAt: '2027-10-10T03:00:00.000Z',
+          operatoryId: operatory.id,
+        }),
+      )
+      .expect(201);
+    expect(first.body).toMatchObject({
+      operatory: { id: operatory.id, code: 'R-01' },
+    });
+
+    await fixture.receptionist.agent
+      .get(`${fixture.route}/availability`)
+      .query({
+        startAt: '2027-10-10T02:30:00.000Z',
+        endAt: '2027-10-10T03:30:00.000Z',
+        operatoryId: operatory.id,
+      })
+      .expect(200)
+      .expect({ dentistConflict: false, operatoryConflict: true });
+
+    await fixture.receptionist.agent
+      .post(fixture.route)
+      .set('Idempotency-Key', randomUUID())
+      .send(
+        appointmentPayload(fixture, {
+          startAt: '2027-10-10T02:30:00.000Z',
+          endAt: '2027-10-10T03:30:00.000Z',
+          operatoryId: operatory.id,
+        }),
+      )
+      .expect(409)
+      .expect((response) => {
+        const body = response.body as { message: string };
+        expect(body.message).toContain('Operatory');
+      });
+
+    await fixture.branchAdmin.agent
+      .post(`${operatoryRoute}/${operatory.id}/deactivate`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reason: 'Synthetic maintenance' })
+      .expect(409);
+
+    await fixture.receptionist.agent
+      .post(`${fixture.route}/${(first.body as { id: string }).id}/cancel`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reasonCode: 'CLINIC_CANCELLED' })
+      .expect(200);
+    await fixture.branchAdmin.agent
+      .post(`${operatoryRoute}/${operatory.id}/deactivate`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ reason: 'Synthetic maintenance' })
+      .expect(200)
+      .expect((response) =>
+        expect(response.body).toMatchObject({ isActive: false }),
+      );
+    await fixture.receptionist.agent
+      .get(`${fixture.route}/booking-options/operatories?page=1&limit=20`)
+      .expect(200)
+      .expect((response) => {
+        const body = response.body as { items: unknown[] };
+        expect(body.items).toEqual([]);
+      });
   });
 
   async function createFixture(slug: string) {
@@ -801,6 +1111,8 @@ describe('Appointment workflow (e2e)', () => {
     endAt,
     status,
     assignedDentistUserId = null,
+    visitReason = 'Synthetic calendar summary appointment',
+    operationalNote = null,
   }: {
     tenant: Tenant;
     branch: Branch;
@@ -809,6 +1121,8 @@ describe('Appointment workflow (e2e)', () => {
     endAt: string;
     status: AppointmentStatus;
     assignedDentistUserId?: string | null;
+    visitReason?: string | null;
+    operationalNote?: string | null;
   }): Promise<Appointment> {
     return appointments.save(
       appointments.create({
@@ -826,8 +1140,8 @@ describe('Appointment workflow (e2e)', () => {
         serviceAmount: null,
         serviceCurrency: null,
         serviceDurationMinutes: null,
-        visitReason: 'Synthetic calendar summary appointment',
-        operationalNote: null,
+        visitReason,
+        operationalNote,
       }),
     );
   }

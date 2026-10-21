@@ -31,6 +31,7 @@
     "fields": {
       "fullName": "full name",
       "phone": "phone number",
+      "email": "email",
       "gender": "gender",
       "dateOfBirth": "date of birth",
       "address": "address",
@@ -75,5 +76,245 @@
   },
   "errors": {
     "listTitle": "We could not load the patient list"
+  },
+  "alertsManagement": {
+    "title": "Patient safety alerts",
+    "description": "Review alert history and manage active alerts for this assigned case.",
+    "add": "Add alert",
+    "addShort": "Add",
+    "loading": "Loading safety alerts…",
+    "empty": "No alert history for this patient.",
+    "emptyActive": "No active alerts.",
+    "emptyResolved": "No resolved alerts.",
+    "resolved": "Resolved",
+    "resolve": "Resolve",
+    "editActionDescription": "Edit this alert's category, severity, and content.",
+    "resolveActionDescription": "Mark this alert as resolved and move it to history.",
+    "updatedBy": "by {{name}}",
+    "filters": {
+      "label": "Filter alerts by status",
+      "ACTIVE": "Active",
+      "RESOLVED": "Resolved",
+      "ALL": "All"
+    },
+    "statuses": {
+      "ACTIVE": "Active",
+      "RESOLVED": "Resolved"
+    },
+    "columns": {
+      "category": "Category",
+      "severity": "Severity",
+      "message": "Message",
+      "updated": "Updated",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "createTitle": "Create patient alert",
+    "editTitle": "Edit patient alert",
+    "formDescription": "Record safety information that requires attention during treatment.",
+    "category": "Category",
+    "severity": "Severity",
+    "severityDescriptions": {
+      "INFO": "Reference information for treatment",
+      "WARNING": "Requires attention during treatment",
+      "CRITICAL": "High risk and requires special attention"
+    },
+    "message": "Alert content",
+    "messagePlaceholder": "Enter alert content...",
+    "messageHelp": "Clearly describe the important information to note.",
+    "characterCount": "{{count}} / {{max}}",
+    "createSubmit": "Create alert",
+    "editSubmit": "Save changes",
+    "cancel": "Cancel",
+    "resolveTitle": "Resolve this alert?",
+    "resolveDescription": "Resolved alerts remain in history and cannot be reopened.",
+    "resolveNotice": "After resolving, this alert will move to history and cannot be reopened.",
+    "reason": "Resolution reason",
+    "reasons": {
+      "NO_LONGER_APPLICABLE": "No longer applicable",
+      "ENTERED_IN_ERROR": "Entered in error",
+      "DUPLICATE": "Duplicate"
+    }
+  },
+  "detail": {
+    "overview": "Overview",
+    "tabs": {
+      "label": "Patient profile sections",
+      "overview": "Overview",
+      "appointments": "Appointments",
+      "visits": "Visits",
+      "treatment-plans": "Treatment plans"
+    },
+    "actions": { "back": "Back to patients" },
+    "activity": { "ACTIVE": "Active", "INACTIVE": "Inactive" },
+    "notFound": {
+      "title": "Patient not found",
+      "description": "This patient does not exist or is not available in the current tenant."
+    },
+    "error": { "title": "We could not load this patient" },
+    "information": {
+      "title": "Patient information",
+      "patientCode": "Patient ID"
+    },
+    "alerts": {
+      "title": "Safety alerts",
+      "empty": "No active safety alerts.",
+      "categories": {
+        "ALLERGY": "Allergy",
+        "MEDICAL_CONDITION": "Medical condition",
+        "MEDICATION": "Medication",
+        "OTHER": "Other"
+      },
+      "severities": { "INFO": "Info", "WARNING": "Warning", "CRITICAL": "Critical" }
+    },
+    "nextAppointment": {
+      "title": "Next appointment",
+      "view": "View appointment",
+      "unassigned": "Dentist not assigned",
+      "emptyTitle": "No upcoming appointment",
+      "emptyDescription": "There is no booked or confirmed future appointment in this branch."
+    },
+    "appointments": {
+      "upcomingTitle": "Upcoming appointment",
+      "listTitle": "Appointment history",
+      "searchPlaceholder": "Search services, dentists, operatories, or notes…",
+      "allStatuses": "All statuses",
+      "allDentists": "All dentists",
+      "dateRangePlaceholder": "Select a date range",
+      "dateRangeValue": "{{from}} – {{to}}",
+      "clearFilters": "Clear filters",
+      "viewDetails": "View details",
+      "loadErrorTitle": "Could not load appointment history",
+      "emptyTitle": "No appointments",
+      "emptyDescription": "This patient has no appointments matching the current filters in this branch.",
+      "columns": {
+        "dateTime": "Date and time",
+        "service": "Appointment type",
+        "dentist": "Dentist",
+        "operatory": "Room / chair",
+        "duration": "Duration",
+        "status": "Status",
+        "note": "Note",
+        "actions": "Actions"
+      }
+    },
+    "visits": {
+      "title": "Visit history",
+      "description": "Review this patient's visits in the current branch.",
+      "viewDetails": "View details",
+      "comingSoon": "Feature under development",
+      "loadErrorTitle": "Could not load visit history",
+      "summary": {
+        "total": "Total visits",
+        "completed": "Completed",
+        "inProgress": "In progress"
+      },
+      "statuses": {
+        "OPEN": "In progress",
+        "COMPLETED": "Completed"
+      },
+      "filters": {
+        "status": "Status",
+        "dentist": "Dentist",
+        "dateRange": "Date range",
+        "dateRangePlaceholder": "Select a date range",
+        "dateRangeValue": "{{from}} – {{to}}",
+        "allStatuses": "All statuses",
+        "allDentists": "All dentists",
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "clear": "Clear filters"
+      },
+      "columns": {
+        "dateTime": "Visit date",
+        "dentist": "Dentist",
+        "operatory": "Room / chair",
+        "diagnosis": "Diagnosis",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "empty": {
+        "title": "No visits yet",
+        "description": "This patient has no visits in the current branch."
+      },
+      "noResults": {
+        "title": "No matching visits",
+        "description": "Change or clear the filters to see other visits."
+      }
+    },
+    "treatmentPlans": {
+      "title": "Treatment plans",
+      "description": "Review this patient's treatment plans in the current branch.",
+      "searchPlaceholder": "Search plan code, service, indication, or tooth…",
+      "allStatuses": "All statuses",
+      "allDentists": "All dentists",
+      "clearFilters": "Clear filters",
+      "viewDetails": "View details",
+      "visitLabel": "Visit {{date}}",
+      "sortNewest": "Newest first",
+      "sortOldest": "Oldest first",
+      "loadErrorTitle": "Could not load treatment plans",
+      "columns": {
+        "plan": "Plan",
+        "dentist": "Dentist",
+        "visit": "Visit",
+        "createdAt": "Created",
+        "status": "Status",
+        "progress": "Progress",
+        "total": "Planned total",
+        "actions": "Actions"
+      },
+      "empty": {
+        "title": "No treatment plans",
+        "description": "No treatment plans have been created for this patient in the current branch."
+      },
+      "noResults": {
+        "title": "No matching treatment plans",
+        "description": "Change or clear the filters to view other treatment plans."
+      }
+    },
+    "appointmentStatuses": {
+      "BOOKED": "Booked",
+      "CONFIRMED": "Confirmed",
+      "CHECKED_IN": "Checked in",
+      "IN_PROGRESS": "In progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "NO_SHOW": "No-show"
+    },
+    "treatment": {
+      "title": "Treatment summary",
+      "activePlans": "Active plans",
+      "completedItems": "Completed items",
+      "pendingItems": "Pending items",
+      "fallbackName": "Treatment plan",
+      "created": "Created {{date}}",
+      "viewPlan": "View plan",
+      "emptyTitle": "No active treatment plan",
+      "emptyDescription": "No treatment plan is currently open in this branch.",
+      "planDetails": "Treatment plan details",
+      "readOnly": "Read-only clinical information",
+      "quantity": "Quantity",
+      "tooth": "Tooth position",
+      "price": "Final price",
+      "discount": "Discount",
+      "dentist": "Planned dentist",
+      "indication": "Indication",
+      "noItems": "This plan does not have any items."
+    },
+    "planStatuses": {
+      "DRAFT": "Draft",
+      "PROPOSED": "Proposed",
+      "ACCEPTED": "Accepted",
+      "PARTIALLY_COMPLETED": "Partially completed",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "itemStatuses": {
+      "PENDING": "Pending",
+      "IN_PROGRESS": "In progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    }
   }
 }

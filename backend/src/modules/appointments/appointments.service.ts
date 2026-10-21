@@ -11,6 +11,7 @@ import {
   applyOffsetPagination,
   toPageMeta,
 } from '../../common/database/query-builder-list.util';
+import { patientCode } from '../../common/database/tenant-display-number';
 import { RequestFieldValidationException } from '../../common/exceptions/request-field-validation.exception';
 import { AuditAction } from '../audit/audit-actions';
 import { AuditLogService } from '../audit/audit-log.service';
@@ -19,6 +20,7 @@ import type { AuthorizationContext } from '../authorization/authorization-contex
 import { TenantRoleCode } from '../authorization/entities/role-assignment.entity';
 import { RoleAssignment } from '../authorization/entities/role-assignment.entity';
 import { Patient } from '../patients/entities/patient.entity';
+import { Operatory } from '../operatories/entities/operatory.entity';
 import { Service } from '../services/entities/service.entity';
 import {
   TenantUserMembership,
@@ -27,6 +29,7 @@ import {
 import { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import { AssignAppointmentDto } from './dto/assign-appointment.dto';
+import { CheckAppointmentAvailabilityQueryDto } from './dto/check-appointment-availability-query.dto';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { ListAppointmentsQueryDto } from './dto/list-appointments-query.dto';
 import { ListAppointmentBookingOptionsQueryDto } from './dto/list-appointment-booking-options-query.dto';
@@ -41,6 +44,12 @@ const SCHEDULING_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.CONFIRMED,
   AppointmentStatus.CHECKED_IN,
 ]);
+const CONFLICTING_STATUSES = [
+  AppointmentStatus.BOOKED,
+  AppointmentStatus.CONFIRMED,
+  AppointmentStatus.CHECKED_IN,
+  AppointmentStatus.IN_PROGRESS,
+] as const;
 const TERMINAL_REASON_STATUSES = new Set<AppointmentStatus>([
   AppointmentStatus.BOOKED,
   AppointmentStatus.CONFIRMED,
@@ -49,6 +58,7 @@ const TERMINAL_REASON_STATUSES = new Set<AppointmentStatus>([
 type AppointmentDetails = Appointment & {
   patient: Patient;
   assignedDentist: User | null;
+  operatory: Operatory | null;
 };
 
 type AppointmentSnapshot = {
@@ -56,6 +66,7 @@ type AppointmentSnapshot = {
   startAt: string;
   endAt: string;
   assignedDentistUserId: string | null;
+  operatoryId: string | null;
 };
 
 export interface AppointmentResponse {
@@ -66,6 +77,12 @@ export interface AppointmentResponse {
   endAt: Date;
   patient: { id: string; fullName: string; phone: string };
   assignedDentist: { id: string; fullName: string } | null;
+  operatory: {
+    id: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+  } | null;
   service: {
     id: string;
     code: string;
@@ -100,11 +117,19 @@ export interface AssignedAppointmentResponse {
   endAt: Date;
   patient: {
     id: string;
+    code: string;
     fullName: string;
+    phone: string;
     gender: Patient['gender'];
     dateOfBirth: string | null;
   };
   service: { id: string; code: string; name: string } | null;
+  operatory: {
+    id: string;
+    code: string;
+    name: string;
+    isActive: boolean;
+  } | null;
   visitReason: string | null;
 }
 
@@ -137,6 +162,13 @@ export interface AppointmentServiceOptionResponse {
   amount: number;
   currency: string;
   durationMinutes: number;
+}
+
+export interface AppointmentOperatoryOptionResponse {
+  id: string;
+  code: string;
+  name: string;
+  isActive: boolean;
 }
 
 @Injectable()
@@ -353,6 +385,57 @@ export class AppointmentsService {
     return this.toDetailResponse(appointment);
   }
 
+  async checkAvailability(
+    context: AuthorizationContext,
+    query: CheckAppointmentAvailabilityQueryDto,
+  ): Promise<{ dentistConflict: boolean; operatoryConflict: boolean }> {
+    const { startAt, endAt } = this.parseAppointmentRange(
+      query.startAt,
+      query.endAt,
+    );
+    const conflictQuery = () => {
+      const queryBuilder = this.appointmentsRepository.ormRepository
+        .createQueryBuilder('appointment')
+        .where('appointment.tenantId = :tenantId', {
+          tenantId: context.tenant!.id,
+        })
+        .andWhere('appointment.branchId = :branchId', {
+          branchId: context.branch!.id,
+        })
+        .andWhere('appointment.status IN (:...statuses)', {
+          statuses: CONFLICTING_STATUSES,
+        })
+        .andWhere('appointment.startAt < :endAt', { endAt })
+        .andWhere('appointment.endAt > :startAt', { startAt });
+
+      if (query.excludeAppointmentId) {
+        queryBuilder.andWhere('appointment.id != :excludeAppointmentId', {
+          excludeAppointmentId: query.excludeAppointmentId,
+        });
+      }
+      return queryBuilder;
+    };
+
+    const [dentistConflict, operatoryConflict] = await Promise.all([
+      query.dentistUserId
+        ? conflictQuery()
+            .andWhere('appointment.assignedDentistUserId = :dentistUserId', {
+              dentistUserId: query.dentistUserId,
+            })
+            .getExists()
+        : false,
+      query.operatoryId
+        ? conflictQuery()
+            .andWhere('appointment.operatoryId = :operatoryId', {
+              operatoryId: query.operatoryId,
+            })
+            .getExists()
+        : false,
+    ]);
+
+    return { dentistConflict, operatoryConflict };
+  }
+
   async listBookingDentists(
     context: AuthorizationContext,
     query: ListAppointmentBookingOptionsQueryDto,
@@ -449,6 +532,47 @@ export class AppointmentsService {
     };
   }
 
+  async listBookingOperatories(
+    context: AuthorizationContext,
+    query: ListAppointmentBookingOptionsQueryDto,
+  ): Promise<{
+    items: AppointmentOperatoryOptionResponse[];
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const queryBuilder = this.dataSource
+      .getRepository(Operatory)
+      .createQueryBuilder('operatory')
+      .where('operatory.tenantId = :tenantId', {
+        tenantId: context.tenant!.id,
+      })
+      .andWhere('operatory.branchId = :branchId', {
+        branchId: context.branch!.id,
+      })
+      .andWhere('operatory.isActive = true');
+
+    applyIlikeSearch(queryBuilder, query.search, [
+      'operatory.code',
+      'operatory.name',
+    ]);
+    queryBuilder
+      .orderBy('operatory.name', 'ASC')
+      .addOrderBy('operatory.id', 'ASC');
+    applyOffsetPagination(queryBuilder, { page, limit });
+
+    const [operatories, total] = await queryBuilder.getManyAndCount();
+    return {
+      items: operatories.map((operatory) => ({
+        id: operatory.id,
+        code: operatory.code,
+        name: operatory.name,
+        isActive: operatory.isActive,
+      })),
+      meta: toPageMeta({ page, limit }, total),
+    };
+  }
+
   async create(
     context: AuthorizationContext,
     input: CreateAppointmentDto,
@@ -479,6 +603,11 @@ export class AppointmentsService {
           context,
           input.assignedDentistUserId ?? null,
         );
+        const operatory = await this.resolveOperatoryOrFail(
+          manager,
+          context,
+          input.operatoryId ?? null,
+        );
         const appointment = manager.create(Appointment, {
           tenantId: context.tenant!.id,
           branchId: context.branch!.id,
@@ -488,6 +617,7 @@ export class AppointmentsService {
           startAt,
           endAt,
           assignedDentistUserId: dentist?.id ?? null,
+          operatoryId: operatory?.id ?? null,
           serviceId: service?.id ?? null,
           serviceCode: service?.code ?? null,
           serviceName: service?.name ?? null,
@@ -518,10 +648,11 @@ export class AppointmentsService {
           ...saved,
           patient,
           assignedDentist: dentist,
+          operatory,
         });
       });
     } catch (error) {
-      this.throwIfDentistScheduleOverlaps(error);
+      this.throwIfScheduleOverlaps(error);
       throw error;
     }
   }
@@ -575,6 +706,14 @@ export class AppointmentsService {
                 context.tenant!.id,
                 input.serviceId,
               );
+        const operatory =
+          input.operatoryId === undefined
+            ? undefined
+            : await this.resolveOperatoryOrFail(
+                manager,
+                context,
+                input.operatoryId,
+              );
         const nextServiceId =
           service === undefined ? appointment.serviceId : (service?.id ?? null);
         const nextVisitReason =
@@ -587,6 +726,7 @@ export class AppointmentsService {
           startAt: nextStartAt,
           endAt: nextEndAt,
           service,
+          operatory,
         });
         if (changedFields.length === 0) {
           const details = await this.loadDetailsOrFail(
@@ -614,6 +754,9 @@ export class AppointmentsService {
         }
         if (input.operationalNote !== undefined) {
           appointment.operationalNote = input.operationalNote;
+        }
+        if (operatory !== undefined) {
+          appointment.operatoryId = operatory?.id ?? null;
         }
 
         if (appointment.status === AppointmentStatus.CONFIRMED && timeChanged) {
@@ -658,7 +801,7 @@ export class AppointmentsService {
         );
       });
     } catch (error) {
-      this.throwIfDentistScheduleOverlaps(error);
+      this.throwIfScheduleOverlaps(error);
       throw error;
     }
   }
@@ -736,7 +879,7 @@ export class AppointmentsService {
         );
       });
     } catch (error) {
-      this.throwIfDentistScheduleOverlaps(error);
+      this.throwIfScheduleOverlaps(error);
       throw error;
     }
   }
@@ -962,10 +1105,40 @@ export class AppointmentsService {
     return assignment.user;
   }
 
+  private async resolveOperatoryOrFail(
+    manager: EntityManager,
+    context: AuthorizationContext,
+    operatoryId: string | null,
+  ): Promise<Operatory | null> {
+    if (!operatoryId) {
+      return null;
+    }
+    const operatory = await manager.getRepository(Operatory).findOne({
+      where: {
+        id: operatoryId,
+        tenantId: context.tenant!.id,
+        branchId: context.branch!.id,
+        isActive: true,
+      },
+    });
+    if (!operatory) {
+      throw new RequestFieldValidationException(
+        'operatoryId',
+        'operatoryId must reference an active Operatory in this branch.',
+      );
+    }
+    return operatory;
+  }
+
   private getChangedFields(
     appointment: Appointment,
     input: UpdateAppointmentDto,
-    values: { startAt: Date; endAt: Date; service: Service | null | undefined },
+    values: {
+      startAt: Date;
+      endAt: Date;
+      service: Service | null | undefined;
+      operatory: Operatory | null | undefined;
+    },
   ): string[] {
     const fields: string[] = [];
     if (input.source !== undefined && input.source !== appointment.source) {
@@ -994,6 +1167,12 @@ export class AppointmentsService {
       input.operationalNote !== appointment.operationalNote
     ) {
       fields.push('operationalNote');
+    }
+    if (
+      values.operatory !== undefined &&
+      (values.operatory?.id ?? null) !== appointment.operatoryId
+    ) {
+      fields.push('operatory');
     }
     return fields;
   }
@@ -1159,6 +1338,7 @@ export class AppointmentsService {
       startAt: appointment.startAt.toISOString(),
       endAt: appointment.endAt.toISOString(),
       assignedDentistUserId: appointment.assignedDentistUserId,
+      operatoryId: appointment.operatoryId,
     };
   }
 
@@ -1180,6 +1360,14 @@ export class AppointmentsService {
         ? {
             id: appointment.assignedDentist.id,
             fullName: appointment.assignedDentist.fullName,
+          }
+        : null,
+      operatory: appointment.operatory
+        ? {
+            id: appointment.operatory.id,
+            code: appointment.operatory.code,
+            name: appointment.operatory.name,
+            isActive: appointment.operatory.isActive,
           }
         : null,
       service: appointment.serviceId
@@ -1223,7 +1411,9 @@ export class AppointmentsService {
       endAt: appointment.endAt,
       patient: {
         id: appointment.patient.id,
+        code: patientCode(appointment.patient.displayNumber),
         fullName: appointment.patient.fullName,
+        phone: appointment.patient.phone,
         gender: appointment.patient.gender,
         dateOfBirth: appointment.patient.dateOfBirth,
       },
@@ -1232,20 +1422,35 @@ export class AppointmentsService {
             id: appointment.serviceId,
             code: appointment.serviceCode!,
             name: appointment.serviceName!,
-        }
+          }
+        : null,
+      operatory: appointment.operatory
+        ? {
+            id: appointment.operatory.id,
+            code: appointment.operatory.code,
+            name: appointment.operatory.name,
+            isActive: appointment.operatory.isActive,
+          }
         : null,
       visitReason: appointment.visitReason,
     };
   }
 
-  private throwIfDentistScheduleOverlaps(error: unknown): void {
-    if (
-      error instanceof QueryFailedError &&
-      (error.driverError as { constraint?: string } | undefined)?.constraint ===
-        'ex_appointments_assigned_dentist_time_overlap'
-    ) {
+  private throwIfScheduleOverlaps(error: unknown): void {
+    if (!(error instanceof QueryFailedError)) {
+      return;
+    }
+    const constraint = (
+      error.driverError as { constraint?: string } | undefined
+    )?.constraint;
+    if (constraint === 'ex_appointments_assigned_dentist_time_overlap') {
       throw new ConflictException(
         'The assigned Dentist already has an overlapping appointment.',
+      );
+    }
+    if (constraint === 'ex_appointments_operatory_time_overlap') {
+      throw new ConflictException(
+        'The selected Operatory already has an overlapping appointment.',
       );
     }
   }

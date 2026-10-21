@@ -26,6 +26,7 @@ interface UseDataTableProps<TData, TValue> {
   data: TData[];
   columns: ColumnDef<TData, TValue>[];
   initialState?: TableState;
+  enablePagination?: boolean;
   pageSize?: DataTablePaginationConfig["pageSize"];
   rowSelectionConfig?: DataTableRowSelectionConfig<TData>;
   manualPagination?: {
@@ -45,6 +46,7 @@ interface UseDataTableProps<TData, TValue> {
 export function useShadcnTable<TData, TValue>({
   data,
   columns,
+  enablePagination = true,
   initialState,
   pageSize = 10,
   rowSelectionConfig,
@@ -93,7 +95,7 @@ export function useShadcnTable<TData, TValue>({
     enableRowSelection: rowSelectionConfig?.enableRowSelection ?? true,
     enableMultiSort: !isServerSorting,
     getCoreRowModel: getCoreRowModel(),
-    ...(isManualPagination
+    ...(isManualPagination || !enablePagination
       ? {}
       : { getPaginationRowModel: getPaginationRowModel() }),
     ...(isServerSorting ? {} : { getSortedRowModel: getSortedRowModel() }),
