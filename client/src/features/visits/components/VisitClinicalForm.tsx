@@ -325,7 +325,12 @@ export function VisitClinicalForm({
         <aside className="min-w-0 space-y-4">{aside}</aside>
       </form>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 shadow-[0_-8px_30px_-20px_rgba(15,23,42,0.35)] backdrop-blur lg:left-[17rem]">
+      <div
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 shadow-[0_-8px_30px_-20px_rgba(15,23,42,0.35)] backdrop-blur lg:left-[17rem]",
+          !visible && "hidden",
+        )}
+      >
         <div className="mx-auto flex max-w-[96rem] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-6 lg:px-8">
           <div className="flex items-center gap-2 text-sm text-muted-foreground sm:mr-2">
             {updateMutation.isPending ? (

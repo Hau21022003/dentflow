@@ -33,7 +33,8 @@
     "label": "Visit sections",
     "clinical": "Clinical record",
     "safety": "Safety notes",
-    "treatmentPlans": "Related treatment plans"
+    "treatmentPlans": "Related treatment plans",
+    "files": "Files & images"
   },
   "references": {
     "safetyTitle": "Important safety alerts",

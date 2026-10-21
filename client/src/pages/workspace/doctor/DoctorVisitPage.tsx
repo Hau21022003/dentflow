@@ -24,6 +24,7 @@ import { AppointmentStatusBadge } from "@/features/appointments/components/Appoi
 import { hasBranchPermission } from "@/features/auth/authorization";
 import { PERMISSIONS } from "@/features/auth/auth.types";
 import { PatientAlertsPanel } from "@/features/patients/components/PatientAlertsPanel";
+import { PatientFilesTab } from "@/features/patient-files/components/PatientFilesTab";
 import { PatientTreatmentPlanStatusBadge } from "@/features/patients/components/PatientTreatmentPlanStatusBadge";
 import {
   PATIENT_ALERT_CATEGORY_VISUALS,
@@ -55,16 +56,17 @@ import {
   ClipboardList,
   FilePenLine,
   Phone,
+  Paperclip,
   Stethoscope,
   UserRound,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useRouteWorkspaceContext } from "../use-route-workspace-context";
 
-type VisitTab = "clinical" | "safety" | "treatment-plans";
+type VisitTab = "clinical" | "safety" | "treatment-plans" | "files";
 
 function isValidDate(value: string | null): value is string {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -503,6 +505,7 @@ export function DoctorVisitPage() {
     null,
   );
   const [startError, setStartError] = useState("");
+  const visitTabsViewportRef = useRef<HTMLDivElement>(null);
   const visit = visitQuery.data ?? startedVisit;
   const requestedTab = searchParams.get("tab") as VisitTab | null;
   const safetyAvailable = Boolean(
@@ -510,12 +513,15 @@ export function DoctorVisitPage() {
     !["COMPLETED", "CANCELLED", "NO_SHOW"].includes(appointment.status),
   );
   const plansAvailable = visit?.status === "OPEN";
+  const filesAvailable = Boolean(visit);
   const activeTab: VisitTab =
     requestedTab === "safety" && safetyAvailable
       ? "safety"
       : requestedTab === "treatment-plans" && plansAvailable
         ? "treatment-plans"
-        : "clinical";
+        : requestedTab === "files" && filesAvailable
+          ? "files"
+          : "clinical";
 
   useEffect(() => {
     if (requestedTab && requestedTab !== activeTab) {
@@ -524,6 +530,21 @@ export function DoctorVisitPage() {
       setSearchParams(params, { replace: true });
     }
   }, [activeTab, requestedTab, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const viewport = visitTabsViewportRef.current;
+    if (!viewport) return;
+    const revealActiveTab = () => {
+      if (viewport.scrollWidth <= viewport.clientWidth) return;
+      viewport
+        .querySelector<HTMLElement>('[role="tab"][data-state="active"]')
+        ?.scrollIntoView({ block: "nearest", inline: "center" });
+    };
+    revealActiveTab();
+    const resizeObserver = new ResizeObserver(revealActiveTab);
+    resizeObserver.observe(viewport);
+    return () => resizeObserver.disconnect();
+  }, [activeTab]);
 
   function selectTab(tab: VisitTab) {
     const params = new URLSearchParams(searchParams);
@@ -646,7 +667,10 @@ export function DoctorVisitPage() {
             onValueChange={(value) => selectTab(value as VisitTab)}
             value={activeTab}
           >
-            <div className="overflow-x-auto">
+            <div
+              className="no-scrollbar overflow-x-auto overscroll-x-contain"
+              ref={visitTabsViewportRef}
+            >
               <TabsList aria-label={t("tabs.label")}>
                 <TabsTrigger value="clinical">
                   <FilePenLine aria-hidden="true" className="size-4" />
@@ -659,6 +683,10 @@ export function DoctorVisitPage() {
                 <TabsTrigger disabled={!plansAvailable} value="treatment-plans">
                   <ClipboardList aria-hidden="true" className="size-4" />
                   {t("tabs.treatmentPlans")}
+                </TabsTrigger>
+                <TabsTrigger disabled={!filesAvailable} value="files">
+                  <Paperclip aria-hidden="true" className="size-4" />
+                  {t("tabs.files")}
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -774,6 +802,16 @@ export function DoctorVisitPage() {
               timeZone={timeZone}
               user={user}
               visitId={visit.id}
+            />
+          )}
+
+          {visit && activeTab === "files" && (
+            <PatientFilesTab
+              appointmentId={appointmentId}
+              branchSlug={branchSlug}
+              canManage={visit.status === "OPEN"}
+              tenantSlug={tenantSlug}
+              timeZone={timeZone}
             />
           )}
 

@@ -5,6 +5,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @theme inline {
   --font-sans: "Be Vietnam Pro", Arial, sans-serif;
   --color-background: var(--background);
