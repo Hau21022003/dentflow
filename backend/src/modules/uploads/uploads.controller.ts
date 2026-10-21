@@ -6,6 +6,7 @@ import { TenantScope } from '../../common/decorators/tenant-scope.decorator';
 import type { AuthorizationContext } from '../authorization/authorization-context';
 import { Permission } from '../authorization/authorization.policy';
 import { CreateImageUploadIntentDto } from './dto/create-image-upload-intent.dto';
+import { CreateFileUploadIntentDto } from './dto/create-file-upload-intent.dto';
 import { CreateUserImageUploadIntentDto } from './dto/create-user-image-upload-intent.dto';
 import { UploadsService } from './uploads.service';
 
@@ -22,6 +23,17 @@ export class UploadsController {
     @Body() body: CreateImageUploadIntentDto,
   ) {
     return this.uploadsService.createImageUploadIntent(context, body);
+  }
+
+  @Post('tenants/:tenantSlug/branches/:branchSlug/uploads/file-intents')
+  @HttpCode(HttpStatus.CREATED)
+  @TenantScope('branch')
+  @RequirePermissions(Permission.FILE_UPLOAD)
+  createFileIntent(
+    @RequestContext() context: AuthorizationContext,
+    @Body() body: CreateFileUploadIntentDto,
+  ) {
+    return this.uploadsService.createFileUploadIntent(context, body);
   }
 
   @Post('uploads/image-intents')

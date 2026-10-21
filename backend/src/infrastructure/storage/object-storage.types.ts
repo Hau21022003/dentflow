@@ -9,6 +9,11 @@ export interface PresignedPost {
   fields: Record<string, string>;
 }
 
+export interface CreatePresignedGetOptions {
+  responseContentType?: string;
+  responseContentDisposition?: string;
+}
+
 export interface StoredObjectMetadata {
   contentType?: string;
   sizeBytes?: number;
@@ -25,7 +30,10 @@ export interface CopyObjectInput {
  */
 export interface ObjectStorage {
   createPresignedPost(input: CreatePresignedPostInput): Promise<PresignedPost>;
-  createPresignedGet(key: string): Promise<string>;
+  createPresignedGet(
+    key: string,
+    options?: CreatePresignedGetOptions,
+  ): Promise<string>;
   headObject(key: string): Promise<StoredObjectMetadata>;
   copyObject(input: CopyObjectInput): Promise<void>;
   deleteObject(key: string): Promise<void>;

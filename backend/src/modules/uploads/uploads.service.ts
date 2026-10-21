@@ -13,6 +13,7 @@ import {
   type ObjectStorage,
 } from '../../infrastructure/storage';
 import type { AuthorizationContext } from '../authorization/authorization-context';
+import { CreateFileUploadIntentDto } from './dto/create-file-upload-intent.dto';
 import { CreateImageUploadIntentDto } from './dto/create-image-upload-intent.dto';
 import {
   CreateUserImageUploadIntentDto,
@@ -20,6 +21,10 @@ import {
 } from './dto/create-user-image-upload-intent.dto';
 import {
   BranchImageUploadPurpose,
+  PATIENT_FILE_EXTENSION_BY_CONTENT_TYPE,
+  PATIENT_FILE_CONTENT_TYPES,
+  PATIENT_FILE_MAX_BYTES,
+  type PatientFileContentType,
   IMAGE_CONTENT_TYPES,
   IMAGE_EXTENSION_BY_CONTENT_TYPE,
   IMAGE_UPLOAD_POLICIES,
@@ -84,6 +89,34 @@ export class UploadsService {
     const objectKey = this.userObjectKey(userId, input.folder, extension);
 
     return this.createIntent(objectKey, input, policy);
+  }
+
+  async createFileUploadIntent(
+    context: AuthorizationContext,
+    input: CreateFileUploadIntentDto,
+  ): Promise<ImageUploadIntentResponse> {
+    const tenantId = context.tenant?.id;
+    const branchId = context.branch?.id;
+    if (!tenantId || !branchId) {
+      throw new ServiceUnavailableException(
+        'A branch upload context is required.',
+      );
+    }
+    if (input.sizeBytes > PATIENT_FILE_MAX_BYTES) {
+      throw new PayloadTooLargeException(
+        'Patient file size must not exceed 10 MB.',
+      );
+    }
+    const contentType = input.contentType as PatientFileContentType;
+    if (!PATIENT_FILE_CONTENT_TYPES.includes(contentType)) {
+      throw new BadRequestException('Unsupported patient file content type.');
+    }
+    const extension = PATIENT_FILE_EXTENSION_BY_CONTENT_TYPE[contentType];
+    const objectKey = `temp/${tenantId}/${branchId}/patient-files/${context.actor.userId}/${randomUUID()}.${extension}`;
+
+    return this.createIntent(objectKey, input, {
+      maxFileSizeBytes: PATIENT_FILE_MAX_BYTES,
+    });
   }
 
   private branchImageUploadPolicy(
@@ -159,8 +192,8 @@ export class UploadsService {
 
   private async createIntent(
     objectKey: string,
-    input: CreateImageUploadIntentDto,
-    policy: ImageUploadPolicy,
+    input: Pick<CreateImageUploadIntentDto, 'contentType' | 'sizeBytes'>,
+    policy: Pick<ImageUploadPolicy, 'maxFileSizeBytes'>,
   ): Promise<ImageUploadIntentResponse> {
     try {
       const upload = await this.objectStorage.createPresignedPost({
