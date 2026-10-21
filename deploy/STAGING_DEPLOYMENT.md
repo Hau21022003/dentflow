@@ -59,8 +59,9 @@
   preflight và Phase 3B browser upload/download smoke đã chạy ngày 2026-10-21.
   Browser S3 flow pass; quyền `s3:ListBucket` không cần thiết được operator chấp
   nhận như một deviation và không chặn Phase 3. Phase 3C đã cấu hình backup
-  PostgreSQL hằng ngày lên S3 và manual backup đầu tiên đã pass; restore drill
-  cô lập của Phase 3D chưa thực hiện.
+  PostgreSQL hằng ngày lên S3 và manual backup đầu tiên đã pass. Lần chạy tự động
+  lúc `02:30 Asia/Ho_Chi_Minh` đã tạo đủ dump/sidecar; restore drill cô lập Phase
+  3D đã pass ngày 2026-10-21.
 
 ## Phạm vi implementation GHCR
 
@@ -356,9 +357,8 @@ frontend Nginx vẫn có thể gây OOM, nhất là trong migration hoặc traff
 
 Named volume giữ dữ liệu qua container recreate nhưng không phải backup. Phase 3C
 đã tách backup PostgreSQL sang private S3 bucket cùng region, dùng SSE-S3 và
-lifecycle 30 ngày. Restore drill vẫn phải hoàn tất trong môi trường Docker local
-cô lập ở Phase 3D; không được reset database hoặc restore vào staging để thử
-nghiệm.
+lifecycle 30 ngày. Phase 3D đã restore backup tự động vào Docker local cô lập và
+pass; không reset database hoặc restore vào staging để thử nghiệm.
 
 ## Checklist sau triển khai
 
@@ -399,7 +399,8 @@ nghiệm.
   `882742db804b9722ec40cc766bb9ae1e1fe9fdb4`.
 - [x] Thiết lập database backup S3, SSE-S3, SHA-256, lịch hằng ngày và retention
   30 ngày; manual backup/readability check đã pass mà không thay đổi named volume.
-- [ ] Restore drill từ S3 trong Docker local cô lập; không restore vào staging.
+- [x] Restore drill từ S3 trong Docker local cô lập đã pass với PostgreSQL 16;
+  không restore vào staging và không còn container/file backup local sau drill.
 - [x] Đã thu baseline RAM, swap, disk, Docker restart/OOM sau deploy. Tiếp tục
   checklist thủ công; CloudWatch alarms tạm hoãn và không cài CloudWatch Agent.
 
@@ -669,7 +670,7 @@ Postflight pass:
 Acceptance Phase 2: **PASS**. AWS IAM identity dùng cho kiểm tra vẫn không có
 `ec2:DescribeInstances`, nên checklist vận hành `2/2 status checks` phải được xác
 nhận định kỳ trên AWS Console. Trạng thái Phase 3 hiện tại được ghi ở phần tiếp
-theo; backup Phase 3C đã pass, còn restore drill Phase 3D chưa được thực hiện.
+theo; backup Phase 3C và restore drill cô lập Phase 3D đều đã pass.
 
 ## Phase 3: S3 smoke và database recovery drill
 
@@ -832,5 +833,35 @@ Việc thêm nguồn tái lập không tự reconcile hoặc deploy lại EC2 hi
 disable timer, review diff/checksum, chạy installer và lặp lại manual acceptance;
 không copy credential hoặc file runtime ngược vào repository.
 
-Acceptance Phase 3C: **PASS**. Phase 3D sẽ tải backup này từ S3 để restore trong
-Docker local cô lập; tuyệt đối không restore trên EC2 staging.
+Acceptance Phase 3C: **PASS**.
+
+### Phase 3D: isolated PostgreSQL restore drill
+
+Phase 3D hoàn tất ngày 2026-10-21 với backup tự động tạo lúc
+`02:30 Asia/Ho_Chi_Minh`. Operator tải đúng cặp `.dump`/`.sha256` từ private S3
+bucket; application IAM user bị từ chối truy cập bucket backup đúng theo boundary
+Phase 3C. Không sao chép backup credential khỏi EC2 và không kết nối PostgreSQL
+staging.
+
+Runner tái lập nằm tại `deploy/postgres-backup/restore-drill.sh`. Trước restore,
+runner xác minh sidecar chỉ chứa một SHA-256 và đúng tên dump, checksum khớp
+byte-for-byte, archive có kích thước `175,088` bytes và `pg_restore --list` đọc
+được bằng image `postgres:16-alpine` có sẵn local.
+
+Restore thực tế pass với các guard sau:
+
+- container disposable dùng PostgreSQL 16, `network=none`, không publish host
+  port, giới hạn CPU/RAM/PID và lưu PostgreSQL data trên `tmpfs`;
+- `pg_restore` dùng `--exit-on-error`, `--single-transaction`, `--no-owner` và
+  `--no-privileges` vào database local mới;
+- database sau restore có 32 bảng public, 29 migration records, 41 rows tổng ở
+  bốn bảng lõi `users`/`tenants`/`branches`/`patients` và kích thước 11,205,655
+  bytes; runner không in nội dung row;
+- đủ năm bảng lõi gồm `appointments`, không có constraint chưa validate hoặc
+  index invalid;
+- trap đã xóa container sau PASS; kiểm tra sau drill không còn container
+  `dentflow-phase3d-*`. Hai file backup local được xóa sau khi ghi nhận acceptance;
+  object S3 và staging containers/volumes không bị thay đổi.
+
+Acceptance Phase 3D: **PASS**. Phase 3 hoàn tất với IAM `s3:ListBucket` deviation
+đã được chấp nhận ở Phase 3B; tiếp tục theo dõi backup timer và retention định kỳ.

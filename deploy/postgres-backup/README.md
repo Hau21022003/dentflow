@@ -27,6 +27,7 @@ review đúng commit SHA, chuẩn bị AWS resources/secret rồi chạy install
 | `backup.env.example` | Schema cấu hình không chứa secret. |
 | `install.sh` | Validate AWS/IAM rồi cài file; không start service/timer. |
 | `verify.sh` | Manual backup, health/identity postflight và optional timer enable. |
+| `restore-drill.sh` | Restore backup đã xác minh vào PostgreSQL Docker local disposable. |
 | `aws/` | Bucket policy, IAM policy và lifecycle templates. |
 
 ## AWS prerequisites
@@ -128,6 +129,32 @@ archive không có sidecar sẽ được lifecycle xử lý.
 3. Disable/stop timer, chạy lại `install.sh`, xóa input tạm.
 4. Chạy `verify.sh --enable-timer`.
 5. Chỉ sau khi PASS mới deactivate/delete key cũ trong AWS Console.
+
+## Phase 3D: restore drill cô lập
+
+Tải một cặp `.dump` và `.dump.sha256` đã hoàn tất từ bucket backup về máy
+operator. Giữ file ngoài repository và không commit archive. Không dùng application
+IAM user để đọc bucket backup; dùng quyền operator/AWS Console hoặc một restore
+principal read-only được duyệt.
+
+Chạy drill trên máy local có Docker Desktop và image `postgres:16-alpine` sẵn có:
+
+```bash
+bash deploy/postgres-backup/restore-drill.sh \
+  --dump /path/to/dentflow-staging-<timestamp>-<sha>.dump \
+  --checksum /path/to/dentflow-staging-<timestamp>-<sha>.dump.sha256
+```
+
+Runner xác minh sidecar SHA-256 và archive, sau đó restore vào một PostgreSQL 16
+container disposable. Container dùng `network=none`, không publish port và lưu data
+trên `tmpfs`; trap luôn xóa container khi PASS, fail hoặc nhận signal. Acceptance chỉ
+PASS khi migration history, các bảng lõi, dữ liệu synthetic, constraint/index và kích
+thước database đều hợp lệ. Runner không kết nối EC2, không dùng staging Compose và
+không in row data.
+
+Sau drill, xóa an toàn hai file backup local. Chỉ cập nhật Phase 3D thành PASS sau khi
+lưu output `Phase 3D restore drill PASS` và xác nhận không còn container
+`dentflow-phase3d-*`.
 
 ## Drift check
 
